@@ -1,0 +1,1 @@
+{"style":"new-york","baseColor":"slate","cssVariables":true,"aliases":{"components":"@/components","utils":"@/lib/utils","ui":"@/components/ui","lib":"@/lib","hooks":"@/hooks"},"rsc":false,"tsx":true,"tailwind":{"config":"tailwind.config.js","css":"src/index.css","baseColor":"slate","utils":"@/lib/utils"},"importAlias":"@/*"}
