@@ -5,15 +5,21 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "bun run --watch src/index.ts",
-    "build": "bun build src/index.ts --outdir dist --target bun",
-    "start": "bun run src/index.ts"
+    "dev": "bun run --hot src/index.ts",
+    "start": "bun run src/index.ts",
+    "worker": "bun run src/worker.ts",
+    "worker:dev": "bun run --hot src/worker.ts",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
+    "db:seed": "bun run src/infra/db/seed.ts",
+    "build": "bun build src/index.ts --outdir dist --target bun"
   },
   "devDependencies": {
     "@types/bun": "^1.3.9",
-    "drizzle-kit": "^0.31.9"
-  },
-  "peerDependencies": {
+    "drizzle-kit": "^0.31.9",
     "typescript": "^5.9.3"
   },
   "dependencies": {

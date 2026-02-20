@@ -1,1 +1,2 @@
-// Placeholder - implementation pending
+// Cache infrastructure exports
+export * from "./client";

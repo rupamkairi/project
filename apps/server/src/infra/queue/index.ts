@@ -1,1 +1,2 @@
-// Placeholder - implementation pending
+// Queue infrastructure exports
+export * from "./client";

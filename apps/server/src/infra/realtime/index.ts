@@ -1,1 +1,2 @@
-// Placeholder - implementation pending
+// Realtime infrastructure exports
+export * from "./gateway";

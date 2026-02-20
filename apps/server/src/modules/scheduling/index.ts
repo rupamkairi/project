@@ -1,12 +1,12 @@
-// Catalog Module
+// Scheduling Module
 
 import type { AppModule, BootRegistry } from "../../core/module";
 
-export const CatalogModule: AppModule = {
+export const SchedulingModule: AppModule = {
   manifest: {
-    id: "catalog",
+    id: "scheduling",
     version: "0.1.0",
-    dependsOn: [],
+    dependsOn: ["identity", "catalog"],
     entities: [],
     events: [],
     commands: [],
