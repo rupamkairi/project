@@ -48,7 +48,7 @@ function TemplateEditor() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={template.name}
+        title={template.key}
         description={
           <Badge variant="outline" className="ml-2">
             {template.channel}
@@ -56,7 +56,7 @@ function TemplateEditor() {
         }
         breadcrumbs={[
           { label: "Notifications", href: "/dashboard/notifications" },
-          { label: template.name },
+          { label: template.key },
         ]}
         actions={
           <div className="flex gap-2">
@@ -124,6 +124,7 @@ function TemplateEditor() {
               <div className="space-y-2">
                 {variables.map((v) => (
                   <button
+                    type="button"
                     key={v}
                     className="w-full text-left px-3 py-2 text-sm font-mono bg-muted rounded hover:bg-muted/80"
                     onClick={() => {
@@ -161,7 +162,7 @@ function TemplateEditor() {
                 <span className="text-muted-foreground text-sm">
                   Last Updated
                 </span>
-                <DateDisplay date={template.updatedAt} />
+                <DateDisplay date={template.lastUpdated} />
               </div>
             </CardContent>
           </Card>

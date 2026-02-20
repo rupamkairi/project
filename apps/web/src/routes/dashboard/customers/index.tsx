@@ -1,4 +1,4 @@
-import { createRoute } from "@tanstack/react-router";
+import { createRoute, useNavigate } from "@tanstack/react-router";
 import { Route as dashboardLayoutRoute } from "../../__dashboard";
 import {
   PageHeader,
@@ -29,6 +29,8 @@ export const Route = createRoute({
 });
 
 function CustomersList() {
+  const navigate = useNavigate();
+
   const columns: ColumnDef<MockCustomer>[] = [
     {
       accessorKey: "name",
@@ -71,7 +73,7 @@ function CustomersList() {
     },
     {
       id: "actions",
-      cell: () => (
+      cell: ({ row }) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="h-8 w-8 p-0">
@@ -81,7 +83,14 @@ function CustomersList() {
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() =>
+                navigate({
+                  to: "/dashboard/customers/$customerId",
+                  params: { customerId: row.original.id },
+                })
+              }
+            >
               <Eye className="h-4 w-4 mr-2" />
               View Profile
             </DropdownMenuItem>

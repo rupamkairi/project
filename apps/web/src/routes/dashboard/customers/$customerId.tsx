@@ -8,8 +8,6 @@ import {
 } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { mockCustomers, mockOrders } from "@/lib/mock-data";
 import { ArrowLeft, Mail, Phone, MapPin, ShoppingBag } from "lucide-react";
 
@@ -28,7 +26,9 @@ function CustomerDetail() {
     return <div>Customer not found</div>;
   }
 
-  const customerOrders = mockOrders.filter((o) => o.customerId === customerId);
+  const customerOrders = mockOrders.filter(
+    (o) => o.customerEmail === customer.email,
+  );
 
   return (
     <div className="space-y-6">

@@ -14,10 +14,10 @@ export const Route = createRoute({
 });
 
 const stageIcons: Record<string, React.ElementType> = {
-  "pick-pack": Package,
-  "quality-check": CheckCircle,
+  pick_pack: Package,
+  quality_check: CheckCircle,
   dispatch: Truck,
-  "delivery-confirmed": CheckCircle,
+  delivered: CheckCircle,
 };
 
 function WorkflowInstanceDetail() {
@@ -31,17 +31,20 @@ function WorkflowInstanceDetail() {
 
   const order = mockOrders.find((o) => o.id === instance.orderId);
   const currentStageIndex = [
-    "pick-pack",
-    "quality-check",
+    "pick_pack",
+    "quality_check",
     "dispatch",
-    "delivery-confirmed",
+    "delivered",
   ].indexOf(instance.currentStage);
+
+  const workflowStatus =
+    instance.currentStage === "delivered" ? "completed" : "processing";
 
   return (
     <div className="space-y-6">
       <PageHeader
         title={`Workflow ${instance.id}`}
-        description={<StatusBadge status={instance.status} />}
+        description={<StatusBadge status={workflowStatus} />}
         breadcrumbs={[
           { label: "Workflow", href: "/dashboard/workflow" },
           { label: instance.id },
@@ -78,54 +81,51 @@ function WorkflowInstanceDetail() {
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between">
-            {[
-              "pick-pack",
-              "quality-check",
-              "dispatch",
-              "delivery-confirmed",
-            ].map((stage, index) => {
-              const Icon = stageIcons[stage] || Package;
-              const isCompleted = index < currentStageIndex;
-              const isCurrent = index === currentStageIndex;
+            {["pick_pack", "quality_check", "dispatch", "delivered"].map(
+              (stage, index) => {
+                const Icon = stageIcons[stage] || Package;
+                const isCompleted = index < currentStageIndex;
+                const isCurrent = index === currentStageIndex;
 
-              return (
-                <div key={stage} className="flex items-center">
-                  <div
-                    className={`flex flex-col items-center ${
-                      isCompleted
-                        ? "text-green-600"
-                        : isCurrent
-                          ? "text-blue-600"
-                          : "text-gray-400"
-                    }`}
-                  >
+                return (
+                  <div key={stage} className="flex items-center">
                     <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                      className={`flex flex-col items-center ${
                         isCompleted
-                          ? "bg-green-100"
+                          ? "text-green-600"
                           : isCurrent
-                            ? "bg-blue-100"
-                            : "bg-gray-100"
+                            ? "text-blue-600"
+                            : "text-gray-400"
                       }`}
                     >
-                      <Icon className="h-5 w-5" />
+                      <div
+                        className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                          isCompleted
+                            ? "bg-green-100"
+                            : isCurrent
+                              ? "bg-blue-100"
+                              : "bg-gray-100"
+                        }`}
+                      >
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <span className="text-xs mt-2 capitalize">
+                        {stage.replace("_", " ")}
+                      </span>
                     </div>
-                    <span className="text-xs mt-2 capitalize">
-                      {stage.replace("-", " ")}
-                    </span>
+                    {index < 3 && (
+                      <div
+                        className={`w-20 h-1 mx-2 ${
+                          index < currentStageIndex
+                            ? "bg-green-600"
+                            : "bg-gray-200"
+                        }`}
+                      />
+                    )}
                   </div>
-                  {index < 3 && (
-                    <div
-                      className={`w-20 h-1 mx-2 ${
-                        index < currentStageIndex
-                          ? "bg-green-600"
-                          : "bg-gray-200"
-                      }`}
-                    />
-                  )}
-                </div>
-              );
-            })}
+                );
+              },
+            )}
           </div>
         </CardContent>
       </Card>
@@ -137,9 +137,9 @@ function WorkflowInstanceDetail() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {instance.tasks.map((task, i) => (
+              {instance.tasks.map((task) => (
                 <div
-                  key={i}
+                  key={task.id}
                   className="flex items-center justify-between p-3 border rounded-lg"
                 >
                   <div className="flex items-center gap-3">
@@ -155,7 +155,7 @@ function WorkflowInstanceDetail() {
                           : ""
                       }
                     >
-                      {task.name}
+                      {task.title}
                     </span>
                   </div>
                   {!task.completed && (
@@ -180,18 +180,12 @@ function WorkflowInstanceDetail() {
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Assigned To</span>
-              <span>{instance.assignedTo}</span>
+              <span>{instance.assignee || "Unassigned"}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Started</span>
-              <DateDisplay date={instance.startedAt} />
+              <span className="text-muted-foreground">Stage Entered</span>
+              <DateDisplay date={instance.stageEnteredAt} />
             </div>
-            {instance.completedAt && (
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Completed</span>
-                <DateDisplay date={instance.completedAt} />
-              </div>
-            )}
           </CardContent>
         </Card>
       </div>

@@ -1,4 +1,4 @@
-import { createRoute } from "@tanstack/react-router";
+import { createRoute, useNavigate } from "@tanstack/react-router";
 import { Route as dashboardLayoutRoute } from "../../__dashboard";
 import { PageHeader } from "@/components/shared";
 
@@ -40,6 +40,7 @@ const stageColumns = [
 ];
 
 function WorkflowBoard() {
+  const navigate = useNavigate();
   const [instances] = useState(mockWorkflowInstances);
 
   const getInstancesByStage = (stage: string) =>
@@ -64,7 +65,16 @@ function WorkflowBoard() {
 
             <div className="space-y-3">
               {getInstancesByStage(stage.id).map((instance) => (
-                <WorkflowCard key={instance.id} instance={instance} />
+                <WorkflowCard
+                  key={instance.id}
+                  instance={instance}
+                  onClick={() =>
+                    navigate({
+                      to: "/dashboard/workflow/$instanceId",
+                      params: { instanceId: instance.id },
+                    })
+                  }
+                />
               ))}
             </div>
           </div>
@@ -74,12 +84,21 @@ function WorkflowBoard() {
   );
 }
 
-function WorkflowCard({ instance }: { instance: MockWorkflowInstance }) {
+function WorkflowCard({
+  instance,
+  onClick,
+}: {
+  instance: MockWorkflowInstance;
+  onClick: () => void;
+}) {
   const completedTasks = instance.tasks.filter((t) => t.completed).length;
   const totalTasks = instance.tasks.length;
 
   return (
-    <Card className="cursor-pointer hover:shadow-md transition-shadow">
+    <Card
+      className="cursor-pointer hover:shadow-md transition-shadow"
+      onClick={onClick}
+    >
       <CardContent className="p-4">
         <div className="space-y-3">
           <div className="flex items-center justify-between">

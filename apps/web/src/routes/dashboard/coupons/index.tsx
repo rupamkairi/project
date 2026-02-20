@@ -1,4 +1,4 @@
-import { createRoute } from "@tanstack/react-router";
+import { createRoute, useNavigate } from "@tanstack/react-router";
 import { Route as dashboardLayoutRoute } from "../../__dashboard";
 import {
   PageHeader,
@@ -29,6 +29,8 @@ export const Route = createRoute({
 });
 
 function CouponsList() {
+  const navigate = useNavigate();
+
   const columns: ColumnDef<MockCoupon>[] = [
     {
       accessorKey: "code",
@@ -84,7 +86,7 @@ function CouponsList() {
     },
     {
       id: "actions",
-      cell: () => (
+      cell: ({ row }) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="h-8 w-8 p-0">
@@ -94,7 +96,14 @@ function CouponsList() {
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() =>
+                navigate({
+                  to: "/dashboard/coupons/$couponId",
+                  params: { couponId: row.original.id },
+                })
+              }
+            >
               <Pencil className="h-4 w-4 mr-2" />
               Edit
             </DropdownMenuItem>
@@ -114,7 +123,7 @@ function CouponsList() {
         title="Coupons"
         description="Manage discount coupons and promotions"
         actions={
-          <Button>
+          <Button onClick={() => navigate({ to: "/dashboard/coupons/new" })}>
             <Plus className="h-4 w-4 mr-2" />
             Create Coupon
           </Button>

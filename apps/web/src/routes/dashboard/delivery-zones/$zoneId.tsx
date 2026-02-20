@@ -74,7 +74,7 @@ function EditDeliveryZone() {
               <div className="space-y-2">
                 <Label>Coverage Areas</Label>
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {zone.coverage.map((area, i) => (
+                  {zone.pincodes.map((area, i) => (
                     <Badge key={i} variant="secondary">
                       <MapPin className="h-3 w-3 mr-1" />
                       {area}
@@ -99,8 +99,8 @@ function EditDeliveryZone() {
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Free Shipping Min</span>
                 <span className="font-medium">
-                  {zone.minOrderForFree
-                    ? `$${zone.minOrderForFree.toFixed(2)}`
+                  {zone.freeShippingThreshold
+                    ? `$${zone.freeShippingThreshold.toFixed(2)}`
                     : "N/A"}
                 </span>
               </div>

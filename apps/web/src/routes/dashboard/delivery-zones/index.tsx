@@ -1,4 +1,4 @@
-import { createRoute } from "@tanstack/react-router";
+import { createRoute, useNavigate } from "@tanstack/react-router";
 import { Route as dashboardLayoutRoute } from "../../__dashboard";
 import { PageHeader } from "@/components/shared";
 import { DataTable } from "@/components/data-table";
@@ -16,6 +16,7 @@ export const Route = createRoute({
 });
 
 function DeliveryZones() {
+  const navigate = useNavigate();
   const [zones, setZones] = useState(mockDeliveryZones);
 
   const toggleZone = (id: string) => {
@@ -78,7 +79,9 @@ function DeliveryZones() {
         title="Delivery Zones"
         description="Configure shipping zones and rates"
         actions={
-          <Button>
+          <Button
+            onClick={() => navigate({ to: "/dashboard/delivery-zones/new" })}
+          >
             <Plus className="h-4 w-4 mr-2" />
             Add Zone
           </Button>

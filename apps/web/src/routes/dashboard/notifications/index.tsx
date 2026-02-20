@@ -1,4 +1,4 @@
-import { createRoute } from "@tanstack/react-router";
+import { createRoute, useNavigate } from "@tanstack/react-router";
 import { Route as dashboardLayoutRoute } from "../../__dashboard";
 import { PageHeader, DateDisplay } from "@/components/shared";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,8 @@ const channelIcons: Record<string, React.ElementType> = {
 };
 
 function NotificationsList() {
+  const navigate = useNavigate();
+
   const columns: ColumnDef<MockNotificationTemplate>[] = [
     {
       accessorKey: "key",
@@ -67,6 +69,23 @@ function NotificationsList() {
       accessorKey: "lastUpdated",
       header: "Last Updated",
       cell: ({ row }) => <DateDisplay date={row.original.lastUpdated} />,
+    },
+    {
+      id: "actions",
+      cell: ({ row }) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() =>
+            navigate({
+              to: "/dashboard/notifications/$templateKey",
+              params: { templateKey: row.original.key },
+            })
+          }
+        >
+          Edit
+        </Button>
+      ),
     },
   ];
 
