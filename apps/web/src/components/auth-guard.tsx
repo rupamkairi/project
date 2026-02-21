@@ -1,14 +1,15 @@
 import React from "react";
 import { Navigate } from "@tanstack/react-router";
 import { useAuthStore } from "@/lib/store";
+import type { LMSRole } from "@/types/lms";
 
 interface AuthGuardProps {
   children: React.ReactNode;
-  requiredRoles?: ("admin" | "manager" | "user")[];
+  requiredRoles?: LMSRole[];
 }
 
 export function AuthGuard({ children, requiredRoles }: AuthGuardProps) {
-  const { isAuthenticated, user, isLoading } = useAuthStore();
+  const { isAuthenticated, isLoading, hasRole } = useAuthStore();
 
   if (isLoading) {
     return (
@@ -22,13 +23,11 @@ export function AuthGuard({ children, requiredRoles }: AuthGuardProps) {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/login" replace />;
   }
 
-  if (requiredRoles && user) {
-    if (!requiredRoles.includes(user.role)) {
-      return <Navigate to="/" replace />;
-    }
+  if (requiredRoles && !hasRole(requiredRoles)) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;
@@ -39,21 +38,31 @@ export function usePermission(_permission: string): boolean {
 
   if (!user) return false;
 
-  const rolePermissions: Record<string, string[]> = {
-    admin: [
-      "users:read",
-      "users:write",
-      "users:delete",
-      "products:read",
-      "products:write",
-      "products:delete",
-      "orders:read",
-      "orders:write",
+  const rolePermissions: Record<LMSRole, string[]> = {
+    "lms-admin": [
+      "courses:read",
+      "courses:write",
+      "courses:approve",
+      "courses:reject",
+      "learners:read",
+      "learners:write",
+      "learners:suspend",
+      "enrollments:read",
+      "certificates:read",
+      "certificates:revoke",
       "settings:read",
       "settings:write",
+      "notifications:read",
+      "notifications:write",
+      "team:read",
+      "team:write",
+      "analytics:read",
     ],
-    manager: ["products:read", "products:write", "orders:read", "orders:write"],
-    user: ["products:read", "orders:read"],
+    "content-reviewer": [
+      "courses:read",
+      "courses:review",
+      "notifications:read",
+    ],
   };
 
   const permissions = rolePermissions[user.role] || [];

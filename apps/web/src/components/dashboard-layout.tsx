@@ -1,32 +1,175 @@
 import { Outlet, Link, useLocation } from "@tanstack/react-router";
 import {
   LayoutDashboard,
+  BookOpen,
+  ClipboardCheck,
   Users,
-  Package,
-  ShoppingCart,
+  GraduationCap,
+  Award,
+  Bell,
   Settings,
   Menu,
-  Bell,
   Search,
   LogOut,
+  ChevronDown,
+  BarChart3,
+  DollarSign,
+  CreditCard,
+  UserCog,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useUIStore, useAuthStore } from "@/lib/store";
+import { RoleBadge } from "@/components/lms/status-badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
-export const navigation = [
+const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Users", href: "/dashboard/users", icon: Users },
-  { name: "Products", href: "/dashboard/products", icon: Package },
-  { name: "Orders", href: "/dashboard/orders", icon: ShoppingCart },
-  { name: "Settings", href: "/dashboard/settings", icon: Settings },
+  {
+    name: "Analytics",
+    icon: BarChart3,
+    children: [
+      { name: "Overview", href: "/dashboard/analytics", icon: BarChart3 },
+      {
+        name: "Revenue",
+        href: "/dashboard/analytics/revenue",
+        icon: DollarSign,
+      },
+      { name: "Courses", href: "/dashboard/analytics/courses", icon: BookOpen },
+      {
+        name: "Instructors",
+        href: "/dashboard/analytics/instructors",
+        icon: Users,
+      },
+    ],
+  },
+  { name: "Courses", href: "/dashboard/courses", icon: BookOpen },
+  {
+    name: "Review Queue",
+    href: "/dashboard/review-queue",
+    icon: ClipboardCheck,
+  },
+  { name: "Learners", href: "/dashboard/learners", icon: GraduationCap },
+  { name: "Enrollments", href: "/dashboard/enrollments", icon: Users },
+  { name: "Certificates", href: "/dashboard/certificates", icon: Award },
+  { name: "Notifications", href: "/dashboard/notifications", icon: Bell },
+  {
+    name: "Settings",
+    icon: Settings,
+    children: [
+      { name: "General", href: "/dashboard/settings", icon: Settings },
+      {
+        name: "Payments",
+        href: "/dashboard/settings/payments",
+        icon: CreditCard,
+      },
+      { name: "Team", href: "/dashboard/settings/team", icon: UserCog },
+    ],
+  },
 ];
+
+function NavItem({
+  item,
+  isActive,
+}: {
+  item: {
+    name: string;
+    href: string;
+    icon: React.ComponentType<{ className?: string }>;
+  };
+  isActive: boolean;
+}) {
+  return (
+    <Link
+      to={item.href}
+      className={cn(
+        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+        isActive
+          ? "bg-gray-100 text-gray-900"
+          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
+      )}
+    >
+      <item.icon className="h-5 w-5" />
+      {item.name}
+    </Link>
+  );
+}
+
+function NavGroup({
+  item,
+  locationPathname,
+}: {
+  item: {
+    name: string;
+    icon: React.ComponentType<{ className?: string }>;
+    children: Array<{
+      name: string;
+      href: string;
+      icon: React.ComponentType<{ className?: string }>;
+    }>;
+  };
+  locationPathname: string;
+}) {
+  const isAnyChildActive = item.children.some(
+    (child) =>
+      locationPathname === child.href ||
+      locationPathname.startsWith(child.href + "/"),
+  );
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            "flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+            isAnyChildActive
+              ? "bg-gray-100 text-gray-900"
+              : "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
+          )}
+        >
+          <div className="flex items-center gap-3">
+            <item.icon className="h-5 w-5" />
+            {item.name}
+          </div>
+          <ChevronDown className="h-4 w-4" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent side="right" align="start" className="w-48">
+        {item.children.map((child) => (
+          <DropdownMenuItem key={child.href} asChild>
+            <Link
+              to={child.href}
+              className={cn(
+                "flex items-center gap-2",
+                locationPathname === child.href && "bg-muted",
+              )}
+            >
+              <child.icon className="h-4 w-4" />
+              {child.name}
+            </Link>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 export function DashboardLayout() {
   const location = useLocation();
   const { sidebarOpen, toggleSidebar } = useUIStore();
   const { user, logout } = useAuthStore();
+
+  const handleLogout = () => {
+    logout();
+    window.location.href = "/login";
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -38,28 +181,29 @@ export function DashboardLayout() {
           )}
         >
           <div className="flex h-16 items-center justify-center border-b border-gray-200">
-            <h1 className="text-xl font-bold">Admin</h1>
+            <h1 className="text-xl font-bold">LMS Admin</h1>
           </div>
           <nav className="p-4 space-y-1">
             {navigation.map((item) => {
+              if (item.children) {
+                return (
+                  <NavGroup
+                    key={item.name}
+                    item={item as any}
+                    locationPathname={location.pathname}
+                  />
+                );
+              }
               const isActive =
                 location.pathname === item.href ||
                 (item.href !== "/dashboard" &&
                   location.pathname.startsWith(item.href));
               return (
-                <Link
+                <NavItem
                   key={item.name}
-                  to={item.href}
-                  className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                    isActive
-                      ? "bg-gray-100 text-gray-900"
-                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
-                  )}
-                >
-                  <item.icon className="h-5 w-5" />
-                  {item.name}
-                </Link>
+                  item={item as any}
+                  isActive={isActive}
+                />
               );
             })}
           </nav>
@@ -99,11 +243,9 @@ export function DashboardLayout() {
                 </div>
                 <div className="hidden sm:block">
                   <p className="text-sm font-medium">{user?.name || "User"}</p>
-                  <p className="text-xs text-gray-500 capitalize">
-                    {user?.role || "user"}
-                  </p>
+                  <RoleBadge role={user?.role || "lms-admin"} />
                 </div>
-                <Button variant="ghost" size="icon" onClick={logout}>
+                <Button variant="ghost" size="icon" onClick={handleLogout}>
                   <LogOut className="h-4 w-4" />
                 </Button>
               </div>

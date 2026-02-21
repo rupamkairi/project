@@ -1,13 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  role: "admin" | "manager" | "user";
-  avatar?: string;
-}
+import type { User, LMSRole } from "@/types/lms";
+import { mockUser } from "@/lib/mock-data";
 
 export interface AuthState {
   user: User | null;
@@ -17,21 +11,27 @@ export interface AuthState {
   login: (user: User) => void;
   logout: () => void;
   setLoading: (loading: boolean) => void;
+  hasRole: (roles: LMSRole[]) => boolean;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
-      user: null,
-      isAuthenticated: false,
-      isLoading: true,
+    (set, get) => ({
+      user: mockUser,
+      isAuthenticated: true,
+      isLoading: false,
       setUser: (user) => set({ user, isAuthenticated: !!user }),
       login: (user) => set({ user, isAuthenticated: true, isLoading: false }),
       logout: () => set({ user: null, isAuthenticated: false }),
       setLoading: (isLoading) => set({ isLoading }),
+      hasRole: (roles) => {
+        const { user } = get();
+        if (!user) return false;
+        return roles.includes(user.role);
+      },
     }),
     {
-      name: "auth-storage",
+      name: "lms-auth-storage",
     },
   ),
 );

@@ -1,0 +1,160 @@
+{
+  "name": "@projectx/compose-lms",
+  "version": "1.0.0",
+  "description": "Learning Management System compose module for ProjectX - provides courses, enrollments, certificates, cohorts, and live sessions",
+  "type": "module",
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "scripts": {
+    "build": "bun build ./index.ts --outdir ./dist --target bun",
+    "test": "bun test",
+    "lint": "bun lint",
+    "typecheck": "tsc --noEmit"
+  },
+  "exports": {
+    ".": {
+      "types": "./index.ts",
+      "import": "./index.ts",
+      "default": "./index.ts"
+    },
+    "./db/schema": {
+      "types": "./db/schema/index.ts",
+      "import": "./db/schema/index.ts",
+      "default": "./db/schema/index.ts"
+    },
+    "./types": {
+      "types": "./types/index.ts",
+      "import": "./types/index.ts",
+      "default": "./types/index.ts"
+    },
+    "./adapters": {
+      "types": "./adapters/index.ts",
+      "import": "./adapters/index.ts",
+      "default": "./adapters/index.ts"
+    },
+    "./commands": {
+      "types": "./commands/index.ts",
+      "import": "./commands/index.ts",
+      "default": "./commands/index.ts"
+    },
+    "./queries": {
+      "types": "./queries/index.ts",
+      "import": "./queries/index.ts",
+      "default": "./queries/index.ts"
+    },
+    "./hooks": {
+      "types": "./hooks/index.ts",
+      "import": "./hooks/index.ts",
+      "default": "./hooks/index.ts"
+    },
+    "./rules": {
+      "types": "./rules/index.ts",
+      "import": "./rules/index.ts",
+      "default": "./rules/index.ts"
+    },
+    "./routes": {
+      "types": "./routes/index.ts",
+      "import": "./routes/index.ts",
+      "default": "./routes/index.ts"
+    },
+    "./jobs": {
+      "types": "./jobs/index.ts",
+      "import": "./jobs/index.ts",
+      "default": "./jobs/index.ts"
+    },
+    "./events": {
+      "types": "./events/index.ts",
+      "import": "./events/index.ts",
+      "default": "./events/index.ts"
+    },
+    "./fsm": {
+      "types": "./fsm/index.ts",
+      "import": "./fsm/index.ts",
+      "default": "./fsm/index.ts"
+    },
+    "./realtime": {
+      "types": "./realtime/index.ts",
+      "import": "./realtime/index.ts",
+      "default": "./realtime/index.ts"
+    },
+    "./seed": {
+      "types": "./seed/index.ts",
+      "import": "./seed/index.ts",
+      "default": "./seed/index.ts"
+    }
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.45.1",
+    "ulid": "^3.0.2"
+  },
+  "peerDependencies": {
+    "@projectx/core-module": "workspace:*",
+    "@projectx/core-state": "workspace:*",
+    "@projectx/core-cqrs": "workspace:*",
+    "@projectx/core-event": "workspace:*",
+    "@projectx/core-rule": "workspace:*",
+    "@projectx/core-queue": "workspace:*",
+    "@projectx/core-entity": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@projectx/core-module": {
+      "optional": false
+    },
+    "@projectx/core-state": {
+      "optional": false
+    },
+    "@projectx/core-cqrs": {
+      "optional": false
+    },
+    "@projectx/core-event": {
+      "optional": false
+    },
+    "@projectx/core-rule": {
+      "optional": false
+    },
+    "@projectx/core-queue": {
+      "optional": false
+    },
+    "@projectx/core-entity": {
+      "optional": false
+    }
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.9",
+    "typescript": "^5.9.3"
+  },
+  "files": [
+    "index.ts",
+    "types",
+    "db",
+    "adapters",
+    "commands",
+    "queries",
+    "hooks",
+    "rules",
+    "routes",
+    "jobs",
+    "events",
+    "fsm",
+    "realtime",
+    "seed",
+    "README.md"
+  ],
+  "keywords": [
+    "lms",
+    "learning-management-system",
+    "courses",
+    "enrollments",
+    "certificates",
+    "education",
+    "projectx"
+  ],
+  "author": "ProjectX",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/projectx/projectx",
+    "directory": "composes/lms"
+  },
+  "packageManager": "bun@1.0.25"
+}
