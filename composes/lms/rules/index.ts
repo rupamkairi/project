@@ -1,4 +1,4 @@
-import type { RuleExpr, RuleEngine } from "../../../apps/server/src/core/rule";
+import type { RuleExpr, RuleEngine, Op } from "../interfaces";
 
 export type RuleScope =
   | "enrollment:create"
@@ -21,7 +21,7 @@ export interface LMSRule {
 const freeCourseSkipPayment: LMSRule = {
   id: "freeCourseSkipPayment",
   scope: "enrollment:create",
-  condition: { field: "course.price.amount", op: "eq", value: 0 },
+  condition: { field: "course.price.amount", op: "eq" as Op, value: 0 },
   action: "set-status",
   value: "active",
 };
@@ -29,7 +29,7 @@ const freeCourseSkipPayment: LMSRule = {
 const noDuplicateActiveEnrollment: LMSRule = {
   id: "noDuplicateActiveEnrollment",
   scope: "enrollment:create",
-  guard: { field: "existingActiveEnrollmentCount", op: "eq", value: 0 },
+  guard: { field: "existingActiveEnrollmentCount", op: "eq" as Op, value: 0 },
 };
 
 const certificateRequiresThreshold: LMSRule = {
@@ -37,7 +37,7 @@ const certificateRequiresThreshold: LMSRule = {
   scope: "enrollment:complete",
   guard: {
     field: "enrollment.completionPct",
-    op: "gte",
+    op: "gte" as Op,
     value: { ref: "course.completionThreshold" },
   },
 };
@@ -47,8 +47,8 @@ const assignmentNoLateSubmission: LMSRule = {
   scope: "submission:create",
   guard: {
     or: [
-      { field: "allowLateSubmission", op: "eq", value: true },
-      { field: "now", op: "lte", value: { ref: "absoluteDueDate" } },
+      { field: "allowLateSubmission", op: "eq" as Op, value: true },
+      { field: "now", op: "lte" as Op, value: { ref: "absoluteDueDate" } },
     ],
   },
 };
@@ -58,7 +58,7 @@ const assignmentMaxAttempts: LMSRule = {
   scope: "submission:create",
   guard: {
     field: "attemptNumber",
-    op: "lte",
+    op: "lte" as Op,
     value: { ref: "maxAttempts" },
   },
 };
@@ -66,13 +66,13 @@ const assignmentMaxAttempts: LMSRule = {
 const coursePublishRequiresModule: LMSRule = {
   id: "coursePublishRequiresModule",
   scope: "course:submit-review",
-  guard: { field: "course.moduleCount", op: "gt", value: 0 },
+  guard: { field: "course.moduleCount", op: "gt" as Op, value: 0 },
 };
 
 const coursePublishRequiresPrice: LMSRule = {
   id: "coursePublishRequiresPrice",
   scope: "course:submit-review",
-  guard: { field: "course.price", op: "exists" as const, value: true },
+  guard: { field: "course.price", op: "exists" as Op, value: true },
 };
 
 const moduleSequentialLock: LMSRule = {
@@ -80,8 +80,12 @@ const moduleSequentialLock: LMSRule = {
   scope: "module:start",
   guard: {
     or: [
-      { field: "requiredPrevious", op: "eq", value: false },
-      { field: "previousModuleProgress.status", op: "eq", value: "completed" },
+      { field: "requiredPrevious", op: "eq" as Op, value: false },
+      {
+        field: "previousModuleProgress.status",
+        op: "eq" as Op,
+        value: "completed",
+      },
     ],
   },
 };
@@ -91,7 +95,7 @@ const cohortCapacityLimit: LMSRule = {
   scope: "cohort:enroll",
   guard: {
     field: "cohort.enrolledCount",
-    op: "lt",
+    op: "lt" as Op,
     value: { ref: "cohort.capacity" },
   },
 };
@@ -101,7 +105,7 @@ const refundWithinWindow: LMSRule = {
   scope: "enrollment:cancel",
   condition: {
     field: "daysSinceEnrollment",
-    op: "lte",
+    op: "lte" as Op,
     value: { ref: "config.refundWindowDays" },
   },
   action: "allow-refund",
@@ -167,34 +171,4 @@ export function evaluateRule(
     ? evaluateCondition(engine, rule.id, context)
     : false;
   return { guardPassed, conditionMet };
-}
-
-export function explainRule(
-  engine: RuleEngine,
-  rule: LMSRule,
-  context: Record<string, unknown>,
-): {
-  guardExplanation?: ReturnType<RuleEngine["explain"]>;
-  conditionExplanation?: ReturnType<RuleEngine["explain"]>;
-} {
-  const result: {
-    guardExplanation?: ReturnType<RuleEngine["explain"]>;
-    conditionExplanation?: ReturnType<RuleEngine["explain"]>;
-  } = {};
-
-  if (rule.guard) {
-    const expr = engine.resolve(rule.id);
-    if (expr) {
-      result.guardExplanation = engine.explain(expr, context);
-    }
-  }
-
-  if (rule.condition) {
-    const expr = engine.resolve(`${rule.id}:condition`);
-    if (expr) {
-      result.conditionExplanation = engine.explain(expr, context);
-    }
-  }
-
-  return result;
 }

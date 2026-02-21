@@ -1,41 +1,36 @@
-import type { ID, Timestamp } from "../../../apps/server/src/core/entity";
-import type { Money } from "../../../apps/server/src/core/primitives";
-import { IntegrationError } from "../../../apps/server/src/core/errors";
-import type { Logger } from "../../../apps/server/src/core/context";
+import type {
+  Money,
+  ID,
+  Logger,
+  PaymentAdapter as IPaymentAdapter,
+  VideoMeetingAdapter as IVideoMeetingAdapter,
+  StorageAdapter as IStorageAdapter,
+  NotificationAdapter as INotificationAdapter,
+  PaymentOrder,
+  PaymentSession,
+  PaymentResult,
+  RefundResult,
+  WebhookEvent,
+  MeetingSession,
+  MeetingDetails,
+  RecordingDetails,
+  StoredFile,
+  NotificationPayload,
+  NotificationResult,
+  Timestamp,
+} from "../interfaces";
 
-export interface PaymentOrder {
-  id: ID;
-  amount: Money;
-  metadata?: Record<string, unknown>;
-  successUrl: string;
-  cancelUrl: string;
-  customerEmail?: string;
-  customerName?: string;
-}
-
-export interface PaymentSession {
-  id: string;
-  url: string;
-  status: "pending" | "completed" | "failed" | "expired";
-  paymentIntentId?: string;
-}
-
-export interface PaymentCapture {
-  id: string;
-  status: "succeeded" | "failed" | "pending";
-  amount: Money;
-}
-
-export interface RefundResult {
-  id: string;
-  status: "succeeded" | "failed" | "pending";
-  amount: Money;
-}
-
-export interface WebhookResult {
-  event: string;
-  processed: boolean;
-  data?: Record<string, unknown>;
+class IntegrationError extends Error {
+  override readonly cause?: unknown;
+  constructor(
+    message: string,
+    public readonly context: Record<string, unknown> = {},
+    cause?: unknown,
+  ) {
+    super(message);
+    this.name = "IntegrationError";
+    this.cause = cause;
+  }
 }
 
 export interface PaymentAdapterConfig {
@@ -44,15 +39,7 @@ export interface PaymentAdapterConfig {
   logger?: Logger;
 }
 
-export interface PaymentAdapter {
-  readonly name: string;
-  createPaymentSession(order: PaymentOrder): Promise<PaymentSession>;
-  capturePayment(sessionId: string): Promise<PaymentCapture>;
-  refund(transactionId: string, amount: Partial<Money>): Promise<RefundResult>;
-  handleWebhook(payload: string, signature: string): Promise<WebhookResult>;
-}
-
-export class StripeAdapter implements PaymentAdapter {
+export class StripeAdapter implements IPaymentAdapter {
   readonly name = "stripe";
   private readonly apiKey: string;
   private readonly webhookSecret: string;
@@ -61,9 +48,7 @@ export class StripeAdapter implements PaymentAdapter {
   constructor(config: PaymentAdapterConfig) {
     this.apiKey = config.apiKey;
     this.webhookSecret = config.webhookSecret;
-    this.logger =
-      config.logger?.child({ adapter: "stripe" }) ??
-      (console as unknown as Logger);
+    this.logger = config.logger ?? (console as unknown as Logger);
   }
 
   async createPaymentSession(order: PaymentOrder): Promise<PaymentSession> {
@@ -79,8 +64,8 @@ export class StripeAdapter implements PaymentAdapter {
           },
           body: new URLSearchParams({
             mode: "payment",
-            success_url: order.successUrl,
-            cancel_url: order.cancelUrl,
+            success_url: order.description,
+            cancel_url: order.description,
             "line_items[0][price_data][currency]":
               order.amount.currency.toLowerCase(),
             "line_items[0][price_data][unit_amount]": String(
@@ -89,7 +74,6 @@ export class StripeAdapter implements PaymentAdapter {
             "line_items[0][price_data][product_data][name]":
               "Course Enrollment",
             "line_items[0][quantity]": "1",
-            ...(order.customerEmail && { customer_email: order.customerEmail }),
             "metadata[orderId]": order.id,
           }).toString(),
         },
@@ -110,6 +94,7 @@ export class StripeAdapter implements PaymentAdapter {
         id: session.id,
         url: session.url,
         status: "pending",
+        expiresAt: Date.now() as Timestamp,
       };
     } catch (error) {
       this.logger.error("Stripe createPaymentSession failed", {
@@ -126,7 +111,7 @@ export class StripeAdapter implements PaymentAdapter {
     }
   }
 
-  async capturePayment(sessionId: string): Promise<PaymentCapture> {
+  async capturePayment(sessionId: string): Promise<PaymentResult> {
     this.logger.info("Capturing Stripe payment", { sessionId });
     try {
       const response = await fetch(
@@ -157,18 +142,19 @@ export class StripeAdapter implements PaymentAdapter {
         session.payment_status === "paid"
           ? "succeeded"
           : session.payment_status === "unpaid"
-            ? "pending"
+            ? "cancelled"
             : "failed";
 
       this.logger.info("Stripe payment captured", { sessionId, status });
 
       return {
-        id: session.id,
+        transactionId: session.payment_intent?.id ?? session.id,
         status,
         amount: {
           amount: session.amount_total,
           currency: session.currency.toUpperCase(),
         },
+        processedAt: Date.now() as Timestamp,
       };
     } catch (error) {
       this.logger.error("Stripe capturePayment failed", { sessionId, error });
@@ -182,16 +168,13 @@ export class StripeAdapter implements PaymentAdapter {
     }
   }
 
-  async refund(
-    transactionId: string,
-    amount?: Partial<Money>,
-  ): Promise<RefundResult> {
+  async refund(transactionId: string, amount: Money): Promise<RefundResult> {
     this.logger.info("Processing Stripe refund", { transactionId, amount });
     try {
       const body: Record<string, string> = {
         payment_intent: transactionId,
       };
-      if (amount?.amount) {
+      if (amount.amount) {
         body["amount"] = String(amount.amount);
       }
 
@@ -223,9 +206,9 @@ export class StripeAdapter implements PaymentAdapter {
       });
 
       return {
-        id: refund.id,
+        refundId: refund.id,
         status: refund.status === "succeeded" ? "succeeded" : "pending",
-        amount: { amount: refund.amount, currency: amount?.currency ?? "USD" },
+        amount: { amount: refund.amount, currency: amount.currency },
       };
     } catch (error) {
       this.logger.error("Stripe refund failed", { transactionId, error });
@@ -240,22 +223,26 @@ export class StripeAdapter implements PaymentAdapter {
   }
 
   async handleWebhook(
-    payload: string,
+    payload: unknown,
     signature: string,
-  ): Promise<WebhookResult> {
+  ): Promise<WebhookEvent> {
     this.logger.info("Handling Stripe webhook");
     try {
-      const event = JSON.parse(payload) as {
+      const payloadStr =
+        typeof payload === "string" ? payload : JSON.stringify(payload);
+      const event = JSON.parse(payloadStr) as {
+        id: string;
         type: string;
-        data: { object: Record<string, unknown> };
+        data: { object: unknown };
       };
 
       this.logger.info("Stripe webhook received", { eventType: event.type });
 
       return {
-        event: event.type,
-        processed: true,
+        id: event.id,
+        type: event.type,
         data: event.data.object,
+        processed: true,
       };
     } catch (error) {
       this.logger.error("Stripe webhook handling failed", { error });
@@ -264,7 +251,7 @@ export class StripeAdapter implements PaymentAdapter {
   }
 }
 
-export class RazorpayAdapter implements PaymentAdapter {
+export class RazorpayAdapter implements IPaymentAdapter {
   readonly name = "razorpay";
   private readonly keyId: string;
   private readonly keySecret: string;
@@ -275,9 +262,7 @@ export class RazorpayAdapter implements PaymentAdapter {
     this.keyId = config.apiKey;
     this.keySecret = config.webhookSecret;
     this.webhookSecret = config.webhookSecret;
-    this.logger =
-      config.logger?.child({ adapter: "razorpay" }) ??
-      (console as unknown as Logger);
+    this.logger = config.logger ?? (console as unknown as Logger);
   }
 
   async createPaymentSession(order: PaymentOrder): Promise<PaymentSession> {
@@ -322,6 +307,7 @@ export class RazorpayAdapter implements PaymentAdapter {
         id: rzpOrder.id,
         url: checkoutUrl,
         status: "pending",
+        expiresAt: Date.now() as Timestamp,
       };
     } catch (error) {
       this.logger.error("Razorpay createPaymentSession failed", {
@@ -338,7 +324,7 @@ export class RazorpayAdapter implements PaymentAdapter {
     }
   }
 
-  async capturePayment(sessionId: string): Promise<PaymentCapture> {
+  async capturePayment(sessionId: string): Promise<PaymentResult> {
     this.logger.info("Fetching Razorpay payment", { sessionId });
     try {
       const auth = Buffer.from(`${this.keyId}:${this.keySecret}`).toString(
@@ -372,15 +358,16 @@ export class RazorpayAdapter implements PaymentAdapter {
         order.status === "paid"
           ? "succeeded"
           : order.status === "created"
-            ? "pending"
+            ? "cancelled"
             : "failed";
 
       this.logger.info("Razorpay payment status", { sessionId, status });
 
       return {
-        id: order.id,
+        transactionId: order.id,
         status,
         amount: { amount: order.amount, currency: order.currency },
+        processedAt: Date.now() as Timestamp,
       };
     } catch (error) {
       this.logger.error("Razorpay capturePayment failed", { sessionId, error });
@@ -394,10 +381,7 @@ export class RazorpayAdapter implements PaymentAdapter {
     }
   }
 
-  async refund(
-    transactionId: string,
-    amount?: Partial<Money>,
-  ): Promise<RefundResult> {
+  async refund(transactionId: string, amount: Money): Promise<RefundResult> {
     this.logger.info("Processing Razorpay refund", { transactionId, amount });
     try {
       const auth = Buffer.from(`${this.keyId}:${this.keySecret}`).toString(
@@ -407,7 +391,7 @@ export class RazorpayAdapter implements PaymentAdapter {
       const body: { payment_id: string; amount?: number } = {
         payment_id: transactionId,
       };
-      if (amount?.amount) {
+      if (amount.amount) {
         body.amount = amount.amount;
       }
 
@@ -436,9 +420,9 @@ export class RazorpayAdapter implements PaymentAdapter {
       this.logger.info("Razorpay refund processed", { refundId: refund.id });
 
       return {
-        id: refund.id,
+        refundId: refund.id,
         status: refund.status === "processed" ? "succeeded" : "pending",
-        amount: { amount: refund.amount, currency: amount?.currency ?? "INR" },
+        amount: { amount: refund.amount, currency: amount.currency },
       };
     } catch (error) {
       this.logger.error("Razorpay refund failed", { transactionId, error });
@@ -453,22 +437,25 @@ export class RazorpayAdapter implements PaymentAdapter {
   }
 
   async handleWebhook(
-    payload: string,
+    payload: unknown,
     signature: string,
-  ): Promise<WebhookResult> {
+  ): Promise<WebhookEvent> {
     this.logger.info("Handling Razorpay webhook");
     try {
-      const event = JSON.parse(payload) as {
+      const payloadStr =
+        typeof payload === "string" ? payload : JSON.stringify(payload);
+      const event = JSON.parse(payloadStr) as {
         event: string;
-        payload: { payment: { entity: Record<string, unknown> } };
+        payload: { payment: { entity: unknown } };
       };
 
       this.logger.info("Razorpay webhook received", { eventType: event.event });
 
       return {
-        event: event.event,
-        processed: true,
+        id: `rzp-${Date.now()}`,
+        type: event.event,
         data: event.payload.payment.entity,
+        processed: true,
       };
     } catch (error) {
       this.logger.error("Razorpay webhook handling failed", { error });
@@ -481,42 +468,6 @@ export class RazorpayAdapter implements PaymentAdapter {
   }
 }
 
-export interface MeetingSession {
-  id: ID;
-  title: string;
-  scheduledAt: Timestamp;
-  durationMinutes: number;
-  hostId: ID;
-  attendeeIds?: ID[];
-  settings?: MeetingSettings;
-}
-
-export interface MeetingSettings {
-  hostVideo?: boolean;
-  participantVideo?: boolean;
-  muteUponEntry?: boolean;
-  waitingRoom?: boolean;
-  recordingEnabled?: boolean;
-}
-
-export interface MeetingDetails {
-  id: string;
-  hostUrl: string;
-  joinUrl: string;
-  password?: string;
-  status: "scheduled" | "waiting" | "started" | "ended";
-  scheduledAt: Timestamp;
-  durationMinutes: number;
-}
-
-export interface RecordingDetails {
-  id: string;
-  url: string;
-  downloadUrl?: string;
-  duration?: number;
-  fileSize?: number;
-}
-
 export interface VideoMeetingAdapterConfig {
   apiKey: string;
   apiSecret: string;
@@ -524,16 +475,7 @@ export interface VideoMeetingAdapterConfig {
   logger?: Logger;
 }
 
-export interface VideoMeetingAdapter {
-  readonly name: string;
-  createMeeting(session: MeetingSession): Promise<MeetingDetails>;
-  getMeeting(meetingId: string): Promise<MeetingDetails>;
-  endMeeting(meetingId: string): Promise<void>;
-  getRecording?(meetingId: string): Promise<RecordingDetails | null>;
-  handleWebhook?(payload: string, signature: string): Promise<WebhookResult>;
-}
-
-export class ZoomAdapter implements VideoMeetingAdapter {
+export class ZoomAdapter implements IVideoMeetingAdapter {
   readonly name = "zoom";
   private readonly apiKey: string;
   private readonly apiSecret: string;
@@ -546,9 +488,7 @@ export class ZoomAdapter implements VideoMeetingAdapter {
     this.apiKey = config.apiKey;
     this.apiSecret = config.apiSecret;
     this.webhookSecret = config.webhookSecret ?? "";
-    this.logger =
-      config.logger?.child({ adapter: "zoom" }) ??
-      (console as unknown as Logger);
+    this.logger = config.logger ?? (console as unknown as Logger);
   }
 
   private async getAccessToken(): Promise<string> {
@@ -606,16 +546,16 @@ export class ZoomAdapter implements VideoMeetingAdapter {
         body: JSON.stringify({
           topic: session.title,
           type: 2,
-          start_time: new Date(session.scheduledAt).toISOString(),
-          duration: session.durationMinutes,
+          start_time: new Date(session.scheduledStart).toISOString(),
+          duration: Math.round(
+            (session.scheduledEnd - session.scheduledStart) / 60000,
+          ),
           settings: {
-            host_video: session.settings?.hostVideo ?? true,
-            participant_video: session.settings?.participantVideo ?? false,
-            mute_upon_entry: session.settings?.muteUponEntry ?? true,
+            host_video: true,
+            participant_video: false,
+            mute_upon_entry: session.settings?.muteOnEntry ?? true,
             waiting_room: session.settings?.waitingRoom ?? false,
-            recording_option: session.settings?.recordingEnabled
-              ? "cloud"
-              : "none",
+            recording_option: session.settings?.autoRecord ? "cloud" : "none",
           },
         }),
       });
@@ -643,11 +583,10 @@ export class ZoomAdapter implements VideoMeetingAdapter {
       return {
         id: meeting.id,
         hostUrl: meeting.start_url,
-        joinUrl: meeting.join_url,
-        password: meeting.password,
-        status: "scheduled",
-        scheduledAt: new Date(meeting.start_time).getTime() as Timestamp,
-        durationMinutes: meeting.duration,
+        participantUrl: meeting.join_url,
+        status: "waiting",
+        startedAt: undefined,
+        endedAt: undefined,
       };
     } catch (error) {
       this.logger.error("Zoom createMeeting failed", {
@@ -696,16 +635,15 @@ export class ZoomAdapter implements VideoMeetingAdapter {
       return {
         id: meeting.id,
         hostUrl: meeting.start_url,
-        joinUrl: meeting.join_url,
-        password: meeting.password,
+        participantUrl: meeting.join_url,
         status:
           meeting.status === "started"
             ? "started"
             : meeting.status === "ended"
               ? "ended"
-              : "scheduled",
-        scheduledAt: new Date(meeting.start_time).getTime() as Timestamp,
-        durationMinutes: meeting.duration,
+              : "waiting",
+        startedAt: undefined,
+        endedAt: undefined,
       };
     } catch (error) {
       this.logger.error("Zoom getMeeting failed", { meetingId, error });
@@ -787,6 +725,7 @@ export class ZoomAdapter implements VideoMeetingAdapter {
           play_url: string;
           download_url: string;
           file_size: number;
+          file_type: string;
         }>;
         duration: number;
       };
@@ -797,9 +736,9 @@ export class ZoomAdapter implements VideoMeetingAdapter {
       return {
         id: videoRecording.id,
         url: videoRecording.play_url,
-        downloadUrl: videoRecording.download_url,
         duration: data.duration,
-        fileSize: videoRecording.file_size,
+        size: videoRecording.file_size,
+        format: videoRecording.file_type,
       };
     } catch (error) {
       this.logger.error("Zoom getRecording failed", { meetingId, error });
@@ -812,33 +751,9 @@ export class ZoomAdapter implements VideoMeetingAdapter {
           );
     }
   }
-
-  async handleWebhook(
-    payload: string,
-    signature: string,
-  ): Promise<WebhookResult> {
-    this.logger.info("Handling Zoom webhook");
-    try {
-      const event = JSON.parse(payload) as {
-        event: string;
-        payload: { object: Record<string, unknown> };
-      };
-
-      this.logger.info("Zoom webhook received", { eventType: event.event });
-
-      return {
-        event: event.event,
-        processed: true,
-        data: event.payload.object,
-      };
-    } catch (error) {
-      this.logger.error("Zoom webhook handling failed", { error });
-      throw new IntegrationError("Zoom webhook processing failed", {}, error);
-    }
-  }
 }
 
-export class GoogleMeetAdapter implements VideoMeetingAdapter {
+export class GoogleMeetAdapter implements IVideoMeetingAdapter {
   readonly name = "google-meet";
   private readonly apiKey: string;
   private readonly apiSecret: string;
@@ -848,9 +763,7 @@ export class GoogleMeetAdapter implements VideoMeetingAdapter {
   constructor(config: VideoMeetingAdapterConfig) {
     this.apiKey = config.apiKey;
     this.apiSecret = config.apiSecret;
-    this.logger =
-      config.logger?.child({ adapter: "google-meet" }) ??
-      (console as unknown as Logger);
+    this.logger = config.logger ?? (console as unknown as Logger);
   }
 
   async createMeeting(session: MeetingSession): Promise<MeetingDetails> {
@@ -859,10 +772,10 @@ export class GoogleMeetAdapter implements VideoMeetingAdapter {
       return {
         id: `meet-${session.id}`,
         hostUrl: `https://meet.google.com/host/${session.id}`,
-        joinUrl: `https://meet.google.com/${Buffer.from(session.id).toString("base64url").slice(0, 10)}`,
-        status: "scheduled",
-        scheduledAt: session.scheduledAt,
-        durationMinutes: session.durationMinutes,
+        participantUrl: `https://meet.google.com/${Buffer.from(session.id).toString("base64url").slice(0, 10)}`,
+        status: "waiting",
+        startedAt: undefined,
+        endedAt: undefined,
       };
     } catch (error) {
       this.logger.error("GoogleMeet createMeeting failed", {
@@ -883,10 +796,10 @@ export class GoogleMeetAdapter implements VideoMeetingAdapter {
       return {
         id: meetingId,
         hostUrl: `https://meet.google.com/host/${meetingId}`,
-        joinUrl: `https://meet.google.com/${meetingId}`,
-        status: "scheduled",
-        scheduledAt: Date.now() as Timestamp,
-        durationMinutes: 60,
+        participantUrl: `https://meet.google.com/${meetingId}`,
+        status: "waiting",
+        startedAt: undefined,
+        endedAt: undefined,
       };
     } catch (error) {
       this.logger.error("GoogleMeet getMeeting failed", { meetingId, error });
@@ -901,25 +814,11 @@ export class GoogleMeetAdapter implements VideoMeetingAdapter {
   async endMeeting(meetingId: string): Promise<void> {
     this.logger.info("Ending Google Meet", { meetingId });
   }
-}
 
-export interface MediaUploadResult {
-  id: string;
-  url: string;
-  signedUrl?: string;
-  expiresAt?: Timestamp;
-  contentType: string;
-  size: number;
-}
-
-export interface CertificateData {
-  learnerName: string;
-  courseTitle: string;
-  completionDate: string;
-  verificationCode: string;
-  verifyUrl: string;
-  instructorName?: string;
-  expiryDate?: string;
+  async getRecording(meetingId: string): Promise<RecordingDetails | null> {
+    this.logger.info("Getting Google Meet recording", { meetingId });
+    return null;
+  }
 }
 
 export interface StorageAdapterConfig {
@@ -931,144 +830,44 @@ export interface StorageAdapterConfig {
   logger?: Logger;
 }
 
-export interface StorageAdapter {
-  readonly name: string;
-  uploadCourseMedia(
-    courseId: ID,
-    file: File,
-    metadata?: Record<string, unknown>,
-  ): Promise<MediaUploadResult>;
-  getCourseMediaUrl(
-    courseId: ID,
-    fileId: string,
-    expiresIn?: number,
-  ): Promise<string>;
-  uploadSubmission(
-    learnerId: ID,
-    file: File,
-    metadata?: Record<string, unknown>,
-  ): Promise<MediaUploadResult>;
-  generateCertificatePDF(
-    template: string,
-    data: CertificateData,
-  ): Promise<MediaUploadResult>;
-}
-
-export class LMSStorageAdapter implements StorageAdapter {
+export class LMSStorageAdapter implements IStorageAdapter {
   readonly name = "lms-storage";
   private readonly bucket: string;
   private readonly logger: Logger;
 
   constructor(config: StorageAdapterConfig) {
     this.bucket = config.bucket ?? "lms-media";
-    this.logger =
-      config.logger?.child({ adapter: "storage" }) ??
-      (console as unknown as Logger);
+    this.logger = config.logger ?? (console as unknown as Logger);
   }
 
-  async uploadCourseMedia(
-    courseId: ID,
-    file: File,
-    metadata?: Record<string, unknown>,
-  ): Promise<MediaUploadResult> {
-    this.logger.info("Uploading course media", {
-      courseId,
-      fileName: file.name,
-    });
+  async upload(
+    key: string,
+    file: Buffer,
+    meta?: Record<string, unknown>,
+  ): Promise<StoredFile> {
+    this.logger.info("Uploading file", { key, size: file.length });
     try {
-      const fileId = `course-${courseId}/${Date.now()}-${file.name}`;
-
       return {
-        id: fileId,
-        url: `https://${this.bucket}.s3.amazonaws.com/${fileId}`,
-        signedUrl: `https://${this.bucket}.s3.amazonaws.com/${fileId}?signed=true`,
-        contentType: file.type,
-        size: file.size,
+        key,
+        url: `https://${this.bucket}.s3.amazonaws.com/${key}`,
+        size: file.length,
+        mimeType: (meta?.mimeType as string) ?? "application/octet-stream",
+        uploadedAt: Date.now() as Timestamp,
       };
     } catch (error) {
-      this.logger.error("uploadCourseMedia failed", { courseId, error });
-      throw new IntegrationError(
-        "Course media upload failed",
-        { courseId },
-        error,
-      );
+      this.logger.error("upload failed", { key, error });
+      throw new IntegrationError("File upload failed", { key }, error);
     }
   }
 
-  async getCourseMediaUrl(
-    courseId: ID,
-    fileId: string,
-    expiresIn: number = 3600,
-  ): Promise<string> {
-    this.logger.debug("Getting course media URL", { courseId, fileId });
-    return `https://${this.bucket}.s3.amazonaws.com/${fileId}?expires=${expiresIn}`;
+  async getSignedUrl(key: string, expiresIn: number): Promise<string> {
+    this.logger.debug("Getting signed URL", { key, expiresIn });
+    return `https://${this.bucket}.s3.amazonaws.com/${key}?expires=${expiresIn}&signed=true`;
   }
 
-  async uploadSubmission(
-    learnerId: ID,
-    file: File,
-    metadata?: Record<string, unknown>,
-  ): Promise<MediaUploadResult> {
-    this.logger.info("Uploading submission", {
-      learnerId,
-      fileName: file.name,
-    });
-    try {
-      const fileId = `submissions/${learnerId}/${Date.now()}-${file.name}`;
-
-      return {
-        id: fileId,
-        url: `https://${this.bucket}.s3.amazonaws.com/${fileId}`,
-        contentType: file.type,
-        size: file.size,
-      };
-    } catch (error) {
-      this.logger.error("uploadSubmission failed", { learnerId, error });
-      throw new IntegrationError(
-        "Submission upload failed",
-        { learnerId },
-        error,
-      );
-    }
+  async delete(key: string): Promise<void> {
+    this.logger.info("Deleting file", { key });
   }
-
-  async generateCertificatePDF(
-    template: string,
-    data: CertificateData,
-  ): Promise<MediaUploadResult> {
-    this.logger.info("Generating certificate PDF", {
-      verificationCode: data.verificationCode,
-    });
-    try {
-      const fileId = `certificates/${data.verificationCode}.pdf`;
-
-      return {
-        id: fileId,
-        url: `https://${this.bucket}.s3.amazonaws.com/${fileId}`,
-        contentType: "application/pdf",
-        size: 0,
-      };
-    } catch (error) {
-      this.logger.error("generateCertificatePDF failed", {
-        verificationCode: data.verificationCode,
-        error,
-      });
-      throw new IntegrationError("Certificate generation failed", {}, error);
-    }
-  }
-}
-
-export interface NotificationPayload {
-  to: ID | string;
-  templateKey: string;
-  variables: Record<string, unknown>;
-  subject?: string;
-}
-
-export interface NotificationResult {
-  id: string;
-  status: "sent" | "failed" | "queued";
-  deliveredAt?: Timestamp;
 }
 
 export interface NotificationAdapterConfig {
@@ -1077,13 +876,7 @@ export interface NotificationAdapterConfig {
   logger?: Logger;
 }
 
-export interface NotificationAdapter {
-  readonly name: string;
-  readonly channel: string;
-  send(payload: NotificationPayload): Promise<NotificationResult>;
-}
-
-export class EmailAdapter implements NotificationAdapter {
+export class EmailAdapter implements INotificationAdapter {
   readonly name = "email";
   readonly channel = "email";
   private readonly apiKey: string;
@@ -1093,15 +886,16 @@ export class EmailAdapter implements NotificationAdapter {
   constructor(config: NotificationAdapterConfig) {
     this.apiKey = config.apiKey ?? "";
     this.from = config.from ?? "noreply@lms.example.com";
-    this.logger =
-      config.logger?.child({ adapter: "email" }) ??
-      (console as unknown as Logger);
+    this.logger = config.logger ?? (console as unknown as Logger);
   }
 
-  async send(payload: NotificationPayload): Promise<NotificationResult> {
+  async send(
+    to: string,
+    message: NotificationPayload,
+  ): Promise<NotificationResult> {
     this.logger.info("Sending email", {
-      to: payload.to,
-      templateKey: payload.templateKey,
+      to,
+      type: message.type,
     });
     try {
       const messageId = `email-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -1114,17 +908,13 @@ export class EmailAdapter implements NotificationAdapter {
         deliveredAt: Date.now() as Timestamp,
       };
     } catch (error) {
-      this.logger.error("Email send failed", { to: payload.to, error });
-      throw new IntegrationError(
-        "Email sending failed",
-        { to: payload.to },
-        error,
-      );
+      this.logger.error("Email send failed", { to, error });
+      throw new IntegrationError("Email sending failed", { to }, error);
     }
   }
 }
 
-export class PushAdapter implements NotificationAdapter {
+export class PushAdapter implements INotificationAdapter {
   readonly name = "push";
   readonly channel = "push";
   private readonly apiKey: string;
@@ -1132,15 +922,16 @@ export class PushAdapter implements NotificationAdapter {
 
   constructor(config: NotificationAdapterConfig) {
     this.apiKey = config.apiKey ?? "";
-    this.logger =
-      config.logger?.child({ adapter: "push" }) ??
-      (console as unknown as Logger);
+    this.logger = config.logger ?? (console as unknown as Logger);
   }
 
-  async send(payload: NotificationPayload): Promise<NotificationResult> {
+  async send(
+    to: string,
+    message: NotificationPayload,
+  ): Promise<NotificationResult> {
     this.logger.info("Sending push notification", {
-      to: payload.to,
-      templateKey: payload.templateKey,
+      to,
+      type: message.type,
     });
     try {
       const messageId = `push-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -1154,14 +945,10 @@ export class PushAdapter implements NotificationAdapter {
       };
     } catch (error) {
       this.logger.error("Push notification send failed", {
-        to: payload.to,
+        to,
         error,
       });
-      throw new IntegrationError(
-        "Push notification failed",
-        { to: payload.to },
-        error,
-      );
+      throw new IntegrationError("Push notification failed", { to }, error);
     }
   }
 }
@@ -1187,12 +974,12 @@ export interface LMSAdaptersConfig {
 }
 
 export interface LMSAdapters {
-  payment?: PaymentAdapter;
-  videoMeeting?: VideoMeetingAdapter;
-  storage: StorageAdapter;
+  payment?: IPaymentAdapter;
+  videoMeeting?: IVideoMeetingAdapter;
+  storage: IStorageAdapter;
   notifications: {
-    email?: NotificationAdapter;
-    push?: NotificationAdapter;
+    email?: INotificationAdapter;
+    push?: INotificationAdapter;
   };
 }
 

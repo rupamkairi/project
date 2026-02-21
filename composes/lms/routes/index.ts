@@ -1,4 +1,5 @@
-import type { ID, Timestamp, Money } from "../types";
+import type { ID, ActorContext, Logger } from "../interfaces";
+import type { Timestamp, Money } from "../types";
 
 export interface RouteContext {
   actor: {

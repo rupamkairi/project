@@ -1,20 +1,36 @@
 import type {
-  AppModule,
-  ModuleManifest,
-  BootRegistry,
-} from "../../apps/server/src/core/module";
-import type { FSMEngine, StateMachine } from "../../apps/server/src/core/state";
-import type { Command, Query } from "../../apps/server/src/core/cqrs";
-import type { EventBus, DomainEvent } from "../../apps/server/src/core/event";
-import type { RuleEngine } from "../../apps/server/src/core/rule";
-import type { Scheduler } from "../../apps/server/src/core/queue";
-import type { ID } from "../../apps/server/src/core/entity";
+  LMSPluginContext,
+  EventBus,
+  FSMEngine,
+  RuleEngine,
+  Scheduler,
+  RealtimeGateway,
+  Logger,
+  Command,
+  Query,
+  DomainEvent,
+  ID,
+  LMSPluginConfig,
+} from "./interfaces";
 
-import type { ComposeDefinition } from "./types";
+import type {
+  Course,
+  CourseModule,
+  Enrollment,
+  ModuleProgress,
+  Assignment,
+  Submission,
+  Certificate,
+  Cohort,
+  LiveSession,
+  ComposeDefinition,
+} from "./types";
+
+export * from "./interfaces";
+
 export type {
   ID,
   Timestamp,
-  Meta,
   Money,
   CourseStatus,
   CourseType,
@@ -36,6 +52,8 @@ export type {
   Certificate,
   Cohort,
   LiveSession,
+  ComposeDefinition,
+  Entity,
 } from "./types";
 
 export * from "./db/schema/index";
@@ -68,7 +86,6 @@ export type {
   LmsCommand,
   LmsCommandHandler,
   CommandContext,
-  DomainEvent as LmsDomainEvent,
   CourseCreatePayload,
   CourseUpdatePayload,
   CourseSubmitReviewPayload,
@@ -155,7 +172,6 @@ export {
   evaluateGuard,
   evaluateCondition,
   evaluateRule,
-  explainRule,
 } from "./rules";
 
 export type { RuleScope, LMSRule } from "./rules";
@@ -199,27 +215,10 @@ export {
 } from "./adapters";
 
 export type {
-  PaymentOrder,
-  PaymentSession,
-  PaymentCapture,
-  RefundResult,
-  WebhookResult,
   PaymentAdapterConfig,
-  PaymentAdapter,
-  MeetingSession,
-  MeetingSettings,
-  MeetingDetails,
-  RecordingDetails,
   VideoMeetingAdapterConfig,
-  VideoMeetingAdapter,
-  MediaUploadResult,
-  CertificateData,
   StorageAdapterConfig,
-  StorageAdapter,
-  NotificationPayload,
-  NotificationResult,
   NotificationAdapterConfig,
-  NotificationAdapter,
   LMSAdaptersConfig,
   LMSAdapters,
 } from "./adapters";
@@ -242,41 +241,113 @@ export {
 
 export type { SeedContext } from "./seed";
 
-export const LMSCompose: ComposeDefinition = {
-  id: "lms",
-  name: "Learning Management System",
-  version: "1.0.0",
-  modules: [
-    "identity",
-    "catalog",
-    "ledger",
-    "workflow",
-    "scheduling",
-    "document",
-    "notification",
-    "analytics",
-  ],
-  moduleConfig: {
-    catalog: {
-      itemLabel: "Course",
-      enableVariants: false,
-      enablePriceLists: true,
-      enableSearch: true,
-    },
-    scheduling: {
-      resourceLabel: "Instructor",
-      slotLabel: "Live Session",
-      enableRecurring: true,
-    },
-    ledger: {
-      baseCurrency: "USD",
-      supportedCurrencies: ["USD", "EUR", "INR", "GBP"],
-    },
-    workflow: {
-      processLabel: "Course Review",
-    },
-  },
-};
+export {
+  LMS_EVENT_NAMESPACE,
+  CourseEventTypes,
+  EnrollmentEventTypes,
+  ModuleEventTypes,
+  AssignmentEventTypes,
+  SubmissionEventTypes,
+  CertificateEventTypes,
+  CohortEventTypes,
+  SessionEventTypes,
+  lmsEventTypes,
+  lmsEvents,
+  courseCreated,
+  courseUpdated,
+  courseSubmittedForReview,
+  coursePublished,
+  courseRejected,
+  courseArchived,
+  courseRestored,
+  enrollmentCreated,
+  enrollmentActivated,
+  enrollmentCompleted,
+  enrollmentExpired,
+  enrollmentCancelled,
+  enrollmentRefunded,
+  moduleStarted,
+  moduleCompleted,
+  moduleUnlocked,
+  assignmentCreated,
+  assignmentUpdated,
+  assignmentDeleted,
+  submissionCreated,
+  submissionReceived,
+  submissionGraded,
+  submissionReturned,
+  certificateIssued,
+  certificateExpiring,
+  certificateRevoked,
+  cohortCreated,
+  cohortActivated,
+  cohortCompleted,
+  cohortCancelled,
+  sessionCreated,
+  sessionReminderTrigger,
+  sessionStarted,
+  sessionEnded,
+  sessionRecorded,
+  sessionCancelled,
+} from "./events";
+
+export type {
+  LmsEvent,
+  CourseCreatedPayload,
+  CourseUpdatedPayload,
+  CourseSubmittedForReviewPayload,
+  CoursePublishedPayload,
+  CourseRejectedPayload,
+  CourseArchivedPayload,
+  CourseRestoredPayload,
+  EnrollmentCreatedPayload as EventEnrollmentCreatedPayload,
+  EnrollmentActivatedPayload,
+  EnrollmentCompletedPayload as EventEnrollmentCompletedPayload,
+  EnrollmentExpiredPayload,
+  EnrollmentCancelledPayload as EventEnrollmentCancelledPayload,
+  EnrollmentRefundedPayload,
+  ModuleStartedPayload,
+  ModuleCompletedPayload as EventModuleCompletedPayload,
+  ModuleUnlockedPayload,
+  AssignmentCreatedPayload as EventAssignmentCreatedPayload,
+  AssignmentUpdatedPayload as EventAssignmentUpdatedPayload,
+  AssignmentDeletedPayload,
+  SubmissionCreatedPayload as EventSubmissionCreatedPayload,
+  SubmissionReceivedPayload,
+  SubmissionGradedPayload as EventSubmissionGradedPayload,
+  SubmissionReturnedPayload,
+  CertificateIssuedPayload,
+  CertificateExpiringPayload,
+  CertificateRevokedPayload,
+  CohortCreatedPayload as EventCohortCreatedPayload,
+  CohortActivatedPayload,
+  CohortCompletedPayload as EventCohortCompletedPayload,
+  CohortCancelledPayload as EventCohortCancelledPayload,
+  SessionCreatedPayload as EventSessionCreatedPayload,
+  SessionReminderTriggerPayload,
+  SessionStartedPayload,
+  SessionEndedPayload,
+  SessionRecordedPayload,
+  SessionCancelledPayload as EventSessionCancelledPayload,
+} from "./events";
+
+export {
+  LMSRealtimeBridge,
+  createLMSRealtimeBridge,
+  registerLMSRealtime,
+  sessionChannel,
+  instructorChannel,
+  learnerChannel,
+  adminChannel,
+} from "./realtime";
+
+export type {
+  LmsWsMessageType,
+  LmsWsMessage,
+  LmsRealtimePayload,
+  ChannelResolver,
+  EventForwardRule,
+} from "./realtime";
 
 const LMS_EVENTS = [
   "course.created",
@@ -413,262 +484,170 @@ const LMS_ENTITIES = [
   "Category",
 ];
 
-export interface LMSConfig {
-  adapters?: {
-    payment?: {
-      provider: "stripe" | "razorpay";
-      apiKey: string;
-      webhookSecret: string;
-    };
-    videoMeeting?: {
-      provider: "zoom" | "google-meet";
-      apiKey: string;
-      apiSecret: string;
-      webhookSecret?: string;
-    };
-    storage?: {
-      bucket?: string;
-      region?: string;
-    };
-  };
-  features?: {
-    enableCertificates: boolean;
-    enableCohorts: boolean;
-    enableLiveSessions: boolean;
-    enableQuizzes: boolean;
-    enablePeerReview: boolean;
-  };
-  defaults?: {
-    completionThreshold: number;
-    refundWindowDays: number;
-    inactivityNudgeDays: number;
-    sessionReminderMinutes: number[];
-    maxQuizAttempts: number;
-    certificateExpiresAfterDays: number | null;
-  };
-}
+export const LMS_MANIFEST = {
+  id: "lms",
+  name: "Learning Management System",
+  version: "1.0.0",
+  description:
+    "Full-featured LMS compose - courses, enrollments, certificates, cohorts",
+  author: "ProjectX",
+  license: "MIT",
 
-export interface LMSComposeContext {
-  fsmEngine: FSMEngine;
-  eventBus: EventBus;
-  ruleEngine: RuleEngine;
-  scheduler: Scheduler;
-  realtime?: {
-    broadcast: (
-      channel: string,
-      event: string,
-      payload: unknown,
-    ) => Promise<void>;
-  };
-  logger: {
-    info: (msg: string, meta?: Record<string, unknown>) => void;
-    error: (msg: string, meta?: Record<string, unknown>) => void;
-    debug: (msg: string, meta?: Record<string, unknown>) => void;
-  };
-}
+  requiredCapabilities: [
+    "eventBus",
+    "fsmEngine",
+    "ruleEngine",
+    "scheduler",
+    "queue",
+    "database",
+  ],
 
-export class LMSComposeModule implements AppModule {
-  readonly manifest: ModuleManifest;
-  private config: LMSConfig;
-  private context?: LMSComposeContext;
+  optionalCapabilities: ["realtime", "payment", "videoMeeting", "storage"],
+
+  entities: LMS_ENTITIES,
+
+  events: LMS_EVENTS,
+
+  commands: LMS_COMMANDS,
+
+  queries: LMS_QUERIES,
+
+  fsms: LMS_FSMS,
+
+  migrations: [
+    "0001_lms_categories",
+    "0002_lms_courses",
+    "0003_lms_course_modules",
+    "0004_lms_enrollments",
+    "0005_lms_module_progress",
+    "0006_lms_assignments",
+    "0007_lms_submissions",
+    "0008_lms_certificates",
+    "0009_lms_cohorts",
+    "0010_lms_live_sessions",
+    "0011_lms_course_reviews",
+  ],
+} as const;
+
+export const LMSCompose: ComposeDefinition = {
+  id: "lms",
+  name: "Learning Management System",
+  version: "1.0.0",
+  modules: [
+    "identity",
+    "catalog",
+    "ledger",
+    "workflow",
+    "scheduling",
+    "document",
+    "notification",
+    "analytics",
+  ],
+  moduleConfig: {
+    catalog: {
+      itemLabel: "Course",
+      enableVariants: false,
+      enablePriceLists: true,
+      enableSearch: true,
+    },
+    scheduling: {
+      resourceLabel: "Instructor",
+      slotLabel: "Live Session",
+      enableRecurring: true,
+    },
+    ledger: {
+      baseCurrency: "USD",
+      supportedCurrencies: ["USD", "EUR", "INR", "GBP"],
+    },
+    workflow: {
+      processLabel: "Course Review",
+    },
+  },
+};
+
+const DEFAULT_CONFIG: LMSPluginConfig = {
+  features: {
+    enableCertificates: true,
+    enableCohorts: true,
+    enableLiveSessions: true,
+    enableQuizzes: true,
+    enablePeerReview: false,
+  },
+  defaults: {
+    completionThreshold: 80,
+    refundWindowDays: 14,
+    inactivityNudgeDays: 7,
+    sessionReminderMinutes: [1440, 30],
+    maxQuizAttempts: 3,
+    certificateExpiresAfterDays: null,
+  },
+  adapters: {},
+};
+
+export class LMSPlugin {
+  private context: LMSPluginContext | null = null;
   private unsubscribes: (() => void)[] = [];
   private registeredJobIds: string[] = [];
+  private realtimeBridge: unknown = null;
 
-  constructor(config: LMSConfig = {}) {
-    this.config = {
+  constructor(private config: Partial<LMSPluginConfig> = {}) {}
+
+  async init(context: LMSPluginContext): Promise<void> {
+    this.context = context;
+
+    const mergedConfig: LMSPluginConfig = {
+      ...DEFAULT_CONFIG,
+      ...this.config,
       features: {
-        enableCertificates: true,
-        enableCohorts: true,
-        enableLiveSessions: true,
-        enableQuizzes: true,
-        enablePeerReview: false,
+        ...DEFAULT_CONFIG.features,
+        ...this.config.features,
       },
       defaults: {
-        completionThreshold: 80,
-        refundWindowDays: 14,
-        inactivityNudgeDays: 7,
-        sessionReminderMinutes: [1440, 30],
-        maxQuizAttempts: 3,
-        certificateExpiresAfterDays: null,
+        ...DEFAULT_CONFIG.defaults,
+        ...this.config.defaults,
       },
-      ...config,
+      adapters: {
+        ...DEFAULT_CONFIG.adapters,
+        ...this.config.adapters,
+      },
     };
 
-    this.manifest = {
-      id: LMSCompose.id,
-      version: LMSCompose.version ?? "1.0.0",
-      dependsOn: LMSCompose.modules,
-      entities: LMS_ENTITIES,
-      events: LMS_EVENTS,
-      commands: LMS_COMMANDS,
-      queries: LMS_QUERIES,
-      fsms: LMS_FSMS,
-      migrations: [
-        "0001_lms_categories",
-        "0002_lms_courses",
-        "0003_lms_course_modules",
-        "0004_lms_enrollments",
-        "0005_lms_module_progress",
-        "0006_lms_assignments",
-        "0007_lms_submissions",
-        "0008_lms_certificates",
-        "0009_lms_cohorts",
-        "0010_lms_live_sessions",
-        "0011_lms_course_reviews",
-      ],
-    };
-  }
+    (this.context as { config: LMSPluginConfig }).config = mergedConfig;
 
-  setContext(context: LMSComposeContext): void {
-    this.context = context;
-  }
-
-  async boot(registry: BootRegistry): Promise<void> {
-    if (!this.context) {
-      throw new Error(
-        "LMSComposeModule requires context to be set before boot",
-      );
-    }
-
-    const { fsmEngine, eventBus, ruleEngine, scheduler, realtime, logger } =
-      this.context;
-
-    logger.info("LMSComposeModule booting...", {
-      version: this.manifest.version,
+    this.context.logger.info("LMSPlugin initializing...", {
+      version: LMS_MANIFEST.version,
     });
 
-    await this.registerFSMs(fsmEngine, logger);
-    await this.registerCommands(registry, logger);
-    await this.registerQueries(registry, logger);
-    await this.registerHooks(eventBus, logger);
-    await this.registerRules(ruleEngine, logger);
-    await this.registerScheduledJobs(scheduler, logger);
-    await this.registerRealtimeBridge(realtime, logger);
+    await this.registerFSMs();
+    await this.registerHooks();
+    await this.registerRules();
+    await this.registerScheduledJobs();
+    await this.registerRealtimeBridge();
 
-    logger.info("LMSComposeModule booted successfully", {
-      entities: this.manifest.entities.length,
-      events: this.manifest.events.length,
-      commands: this.manifest.commands.length,
-      queries: this.manifest.queries.length,
-      fsms: this.manifest.fsms.length,
+    this.context.logger.info("LMSPlugin initialized successfully", {
+      entities: LMS_MANIFEST.entities.length,
+      events: LMS_MANIFEST.events.length,
+      commands: LMS_MANIFEST.commands.length,
+      queries: LMS_MANIFEST.queries.length,
+      fsms: LMS_MANIFEST.fsms.length,
     });
   }
 
-  private async registerFSMs(
-    engine: FSMEngine,
-    logger: LMSComposeContext["logger"],
-  ): Promise<void> {
-    logger.debug("Registering LMS FSMs...");
+  private async registerFSMs(): Promise<void> {
+    if (!this.context) return;
 
     const { registerLMSFSMs } = await import("./fsm");
-    registerLMSFSMs(engine);
+    registerLMSFSMs(this.context.fsmEngine);
 
-    logger.debug("LMS FSMs registered", { count: LMS_FSMS.length });
-  }
-
-  private async registerCommands(
-    registry: BootRegistry,
-    logger: LMSComposeContext["logger"],
-  ): Promise<void> {
-    logger.debug("Registering LMS commands...");
-
-    const {
-      courseCreateHandler,
-      courseUpdateHandler,
-      courseSubmitReviewHandler,
-      courseApproveHandler,
-      courseRejectHandler,
-      courseArchiveHandler,
-      courseRestoreHandler,
-      moduleCreateHandler,
-      moduleUpdateHandler,
-      moduleDeleteHandler,
-      moduleReorderHandler,
-      enrollmentCreateHandler,
-      enrollmentCancelHandler,
-      enrollmentCompleteHandler,
-      enrollmentPaymentConfirmHandler,
-      progressUpdateHandler,
-      progressCompleteHandler,
-      assignmentCreateHandler,
-      assignmentUpdateHandler,
-      assignmentDeleteHandler,
-      submissionCreateHandler,
-      submissionGradeHandler,
-      certificateCreateHandler,
-      certificateRevokeHandler,
-      cohortCreateHandler,
-      cohortUpdateHandler,
-    } = await import("./commands");
-
-    const commandHandlers: Record<string, unknown> = {
-      "lms.course.create": courseCreateHandler,
-      "lms.course.update": courseUpdateHandler,
-      "lms.course.submitReview": courseSubmitReviewHandler,
-      "lms.course.approve": courseApproveHandler,
-      "lms.course.reject": courseRejectHandler,
-      "lms.course.archive": courseArchiveHandler,
-      "lms.course.restore": courseRestoreHandler,
-      "lms.module.create": moduleCreateHandler,
-      "lms.module.update": moduleUpdateHandler,
-      "lms.module.delete": moduleDeleteHandler,
-      "lms.module.reorder": moduleReorderHandler,
-      "lms.enrollment.create": enrollmentCreateHandler,
-      "lms.enrollment.cancel": enrollmentCancelHandler,
-      "lms.enrollment.complete": enrollmentCompleteHandler,
-      "lms.enrollment.paymentConfirm": enrollmentPaymentConfirmHandler,
-      "lms.progress.update": progressUpdateHandler,
-      "lms.progress.complete": progressCompleteHandler,
-      "lms.assignment.create": assignmentCreateHandler,
-      "lms.assignment.update": assignmentUpdateHandler,
-      "lms.assignment.delete": assignmentDeleteHandler,
-      "lms.submission.create": submissionCreateHandler,
-      "lms.submission.grade": submissionGradeHandler,
-      "lms.certificate.create": certificateCreateHandler,
-      "lms.certificate.revoke": certificateRevokeHandler,
-      "lms.cohort.create": cohortCreateHandler,
-      "lms.cohort.update": cohortUpdateHandler,
-    };
-
-    for (const [type, handler] of Object.entries(commandHandlers)) {
-      registry.registerCommand(
-        type,
-        handler as Parameters<BootRegistry["registerCommand"]>[1],
-      );
-    }
-
-    logger.debug("LMS commands registered", {
-      count: Object.keys(commandHandlers).length,
+    this.context.logger.debug("LMS FSMs registered", {
+      count: LMS_FSMS.length,
     });
   }
 
-  private async registerQueries(
-    registry: BootRegistry,
-    logger: LMSComposeContext["logger"],
-  ): Promise<void> {
-    logger.debug("Registering LMS queries...");
-
-    const { lmsQueryHandlers } = await import("./queries");
-
-    for (const [type, handler] of lmsQueryHandlers) {
-      registry.registerQuery(
-        type,
-        handler as Parameters<BootRegistry["registerQuery"]>[1],
-      );
-    }
-
-    logger.debug("LMS queries registered", { count: lmsQueryHandlers.size });
-  }
-
-  private async registerHooks(
-    eventBus: EventBus,
-    logger: LMSComposeContext["logger"],
-  ): Promise<void> {
-    logger.debug("Registering LMS hooks...");
+  private async registerHooks(): Promise<void> {
+    if (!this.context) return;
 
     const { registerLMSHooks } = await import("./hooks");
-
-    const hookCount = 10;
 
     const createContext = (event: DomainEvent) => {
       const evt = event as {
@@ -703,36 +682,32 @@ export class LMSComposeModule implements AppModule {
     };
 
     this.unsubscribes = registerLMSHooks(
-      eventBus,
+      this.context.eventBus,
       createContext as unknown as Parameters<typeof registerLMSHooks>[1],
     );
 
-    logger.debug("LMS hooks registered", { count: hookCount });
+    this.context.logger.debug("LMS hooks registered", { count: 10 });
   }
 
-  private async registerRules(
-    engine: RuleEngine,
-    logger: LMSComposeContext["logger"],
-  ): Promise<void> {
-    logger.debug("Registering LMS rules...");
+  private async registerRules(): Promise<void> {
+    if (!this.context) return;
 
     const { registerLMSRules, lmsRules } = await import("./rules");
-    registerLMSRules(engine);
+    registerLMSRules(this.context.ruleEngine);
 
-    logger.debug("LMS rules registered", { count: lmsRules.length });
+    this.context.logger.debug("LMS rules registered", {
+      count: lmsRules.length,
+    });
   }
 
-  private async registerScheduledJobs(
-    scheduler: Scheduler,
-    logger: LMSComposeContext["logger"],
-  ): Promise<void> {
-    logger.debug("Registering LMS scheduled jobs...");
+  private async registerScheduledJobs(): Promise<void> {
+    if (!this.context) return;
 
     const { lmsJobs } = await import("./jobs");
 
     for (const job of lmsJobs) {
       try {
-        await scheduler.schedule(
+        await this.context.scheduler.schedule(
           job.cron,
           job.id,
           {},
@@ -740,74 +715,63 @@ export class LMSComposeModule implements AppModule {
         );
         this.registeredJobIds.push(job.id);
       } catch (error) {
-        logger.error("Failed to register scheduled job", {
+        this.context.logger.error("Failed to register scheduled job", {
           jobId: job.id,
           error: error instanceof Error ? error.message : String(error),
         });
       }
     }
 
-    logger.debug("LMS scheduled jobs registered", {
+    this.context.logger.debug("LMS scheduled jobs registered", {
       count: this.registeredJobIds.length,
     });
   }
 
-  private async registerRealtimeBridge(
-    realtime: LMSComposeContext["realtime"],
-    logger: LMSComposeContext["logger"],
-  ): Promise<void> {
-    if (!realtime) {
-      logger.debug("Realtime bridge not available, skipping");
+  private async registerRealtimeBridge(): Promise<void> {
+    if (!this.context) return;
+
+    if (!this.context.realtime) {
+      this.context.logger.debug("Realtime bridge not available, skipping");
       return;
     }
 
-    logger.debug("Registering LMS realtime bridge...");
+    const { createLMSRealtimeBridge, registerLMSRealtime } =
+      await import("./realtime");
 
-    const { eventBus } = this.context!;
+    const bridge = createLMSRealtimeBridge(this.context.realtime);
+    this.realtimeBridge = bridge;
+    registerLMSRealtime(bridge, this.context.eventBus);
 
-    const realtimeEvents = [
-      "session.started",
-      "session.ended",
-      "session.recorded",
-      "cohort.activated",
-      "cohort.completed",
-    ];
+    this.context.logger.debug("LMS realtime bridge registered");
+  }
 
-    for (const eventType of realtimeEvents) {
-      const unsubscribe = eventBus.subscribe(eventType, async (event) => {
-        const orgId = event.orgId;
-        const payload = event.payload as Record<string, unknown>;
+  getRoutes(): import("./routes").RouteDefinition[] {
+    const { createLMSRoutes } = require("./routes");
+    return createLMSRoutes();
+  }
 
-        if (eventType.startsWith("session.")) {
-          const sessionId = payload.sessionId as string;
-          await realtime.broadcast(
-            `org:${orgId}:lms:session:${sessionId}`,
-            eventType,
-            payload,
-          );
-        } else if (eventType.startsWith("cohort.")) {
-          const cohortId = payload.cohortId as string;
-          await realtime.broadcast(
-            `org:${orgId}:lms:cohort:${cohortId}`,
-            eventType,
-            payload,
-          );
-        }
-      });
+  getJobs(): import("./jobs").ScheduledJob[] {
+    const { lmsJobs } = require("./jobs");
+    return [...lmsJobs];
+  }
 
-      this.unsubscribes.push(unsubscribe);
-    }
+  getManifest(): typeof LMS_MANIFEST {
+    return LMS_MANIFEST;
+  }
 
-    logger.debug("LMS realtime bridge registered", {
-      events: realtimeEvents.length,
-    });
+  getConfig(): LMSPluginConfig {
+    return this.context?.config ?? DEFAULT_CONFIG;
+  }
+
+  getComposeDefinition(): ComposeDefinition {
+    return LMSCompose;
   }
 
   async shutdown(): Promise<void> {
     if (!this.context) return;
 
     const { logger } = this.context;
-    logger.info("LMSComposeModule shutting down...");
+    logger.info("LMSPlugin shutting down...");
 
     for (const unsubscribe of this.unsubscribes) {
       try {
@@ -820,26 +784,27 @@ export class LMSComposeModule implements AppModule {
     }
     this.unsubscribes = [];
 
+    if (this.realtimeBridge && typeof this.realtimeBridge === "object") {
+      const bridge = this.realtimeBridge as { unsubscribeAll?: () => void };
+      if (bridge.unsubscribeAll) {
+        bridge.unsubscribeAll();
+      }
+      this.realtimeBridge = null;
+    }
+
     this.registeredJobIds = [];
 
-    logger.info("LMSComposeModule shutdown complete");
-  }
-
-  getConfig(): LMSConfig {
-    return { ...this.config };
-  }
-
-  getComposeDefinition(): ComposeDefinition {
-    return LMSCompose;
+    logger.info("LMSPlugin shutdown complete");
   }
 }
 
-export function createLMSCompose(config?: LMSConfig): LMSComposeModule {
-  return new LMSComposeModule(config);
+export function createLMSPlugin(config?: Partial<LMSPluginConfig>): LMSPlugin {
+  return new LMSPlugin(config);
 }
 
 export default {
+  LMS_MANIFEST,
   LMSCompose,
-  LMSComposeModule,
-  createLMSCompose,
+  LMSPlugin,
+  createLMSPlugin,
 };

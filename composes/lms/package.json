@@ -1,7 +1,7 @@
 {
   "name": "@projectx/compose-lms",
   "version": "1.0.0",
-  "description": "Learning Management System compose module for ProjectX - provides courses, enrollments, certificates, cohorts, and live sessions",
+  "description": "Standalone Learning Management System plugin for ProjectX - self-contained module providing courses, enrollments, certificates, cohorts, and live sessions with zero core package dependencies",
   "type": "module",
   "main": "./index.ts",
   "types": "./index.ts",
@@ -87,41 +87,28 @@
     "drizzle-orm": "^0.45.1",
     "ulid": "^3.0.2"
   },
-  "peerDependencies": {
-    "@projectx/core-module": "workspace:*",
-    "@projectx/core-state": "workspace:*",
-    "@projectx/core-cqrs": "workspace:*",
-    "@projectx/core-event": "workspace:*",
-    "@projectx/core-rule": "workspace:*",
-    "@projectx/core-queue": "workspace:*",
-    "@projectx/core-entity": "workspace:*"
-  },
-  "peerDependenciesMeta": {
-    "@projectx/core-module": {
-      "optional": false
-    },
-    "@projectx/core-state": {
-      "optional": false
-    },
-    "@projectx/core-cqrs": {
-      "optional": false
-    },
-    "@projectx/core-event": {
-      "optional": false
-    },
-    "@projectx/core-rule": {
-      "optional": false
-    },
-    "@projectx/core-queue": {
-      "optional": false
-    },
-    "@projectx/core-entity": {
-      "optional": false
-    }
-  },
   "devDependencies": {
     "@types/bun": "^1.3.9",
     "typescript": "^5.9.3"
+  },
+  "engines": {
+    "typescript": "^5.0.0"
+  },
+  "host": {
+    "requires": {
+      "eventBus": "Event publishing and subscription",
+      "fsmEngine": "State machine management",
+      "ruleEngine": "Business rule evaluation",
+      "scheduler": "Background job scheduling",
+      "database": "PostgreSQL with drizzle-orm"
+    },
+    "optional": {
+      "realtime": "WebSocket support for live sessions",
+      "paymentAdapter": "Stripe or Razorpay for course payments",
+      "videoMeetingAdapter": "Zoom or Google Meet for live sessions",
+      "storageAdapter": "S3 or compatible for media uploads",
+      "notificationAdapter": "Email/push notifications"
+    }
   },
   "files": [
     "index.ts",
@@ -147,7 +134,8 @@
     "enrollments",
     "certificates",
     "education",
-    "projectx"
+    "projectx",
+    "standalone-plugin"
   ],
   "author": "ProjectX",
   "license": "MIT",

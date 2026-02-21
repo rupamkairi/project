@@ -1,8 +1,4 @@
-import type { ID, Timestamp } from "../../../apps/server/src/core/entity";
-import type {
-  Scheduler,
-  JobOptions,
-} from "../../../apps/server/src/core/queue";
+import type { Scheduler, Job, Logger, ID, Timestamp } from "../interfaces";
 
 interface JobContext {
   dispatch<R = unknown>(
@@ -10,11 +6,7 @@ interface JobContext {
     payload: Record<string, unknown>,
   ): Promise<R>;
   query<R = unknown>(type: string, params: Record<string, unknown>): Promise<R>;
-  logger: {
-    error: (msg: string, meta?: Record<string, unknown>) => void;
-    info: (msg: string, meta?: Record<string, unknown>) => void;
-    debug: (msg: string, meta?: Record<string, unknown>) => void;
-  };
+  logger: Logger;
 }
 
 interface ScheduledJob {
@@ -608,13 +600,12 @@ async function registerLMSJobs(
   createContext: () => JobContext,
 ): Promise<void> {
   for (const job of lmsJobs) {
-    const opts: JobOptions = {
-      repeat: {
-        cron: job.cron,
-      },
-    };
-
-    await scheduler.schedule(job.cron, job.id, {}, opts);
+    await scheduler.schedule(
+      job.cron,
+      job.id,
+      {},
+      { repeat: { cron: job.cron } },
+    );
   }
 }
 

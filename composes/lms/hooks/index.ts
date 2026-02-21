@@ -1,10 +1,14 @@
 import type {
   EventBus,
   DomainEvent,
-  Unsubscribe,
-} from "../../../apps/server/src/core/event";
-import type { ID, Timestamp } from "../../../apps/server/src/core/entity";
-import type { Money } from "../../../apps/server/src/core/primitives";
+  Command,
+  Query,
+  Logger,
+  Scheduler,
+  ID,
+  Timestamp,
+  Money,
+} from "../interfaces";
 
 type HookHandler = (event: DomainEvent, ctx: HookContext) => Promise<void>;
 
@@ -32,19 +36,8 @@ interface HookContext {
     type: string;
     payload: Record<string, unknown>;
   }): Promise<void>;
-  logger: {
-    error: (msg: string, meta?: Record<string, unknown>) => void;
-    info: (msg: string, meta?: Record<string, unknown>) => void;
-    debug: (msg: string, meta?: Record<string, unknown>) => void;
-  };
-  scheduler: {
-    runOnce(
-      jobId: string,
-      runAt: Date,
-      data: Record<string, unknown>,
-      handler: (job: { data: Record<string, unknown> }) => Promise<void>,
-    ): Promise<void>;
-  };
+  logger: Logger;
+  scheduler: Scheduler;
 }
 
 interface HookRegistration {
@@ -199,26 +192,14 @@ const enrollmentActivatedHook: HookRegistration = {
 
       await ctx.dispatch("lms.course.incrementEnrolledCount", { courseId });
 
-      await ctx.scheduler.runOnce(
+      await ctx.scheduler.schedule(
+        `0 0 * * *`,
         `enrollment-nudge:${enrollmentId}`,
-        new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        { enrollmentId, learnerId, courseId },
-        async (job) => {
-          const progress = await ctx.query<ModuleProgress>(
-            "lms.enrollment.progress",
-            { id: job.data.enrollmentId as ID },
-          );
-          if (progress && progress.progressPct === 0) {
-            await ctx.dispatch("notification.send", {
-              templateKey: "enrollment.nudge",
-              to: job.data.learnerId as ID,
-              channels: ["email"],
-              variables: {
-                courseTitle: course.title,
-                courseUrl: `${ctx.org.settings.appUrl}/learn/${course.slug}`,
-              },
-            });
-          }
+        {
+          enrollmentId,
+          learnerId,
+          courseId,
+          runAt: Date.now() + 7 * 24 * 60 * 60 * 1000,
         },
       );
     } catch (error) {
@@ -703,8 +684,8 @@ const hookRegistrations: HookRegistration[] = [
 export function registerLMSHooks(
   eventBus: EventBus,
   createContext: (event: DomainEvent) => HookContext,
-): Unsubscribe[] {
-  const unsubscribes: Unsubscribe[] = [];
+): (() => void)[] {
+  const unsubscribes: (() => void)[] = [];
 
   for (const registration of hookRegistrations) {
     const unsubscribe = eventBus.subscribe(

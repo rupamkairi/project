@@ -1,13 +1,27 @@
 import type {
   Query,
-  QueryHandler,
-  SystemContext,
-} from "../../../apps/server/src/core/cqrs";
-import type { ID, Timestamp } from "../../../apps/server/src/core/entity";
-import type {
-  PaginatedResult,
+  ID,
+  Timestamp,
   Money,
-} from "../../../apps/server/src/core/primitives";
+  ActorContext,
+  Logger,
+  Repository,
+  Filter,
+  PaginatedResult,
+} from "../interfaces";
+import type {
+  Course,
+  CourseModule,
+  Enrollment,
+  ModuleProgress,
+  Assignment,
+  Submission,
+  Certificate,
+  Cohort,
+  LiveSession,
+  CourseStatus,
+  CourseLevel,
+} from "../types";
 import type {
   LmsCourse,
   LmsCategory,
@@ -44,9 +58,6 @@ import {
   isNull,
 } from "drizzle-orm";
 
-type CourseStatus = "draft" | "under-review" | "published" | "archived";
-type CourseLevel = "beginner" | "intermediate" | "advanced" | "all-levels";
-
 interface DbClient {
   select(): any;
   insert(table: any): any;
@@ -54,23 +65,23 @@ interface DbClient {
   delete(table: any): any;
 }
 
-interface LmsContext extends SystemContext {
+interface LmsContext extends ActorContext {
   db: DbClient;
 }
 
-function hasRole(ctx: SystemContext, roles: string[]): boolean {
+function hasRole(ctx: ActorContext, roles: string[]): boolean {
   return ctx.actor.roles.some((r) => roles.includes(r));
 }
 
-function isAdmin(ctx: SystemContext): boolean {
+function isAdmin(ctx: ActorContext): boolean {
   return hasRole(ctx, ["lms-admin", "admin"]);
 }
 
-function isInstructor(ctx: SystemContext): boolean {
+function isInstructor(ctx: ActorContext): boolean {
   return hasRole(ctx, ["instructor", "lms-admin", "content-reviewer"]);
 }
 
-function isLearner(ctx: SystemContext): boolean {
+function isLearner(ctx: ActorContext): boolean {
   return hasRole(ctx, [
     "learner",
     "instructor",
@@ -80,7 +91,7 @@ function isLearner(ctx: SystemContext): boolean {
   ]);
 }
 
-function getDb(ctx: SystemContext): DbClient {
+function getDb(ctx: ActorContext): DbClient {
   return (ctx as LmsContext).db;
 }
 
@@ -94,10 +105,14 @@ function createPaginatedResult<T>(
     data,
     total,
     page,
-    limit,
-    hasNext: page * limit < total,
+    pageSize: limit,
   };
 }
+
+export type QueryHandler<TParams = unknown, TResult = unknown> = (
+  query: Query<TParams>,
+  ctx: ActorContext,
+) => Promise<TResult>;
 
 export const queryHandlers: Map<string, QueryHandler<any, any>> = new Map();
 
@@ -116,7 +131,7 @@ queryHandlers.set(
       maxPrice?: number;
       search?: string;
     }>,
-    ctx: SystemContext,
+    ctx: ActorContext,
   ): Promise<PaginatedResult<LmsCourse>> => {
     const db = getDb(ctx);
     const {
@@ -179,7 +194,7 @@ queryHandlers.set(
   "lms.courses.getBySlug",
   async (
     query: Query<{ slug: string }>,
-    ctx: SystemContext,
+    ctx: ActorContext,
   ): Promise<LmsCourse | null> => {
     const db = getDb(ctx);
     const conditions = [
@@ -216,7 +231,7 @@ queryHandlers.set(
         tags?: string[];
       };
     }>,
-    ctx: SystemContext,
+    ctx: ActorContext,
   ): Promise<PaginatedResult<LmsCourse>> => {
     const db = getDb(ctx);
     const { q, page = 1, limit = 20, filters } = query.params;
@@ -259,7 +274,7 @@ queryHandlers.set(
   "lms.categories.list",
   async (
     query: Query<{ parentId?: ID; includeInactive?: boolean }>,
-    ctx: SystemContext,
+    ctx: ActorContext,
   ): Promise<LmsCategory[]> => {
     const db = getDb(ctx);
     const conditions: any[] = [
@@ -289,7 +304,7 @@ queryHandlers.set(
   "lms.courses.modules",
   async (
     query: Query<{ courseId: ID; enrollmentId?: ID }>,
-    ctx: SystemContext,
+    ctx: ActorContext,
   ): Promise<LmsCourseModule[]> => {
     const db = getDb(ctx);
     const courseConditions = [
@@ -364,7 +379,7 @@ queryHandlers.set(
       status?: string;
       courseId?: ID;
     }>,
-    ctx: SystemContext,
+    ctx: ActorContext,
   ): Promise<PaginatedResult<LmsEnrollment>> => {
     const db = getDb(ctx);
     const { page = 1, limit = 20, status, courseId } = query.params;
@@ -397,7 +412,7 @@ queryHandlers.set(
   "lms.enrollments.get",
   async (
     query: Query<{ id: ID }>,
-    ctx: SystemContext,
+    ctx: ActorContext,
   ): Promise<LmsEnrollment | null> => {
     const db = getDb(ctx);
     const [enrollment] = await db
@@ -433,7 +448,7 @@ queryHandlers.set(
   "lms.enrollments.progress",
   async (
     query: Query<{ enrollmentId: ID }>,
-    ctx: SystemContext,
+    ctx: ActorContext,
   ): Promise<{
     enrollment: LmsEnrollment;
     modules: (LmsCourseModule & { progress?: LmsModuleProgress })[];
@@ -502,7 +517,7 @@ queryHandlers.set(
   "lms.learn.course",
   async (
     query: Query<{ courseSlug: string }>,
-    ctx: SystemContext,
+    ctx: ActorContext,
   ): Promise<{
     course: LmsCourse;
     enrollment?: LmsEnrollment;
@@ -559,7 +574,7 @@ queryHandlers.set(
   "lms.learn.module",
   async (
     query: Query<{ courseId: ID; moduleId: ID }>,
-    ctx: SystemContext,
+    ctx: ActorContext,
   ): Promise<{
     module: LmsCourseModule;
     progress?: LmsModuleProgress;
@@ -652,7 +667,7 @@ queryHandlers.set(
   "lms.progress.get",
   async (
     query: Query<{ enrollmentId: ID; moduleId: ID }>,
-    ctx: SystemContext,
+    ctx: ActorContext,
   ): Promise<LmsModuleProgress | null> => {
     const db = getDb(ctx);
     const [enrollment] = await db
@@ -694,7 +709,7 @@ queryHandlers.set(
   "lms.assignments.get",
   async (
     query: Query<{ id: ID }>,
-    ctx: SystemContext,
+    ctx: ActorContext,
   ): Promise<LmsAssignment | null> => {
     const db = getDb(ctx);
     const [assignment] = await db
@@ -742,7 +757,7 @@ queryHandlers.set(
   "lms.submissions.get",
   async (
     query: Query<{ id: ID }>,
-    ctx: SystemContext,
+    ctx: ActorContext,
   ): Promise<LmsSubmission | null> => {
     const db = getDb(ctx);
     const [submission] = await db
@@ -790,7 +805,7 @@ queryHandlers.set(
       limit?: number;
       status?: string;
     }>,
-    ctx: SystemContext,
+    ctx: ActorContext,
   ): Promise<PaginatedResult<LmsSubmission>> => {
     const db = getDb(ctx);
     const { assignmentId, page = 1, limit = 20, status } = query.params;
@@ -869,7 +884,7 @@ queryHandlers.set(
   "lms.certificates.list",
   async (
     query: Query<{ page?: number; limit?: number }>,
-    ctx: SystemContext,
+    ctx: ActorContext,
   ): Promise<PaginatedResult<LmsCertificate>> => {
     const db = getDb(ctx);
     const { page = 1, limit = 20 } = query.params;
@@ -901,7 +916,7 @@ queryHandlers.set(
   "lms.certificates.get",
   async (
     query: Query<{ id: ID }>,
-    ctx: SystemContext,
+    ctx: ActorContext,
   ): Promise<LmsCertificate | null> => {
     const db = getDb(ctx);
     const [certificate] = await db
@@ -930,7 +945,7 @@ queryHandlers.set(
   "lms.certificates.verify",
   async (
     query: Query<{ code: string }>,
-    ctx: SystemContext,
+    ctx: ActorContext,
   ): Promise<{
     valid: boolean;
     certificate?: LmsCertificate;
@@ -969,7 +984,7 @@ queryHandlers.set(
   "lms.certificates.download",
   async (
     query: Query<{ id: ID }>,
-    ctx: SystemContext,
+    ctx: ActorContext,
   ): Promise<{ downloadUrl: string; filename: string } | null> => {
     const db = getDb(ctx);
     const [certificate] = await db
@@ -1009,7 +1024,7 @@ queryHandlers.set(
   "lms.cohorts.get",
   async (
     query: Query<{ id: ID }>,
-    ctx: SystemContext,
+    ctx: ActorContext,
   ): Promise<LmsCohort | null> => {
     const db = getDb(ctx);
     const [cohort] = await db
@@ -1056,7 +1071,7 @@ queryHandlers.set(
   "lms.cohorts.sessions",
   async (
     query: Query<{ cohortId: ID }>,
-    ctx: SystemContext,
+    ctx: ActorContext,
   ): Promise<LmsLiveSession[]> => {
     const db = getDb(ctx);
     const [cohort] = await db
@@ -1115,7 +1130,7 @@ queryHandlers.set(
   "lms.sessions.get",
   async (
     query: Query<{ id: ID }>,
-    ctx: SystemContext,
+    ctx: ActorContext,
   ): Promise<LmsLiveSession | null> => {
     const db = getDb(ctx);
     const [session] = await db
@@ -1160,7 +1175,7 @@ queryHandlers.set(
       limit?: number;
       status?: CourseStatus;
     }>,
-    ctx: SystemContext,
+    ctx: ActorContext,
   ): Promise<PaginatedResult<LmsCourse>> => {
     const db = getDb(ctx);
     if (!isInstructor(ctx)) {
@@ -1201,7 +1216,7 @@ queryHandlers.set(
       limit?: number;
       status?: string;
     }>,
-    ctx: SystemContext,
+    ctx: ActorContext,
   ): Promise<PaginatedResult<LmsEnrollment>> => {
     const db = getDb(ctx);
     const { courseId, page = 1, limit = 20, status } = query.params;
@@ -1254,7 +1269,7 @@ queryHandlers.set(
   "lms.instructor.analytics",
   async (
     query: Query<{ courseId: ID }>,
-    ctx: SystemContext,
+    ctx: ActorContext,
   ): Promise<{
     totalEnrollments: number;
     activeEnrollments: number;
@@ -1334,7 +1349,7 @@ queryHandlers.set(
       limit?: number;
       status?: string;
     }>,
-    ctx: SystemContext,
+    ctx: ActorContext,
   ): Promise<
     PaginatedResult<
       LmsSubmission & { course?: LmsCourse; assignment?: LmsAssignment }
@@ -1439,7 +1454,7 @@ queryHandlers.set(
       instructorId?: ID;
       search?: string;
     }>,
-    ctx: SystemContext,
+    ctx: ActorContext,
   ): Promise<PaginatedResult<LmsCourse>> => {
     const db = getDb(ctx);
     if (!isAdmin(ctx)) {
@@ -1490,7 +1505,7 @@ queryHandlers.set(
       learnerId?: ID;
       status?: string;
     }>,
-    ctx: SystemContext,
+    ctx: ActorContext,
   ): Promise<PaginatedResult<LmsEnrollment>> => {
     const db = getDb(ctx);
     if (!isAdmin(ctx)) {
@@ -1531,7 +1546,7 @@ queryHandlers.set(
       limit?: number;
       search?: string;
     }>,
-    ctx: SystemContext,
+    ctx: ActorContext,
   ): Promise<
     PaginatedResult<{
       learnerId: ID;
@@ -1593,7 +1608,7 @@ queryHandlers.set(
   "lms.admin.analytics",
   async (
     query: Query<{ startDate?: Timestamp; endDate?: Timestamp }>,
-    ctx: SystemContext,
+    ctx: ActorContext,
   ): Promise<{
     totalCourses: number;
     publishedCourses: number;

@@ -1,205 +1,27 @@
 import type {
   Command,
-  CommandHandler,
-  SystemContext,
-} from "../../../apps/server/src/core/cqrs";
-import type {
   ID,
   Timestamp,
+  Money,
+  DomainEvent,
+  ActorContext,
+} from "../interfaces";
+import type {
   Entity,
-  Meta,
-} from "../../../apps/server/src/core/entity";
-import type { Money } from "../../../apps/server/src/core/primitives";
+  Course,
+  CourseModule,
+  Enrollment,
+  ModuleProgress,
+  Assignment,
+  Submission,
+  Certificate,
+  Cohort,
+  LiveSession,
+  EnrollmentStatus,
+} from "../types";
 
-type CourseStatus = "draft" | "under-review" | "published" | "archived";
-type EnrollmentStatus =
-  | "pending-payment"
-  | "active"
-  | "completed"
-  | "expired"
-  | "cancelled"
-  | "refunded";
-type ModuleProgressStatus = "not-started" | "in-progress" | "completed";
-type SubmissionStatus =
-  | "submitted"
-  | "grading"
-  | "graded"
-  | "returned"
-  | "late";
-type CohortStatus = "scheduled" | "active" | "completed" | "cancelled";
-type LiveSessionStatus =
-  | "scheduled"
-  | "live"
-  | "ended"
-  | "cancelled"
-  | "recorded";
-
-interface CertificateTemplate {
-  title: string;
-  body: string;
-  expiresAfterDays?: number;
-  logoDocId?: ID;
-}
-
-interface Course extends Entity {
-  title: string;
-  slug: string;
-  description: string;
-  instructorId: ID;
-  categoryId: ID;
-  status: CourseStatus;
-  type: "self-paced" | "cohort" | "live-only" | "hybrid";
-  level: "beginner" | "intermediate" | "advanced" | "all-levels";
-  language: string;
-  prerequisites: string[];
-  durationHours: number;
-  moduleCount: number;
-  price: Money;
-  compareAtPrice?: Money;
-  currency: string;
-  enrolledCount: number;
-  completedCount: number;
-  rating: number;
-  reviewCount: number;
-  completionThreshold: number;
-  tags: string[];
-  thumbnailDocId?: ID;
-  previewVideoUrl?: string;
-  syllabusDocId?: ID;
-  certificateTemplate: CertificateTemplate;
-  publishedAt?: Timestamp;
-  archivedAt?: Timestamp;
-}
-
-interface CourseModule extends Entity {
-  courseId: ID;
-  title: string;
-  description?: string;
-  order: number;
-  type:
-    | "video"
-    | "article"
-    | "quiz"
-    | "assignment"
-    | "live-session"
-    | "download";
-  contentRef?: string;
-  contentDocId?: ID;
-  estimatedMinutes: number;
-  isFree: boolean;
-  isPublished: boolean;
-  requiredPrevious: boolean;
-}
-
-interface Enrollment extends Entity {
-  learnerId: ID;
-  courseId: ID;
-  cohortId?: ID;
-  status: EnrollmentStatus;
-  paymentId?: ID;
-  couponCode?: string;
-  pricePaid: Money;
-  completionPct: number;
-  completedAt?: Timestamp;
-  certificateId?: ID;
-  expiresAt?: Timestamp;
-  lastAccessedAt?: Timestamp;
-}
-
-interface ModuleProgress extends Entity {
-  enrollmentId: ID;
-  moduleId: ID;
-  learnerId: ID;
-  courseId: ID;
-  status: ModuleProgressStatus;
-  startedAt?: Timestamp;
-  completedAt?: Timestamp;
-  progressPct: number;
-  quizScore?: number;
-  quizAttempts: number;
-  timeSpentSec: number;
-}
-
-interface Assignment extends Entity {
-  courseId: ID;
-  moduleId: ID;
-  title: string;
-  description: string;
-  type: "quiz" | "file-upload" | "text-response" | "peer-review" | "project";
-  dueHoursAfterEnrollment?: number;
-  absoluteDueDate?: Timestamp;
-  maxScore: number;
-  passingScore: number;
-  allowLateSubmission: boolean;
-  maxAttempts: number;
-}
-
-interface Submission extends Entity {
-  assignmentId: ID;
-  learnerId: ID;
-  enrollmentId: ID;
-  attemptNumber: number;
-  status: SubmissionStatus;
-  content?: string;
-  attachmentIds: ID[];
-  score?: number;
-  maxScore: number;
-  feedback?: string;
-  gradedBy?: ID;
-  gradedAt?: Timestamp;
-  submittedAt: Timestamp;
-}
-
-interface Certificate extends Entity {
-  enrollmentId: ID;
-  learnerId: ID;
-  courseId: ID;
-  verificationCode: string;
-  issuedAt: Timestamp;
-  expiresAt?: Timestamp;
-  documentId: ID;
-  revoked: boolean;
-  revokedReason?: string;
-  revokedAt?: Timestamp;
-}
-
-interface Cohort extends Entity {
-  courseId: ID;
-  name: string;
-  instructorId: ID;
-  startDate: Timestamp;
-  endDate: Timestamp;
-  capacity: number;
-  enrolledCount: number;
-  status: CohortStatus;
-  timezone: string;
-  sessionIds: ID[];
-}
-
-interface LiveSession extends Entity {
-  cohortId: ID;
-  courseId: ID;
-  instructorId: ID;
-  title: string;
-  scheduledAt: Timestamp;
-  durationMinutes: number;
-  meetingUrl: string;
-  recordingUrl?: string;
-  status: LiveSessionStatus;
-  attendeeCount: number;
-}
-
-export interface DomainEvent {
-  type: string;
-  payload: Record<string, unknown>;
-  orgId: ID;
-  actorId: ID;
-  timestamp: Timestamp;
-  correlationId: ID;
-}
-
-export interface CommandContext extends SystemContext {
-  emit(event: DomainEvent): void;
+export interface CommandContext extends ActorContext {
+  emit(event: Omit<DomainEvent, "id" | "version" | "occurredAt">): void;
   query<T>(type: string, params: unknown): Promise<T>;
 }
 
@@ -209,26 +31,27 @@ export type LmsCommandHandler<
   TResult = unknown,
 > = (command: TCommand, context: CommandContext) => Promise<TResult>;
 
-function hasRole(ctx: SystemContext, roles: string[]): boolean {
+function hasRole(ctx: ActorContext, roles: string[]): boolean {
   return ctx.actor.roles.some((r) => roles.includes(r));
 }
 
-function isOwn(ctx: SystemContext, entityId: ID): boolean {
+function isOwn(ctx: ActorContext, entityId: ID): boolean {
   return ctx.actor.id === entityId;
 }
 
 function createEvent(
   type: string,
   payload: Record<string, unknown>,
-  ctx: SystemContext,
+  ctx: ActorContext,
   correlationId: ID,
-): DomainEvent {
+): Omit<DomainEvent, "id" | "version" | "occurredAt"> {
   return {
     type,
     payload,
     orgId: ctx.org.id,
     actorId: ctx.actor.id,
-    timestamp: Date.now(),
+    aggregateId: correlationId,
+    aggregateType: "lms",
     correlationId,
   };
 }
@@ -238,7 +61,7 @@ function createEntityBase(orgId: ID): {
   createdAt: Timestamp;
   updatedAt: Timestamp;
   version: number;
-  meta: Meta;
+  meta: Record<string, unknown>;
 } {
   const now = Date.now();
   return {
@@ -258,10 +81,6 @@ function updateEntityBase<T extends Entity>(
     version: entity.version + 1,
   } as Pick<T, "updatedAt" | "version">;
 }
-
-// ============================================================================
-// COURSE COMMANDS
-// ============================================================================
 
 export interface CourseCreatePayload {
   title: string;
@@ -663,10 +482,6 @@ export const courseRestoreHandler: LmsCommandHandler<
   return updatedCourse;
 };
 
-// ============================================================================
-// MODULE COMMANDS
-// ============================================================================
-
 export interface ModuleCreatePayload {
   courseId: ID;
   title: string;
@@ -890,10 +705,6 @@ export const moduleReorderHandler: LmsCommandHandler<
 
   return updatedModules;
 };
-
-// ============================================================================
-// ENROLLMENT COMMANDS
-// ============================================================================
 
 export interface EnrollmentCreatePayload {
   courseId: ID;
@@ -1160,10 +971,6 @@ export const enrollmentPaymentConfirmHandler: LmsCommandHandler<
   return updatedEnrollment;
 };
 
-// ============================================================================
-// PROGRESS COMMANDS
-// ============================================================================
-
 export interface ProgressUpdatePayload {
   enrollmentId: ID;
   moduleId: ID;
@@ -1351,10 +1158,6 @@ export const progressCompleteHandler: LmsCommandHandler<
   return progress;
 };
 
-// ============================================================================
-// ASSIGNMENT COMMANDS
-// ============================================================================
-
 export interface AssignmentCreatePayload {
   courseId: ID;
   moduleId: ID;
@@ -1538,10 +1341,6 @@ export const assignmentDeleteHandler: LmsCommandHandler<
     ),
   );
 };
-
-// ============================================================================
-// SUBMISSION COMMANDS
-// ============================================================================
 
 export interface SubmissionCreatePayload {
   assignmentId: ID;
@@ -1732,10 +1531,6 @@ export const submissionGradeHandler: LmsCommandHandler<
   return updatedSubmission;
 };
 
-// ============================================================================
-// CERTIFICATE COMMANDS
-// ============================================================================
-
 export interface CertificateCreatePayload {
   enrollmentId: ID;
   learnerId: ID;
@@ -1857,10 +1652,6 @@ export const certificateRevokeHandler: LmsCommandHandler<
 
   return updatedCertificate;
 };
-
-// ============================================================================
-// COHORT COMMANDS
-// ============================================================================
 
 export interface CohortCreatePayload {
   courseId: ID;
@@ -2070,10 +1861,6 @@ export const cohortCancelHandler: LmsCommandHandler<
 
   return updatedCohort;
 };
-
-// ============================================================================
-// LIVE SESSION COMMANDS
-// ============================================================================
 
 export interface SessionCreatePayload {
   cohortId: ID;
@@ -2368,57 +2155,51 @@ export const sessionUploadRecordingHandler: LmsCommandHandler<
   return updatedSession;
 };
 
-// ============================================================================
-// COMMAND REGISTRY
-// ============================================================================
+export const lmsCommandHandlers: Record<string, LmsCommandHandler<any, any>> = {
+  "lms.course.create": courseCreateHandler,
+  "lms.course.update": courseUpdateHandler,
+  "lms.course.submit-review": courseSubmitReviewHandler,
+  "lms.course.approve": courseApproveHandler,
+  "lms.course.reject": courseRejectHandler,
+  "lms.course.archive": courseArchiveHandler,
+  "lms.course.restore": courseRestoreHandler,
 
-export const lmsCommandHandlers: Record<string, CommandHandler<any>> = {
-  "lms.course.create": courseCreateHandler as CommandHandler<any>,
-  "lms.course.update": courseUpdateHandler as CommandHandler<any>,
-  "lms.course.submit-review": courseSubmitReviewHandler as CommandHandler<any>,
-  "lms.course.approve": courseApproveHandler as CommandHandler<any>,
-  "lms.course.reject": courseRejectHandler as CommandHandler<any>,
-  "lms.course.archive": courseArchiveHandler as CommandHandler<any>,
-  "lms.course.restore": courseRestoreHandler as CommandHandler<any>,
+  "lms.module.create": moduleCreateHandler,
+  "lms.module.update": moduleUpdateHandler,
+  "lms.module.delete": moduleDeleteHandler,
+  "lms.module.reorder": moduleReorderHandler,
 
-  "lms.module.create": moduleCreateHandler as CommandHandler<any>,
-  "lms.module.update": moduleUpdateHandler as CommandHandler<any>,
-  "lms.module.delete": moduleDeleteHandler as CommandHandler<any>,
-  "lms.module.reorder": moduleReorderHandler as CommandHandler<any>,
+  "lms.enrollment.create": enrollmentCreateHandler,
+  "lms.enrollment.cancel": enrollmentCancelHandler,
+  "lms.enrollment.complete": enrollmentCompleteHandler,
+  "lms.enrollment.payment-confirm": enrollmentPaymentConfirmHandler,
 
-  "lms.enrollment.create": enrollmentCreateHandler as CommandHandler<any>,
-  "lms.enrollment.cancel": enrollmentCancelHandler as CommandHandler<any>,
-  "lms.enrollment.complete": enrollmentCompleteHandler as CommandHandler<any>,
-  "lms.enrollment.payment-confirm":
-    enrollmentPaymentConfirmHandler as CommandHandler<any>,
+  "lms.progress.update": progressUpdateHandler,
+  "lms.progress.complete": progressCompleteHandler,
 
-  "lms.progress.update": progressUpdateHandler as CommandHandler<any>,
-  "lms.progress.complete": progressCompleteHandler as CommandHandler<any>,
+  "lms.assignment.create": assignmentCreateHandler,
+  "lms.assignment.update": assignmentUpdateHandler,
+  "lms.assignment.delete": assignmentDeleteHandler,
 
-  "lms.assignment.create": assignmentCreateHandler as CommandHandler<any>,
-  "lms.assignment.update": assignmentUpdateHandler as CommandHandler<any>,
-  "lms.assignment.delete": assignmentDeleteHandler as CommandHandler<any>,
+  "lms.submission.create": submissionCreateHandler,
+  "lms.submission.grade": submissionGradeHandler,
 
-  "lms.submission.create": submissionCreateHandler as CommandHandler<any>,
-  "lms.submission.grade": submissionGradeHandler as CommandHandler<any>,
+  "lms.certificate.create": certificateCreateHandler,
+  "lms.certificate.revoke": certificateRevokeHandler,
 
-  "lms.certificate.create": certificateCreateHandler as CommandHandler<any>,
-  "lms.certificate.revoke": certificateRevokeHandler as CommandHandler<any>,
+  "lms.cohort.create": cohortCreateHandler,
+  "lms.cohort.update": cohortUpdateHandler,
+  "lms.cohort.cancel": cohortCancelHandler,
 
-  "lms.cohort.create": cohortCreateHandler as CommandHandler<any>,
-  "lms.cohort.update": cohortUpdateHandler as CommandHandler<any>,
-  "lms.cohort.cancel": cohortCancelHandler as CommandHandler<any>,
-
-  "lms.session.create": sessionCreateHandler as CommandHandler<any>,
-  "lms.session.start": sessionStartHandler as CommandHandler<any>,
-  "lms.session.end": sessionEndHandler as CommandHandler<any>,
-  "lms.session.cancel": sessionCancelHandler as CommandHandler<any>,
-  "lms.session.upload-recording":
-    sessionUploadRecordingHandler as CommandHandler<any>,
+  "lms.session.create": sessionCreateHandler,
+  "lms.session.start": sessionStartHandler,
+  "lms.session.end": sessionEndHandler,
+  "lms.session.cancel": sessionCancelHandler,
+  "lms.session.upload-recording": sessionUploadRecordingHandler,
 };
 
 export function registerLmsCommands(mediator: {
-  registerCommand(type: string, handler: CommandHandler<any>): void;
+  registerCommand(type: string, handler: LmsCommandHandler<any, any>): void;
 }): void {
   for (const [type, handler] of Object.entries(lmsCommandHandlers)) {
     mediator.registerCommand(type, handler);

@@ -1,14 +1,52 @@
 import { ulid } from "ulid";
-import type { DB } from "../../../apps/server/src/infra/db/client";
-import { roles } from "../../../apps/server/src/infra/db/schema/identity";
+import type { ID, Logger, DatabaseClient } from "../interfaces";
 import { lmsCategories } from "../db/schema";
-import { wfProcessTemplates } from "../../../apps/server/src/infra/db/schema/workflow";
-import { ntfTemplates } from "../../../apps/server/src/infra/db/schema/notification";
-import { ldgAccounts } from "../../../apps/server/src/infra/db/schema/ledger";
 
-function generateId(): string {
+type DB = DatabaseClient;
+
+function generateId(): ID {
   return ulid();
 }
+
+const lmsRoles = {
+  id: "text",
+  organizationId: "text",
+  name: "text",
+  permissions: "text[]",
+  isSystem: "boolean",
+} as const;
+
+const lmsWfProcessTemplates = {
+  id: "text",
+  organizationId: "text",
+  name: "text",
+  description: "text",
+  entityType: "text",
+  stages: "jsonb",
+  isActive: "boolean",
+} as const;
+
+const lmsNtfTemplates = {
+  id: "text",
+  organizationId: "text",
+  key: "text",
+  channel: "text",
+  subject: "text",
+  body: "text",
+  locale: "text",
+  isSystem: "boolean",
+} as const;
+
+const lmsLdgAccounts = {
+  id: "text",
+  organizationId: "text",
+  code: "text",
+  name: "text",
+  type: "text",
+  currency: "text",
+  isSystem: "boolean",
+  description: "text",
+} as const;
 
 export const lmsRolesSeed = [
   {
@@ -414,130 +452,126 @@ export const lmsDefaultLedgerAccountsSeed = {
 
 export interface SeedContext {
   db: DB;
-  organizationId: string;
+  organizationId: ID;
+  logger?: Logger;
 }
 
 export async function seedLMSRoles(ctx: SeedContext): Promise<void> {
-  console.log("Seeding LMS roles...");
+  ctx.logger?.info("Seeding LMS roles...");
 
   for (const role of lmsRolesSeed) {
-    await ctx.db
-      .insert(roles)
-      .values({
-        id: generateId(),
-        organizationId: ctx.organizationId,
-        name: role.name,
-        permissions: role.permissions,
-        isSystem: true,
-      })
-      .onConflictDoNothing();
+    await ctx.db.execute(
+      `INSERT INTO lms_roles (id, organization_id, name, permissions, is_system)
+       VALUES ($1, $2, $3, $4, true)
+       ON CONFLICT (organization_id, name) DO NOTHING`,
+      [generateId(), ctx.organizationId, role.name, role.permissions],
+    );
   }
 
-  console.log(`✓ LMS roles seeded: ${lmsRolesSeed.length} roles`);
+  ctx.logger?.info(`LMS roles seeded: ${lmsRolesSeed.length} roles`);
 }
 
 export async function seedLMSCategories(ctx: SeedContext): Promise<void> {
-  console.log("Seeding LMS categories...");
+  ctx.logger?.info("Seeding LMS categories...");
 
   for (let i = 0; i < lmsCategoriesSeed.length; i++) {
     const name = lmsCategoriesSeed[i];
-    const slug = name.toLowerCase().replace(/\s+/g, "-");
+    const slug = name!.toLowerCase().replace(/\s+/g, "-");
 
-    await ctx.db
-      .insert(lmsCategories)
-      .values({
-        id: generateId(),
-        organizationId: ctx.organizationId,
-        name,
-        slug,
-        sortOrder: i,
-        status: "active",
-      })
-      .onConflictDoNothing();
+    await ctx.db.execute(
+      `INSERT INTO lms_categories (id, organization_id, name, slug, sort_order, status)
+       VALUES ($1, $2, $3, $4, $5, 'active')
+       ON CONFLICT (organization_id, slug) DO NOTHING`,
+      [generateId(), ctx.organizationId, name, slug, i],
+    );
   }
 
-  console.log(
-    `✓ LMS categories seeded: ${lmsCategoriesSeed.length} categories`,
+  ctx.logger?.info(
+    `LMS categories seeded: ${lmsCategoriesSeed.length} categories`,
   );
 }
 
 export async function seedLMSWorkflowTemplate(ctx: SeedContext): Promise<void> {
-  console.log("Seeding LMS workflow template...");
+  ctx.logger?.info("Seeding LMS workflow template...");
 
-  await ctx.db
-    .insert(wfProcessTemplates)
-    .values({
-      id: lmsCourseReviewWorkflowSeed.id,
-      organizationId: ctx.organizationId,
-      name: lmsCourseReviewWorkflowSeed.name,
-      description: lmsCourseReviewWorkflowSeed.description,
-      entityType: lmsCourseReviewWorkflowSeed.entityType,
-      stages: lmsCourseReviewWorkflowSeed.stages,
-      isActive: true,
-    })
-    .onConflictDoNothing();
+  await ctx.db.execute(
+    `INSERT INTO lms_wf_process_templates (id, organization_id, name, description, entity_type, stages, is_active)
+     VALUES ($1, $2, $3, $4, $5, $6, true)
+     ON CONFLICT (id) DO NOTHING`,
+    [
+      lmsCourseReviewWorkflowSeed.id,
+      ctx.organizationId,
+      lmsCourseReviewWorkflowSeed.name,
+      lmsCourseReviewWorkflowSeed.description,
+      lmsCourseReviewWorkflowSeed.entityType,
+      JSON.stringify(lmsCourseReviewWorkflowSeed.stages),
+    ],
+  );
 
-  console.log("✓ LMS workflow template seeded: COURSE_REVIEW");
+  ctx.logger?.info("LMS workflow template seeded: COURSE_REVIEW");
 }
 
 export async function seedLMSNotificationTemplates(
   ctx: SeedContext,
 ): Promise<void> {
-  console.log("Seeding LMS notification templates...");
+  ctx.logger?.info("Seeding LMS notification templates...");
 
   for (const template of lmsNotificationTemplatesSeed) {
-    await ctx.db
-      .insert(ntfTemplates)
-      .values({
-        id: generateId(),
-        organizationId: ctx.organizationId,
-        key: template.key,
-        channel: template.channel,
-        subject: template.subject,
-        body: template.body,
-        locale: "en",
-        isSystem: true,
-      })
-      .onConflictDoNothing();
+    await ctx.db.execute(
+      `INSERT INTO lms_ntf_templates (id, organization_id, key, channel, subject, body, locale, is_system)
+       VALUES ($1, $2, $3, $4, $5, $6, 'en', true)
+       ON CONFLICT (organization_id, key) DO NOTHING`,
+      [
+        generateId(),
+        ctx.organizationId,
+        template.key,
+        template.channel,
+        template.subject,
+        template.body,
+      ],
+    );
   }
 
-  console.log(
-    `✓ LMS notification templates seeded: ${lmsNotificationTemplatesSeed.length} templates`,
+  ctx.logger?.info(
+    `LMS notification templates seeded: ${lmsNotificationTemplatesSeed.length} templates`,
   );
 }
 
 export async function seedLMSLedgerAccounts(ctx: SeedContext): Promise<void> {
-  console.log("Seeding LMS ledger accounts...");
+  ctx.logger?.info("Seeding LMS ledger accounts...");
 
   const accounts = Object.values(lmsDefaultLedgerAccountsSeed);
 
   for (const account of accounts) {
-    await ctx.db
-      .insert(ldgAccounts)
-      .values({
-        id: generateId(),
-        organizationId: ctx.organizationId,
-        code: account.code,
-        name: account.name,
-        type: account.type,
-        currency: account.currency,
-        isSystem: true,
-        description: account.description,
-      })
-      .onConflictDoNothing();
+    await ctx.db.execute(
+      `INSERT INTO lms_ldg_accounts (id, organization_id, code, name, type, currency, is_system, description)
+       VALUES ($1, $2, $3, $4, $5, $6, true, $7)
+       ON CONFLICT (organization_id, code) DO NOTHING`,
+      [
+        generateId(),
+        ctx.organizationId,
+        account.code,
+        account.name,
+        account.type,
+        account.currency,
+        account.description,
+      ],
+    );
   }
 
-  console.log(`✓ LMS ledger accounts seeded: ${accounts.length} accounts`);
+  ctx.logger?.info(`LMS ledger accounts seeded: ${accounts.length} accounts`);
 }
 
 export async function seedLMSConfigDefaults(_ctx: SeedContext): Promise<void> {
-  console.log("LMS config defaults:");
-  console.log(JSON.stringify(lmsConfigDefaultsSeed, null, 2));
-  console.log("✓ LMS config defaults defined (apply via settings/admin API)");
+  _ctx.logger?.info("LMS config defaults:");
+  _ctx.logger?.info(JSON.stringify(lmsConfigDefaultsSeed, null, 2));
+  _ctx.logger?.info(
+    "LMS config defaults defined (apply via settings/admin API)",
+  );
 }
 
 export async function seedLMSData(ctx: SeedContext): Promise<void> {
-  console.log("Starting LMS seed...");
+  ctx.logger?.info("Starting LMS seed...");
 
   await seedLMSRoles(ctx);
   await seedLMSCategories(ctx);
@@ -546,7 +580,7 @@ export async function seedLMSData(ctx: SeedContext): Promise<void> {
   await seedLMSLedgerAccounts(ctx);
   await seedLMSConfigDefaults(ctx);
 
-  console.log("✓ LMS seed complete");
+  ctx.logger?.info("LMS seed complete");
 }
 
 export default {

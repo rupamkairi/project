@@ -1,12 +1,15 @@
-import type {
-  Entity,
-  ID,
-  Timestamp,
-  Meta,
-} from "../../../apps/server/src/core/entity";
-import type { Money } from "../../../apps/server/src/core/primitives";
+import type { ID, Timestamp, Money } from "../interfaces";
 
-export type { ID, Timestamp, Meta, Money };
+export type { ID, Timestamp, Money };
+
+export interface Entity {
+  id: ID;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  organizationId: ID;
+  meta: Record<string, unknown>;
+  version: number;
+}
 
 export type CourseStatus = "draft" | "under-review" | "published" | "archived";
 export type CourseType = "self-paced" | "cohort" | "live-only" | "hybrid";

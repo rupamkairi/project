@@ -1,9 +1,11 @@
 import type {
-  Action,
-  FSMEngine,
   StateMachine,
   StateNode,
-} from "../../../apps/server/src/core/state";
+  Transition,
+  Action,
+  RuleExpr,
+  FSMEngine,
+} from "../interfaces";
 
 type CourseState = "draft" | "under-review" | "published" | "archived";
 type CourseEvent =

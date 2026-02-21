@@ -1,4 +1,4 @@
-import type { ID, Timestamp, Money } from "../types";
+import type { ID, Timestamp, Money } from "../interfaces";
 
 export const LMS_EVENT_NAMESPACE = "lms";
 

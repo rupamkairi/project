@@ -1,6 +1,4 @@
-import type { RealTimeGateway } from "../../../apps/server/src/core/realtime";
-import type { DomainEvent } from "../../../apps/server/src/core/event";
-import type { ID } from "../../../apps/server/src/core/entity";
+import type { RealtimeGateway, EventBus, DomainEvent, ID } from "../interfaces";
 
 export type LmsWsMessageType =
   | "session:state"
@@ -40,11 +38,11 @@ export interface EventForwardRule {
 }
 
 export class LMSRealtimeBridge {
-  private gateway: RealTimeGateway;
+  private gateway: RealtimeGateway;
   private forwardRules: EventForwardRule[] = [];
   private eventSubscriptions: Array<() => void> = [];
 
-  constructor(gateway: RealTimeGateway) {
+  constructor(gateway: RealtimeGateway) {
     this.gateway = gateway;
     this.setupForwardRules();
   }
@@ -120,7 +118,7 @@ export class LMSRealtimeBridge {
             data: event.payload,
             timestamp: Date.now(),
           };
-          this.gateway.publish(channel, message);
+          this.gateway.broadcast(channel, message.type, message);
         }
       }
     }
@@ -168,12 +166,7 @@ export class LMSRealtimeBridge {
     return "session:state";
   }
 
-  subscribeToEventBus(eventBus: {
-    subscribe: (
-      pattern: string,
-      handler: (event: DomainEvent) => Promise<void>,
-    ) => () => void;
-  }): void {
+  subscribeToEventBus(eventBus: EventBus): void {
     const uniquePatterns = [
       ...new Set(this.forwardRules.map((r) => r.pattern)),
     ];
@@ -195,57 +188,27 @@ export class LMSRealtimeBridge {
 
   broadcastSessionState(orgId: ID, sessionId: ID, state: unknown): void {
     const channel = sessionChannel(orgId, sessionId);
-    const message: LmsWsMessage = {
-      type: "session:state",
-      channel,
-      data: state,
-      timestamp: Date.now(),
-    };
-    this.gateway.publish(channel, message);
+    this.gateway.broadcast(channel, "session:state", state);
   }
 
   broadcastSessionPresence(orgId: ID, sessionId: ID, presence: unknown): void {
     const channel = sessionChannel(orgId, sessionId);
-    const message: LmsWsMessage = {
-      type: "session:presence",
-      channel,
-      data: presence,
-      timestamp: Date.now(),
-    };
-    this.gateway.publish(channel, message);
+    this.gateway.broadcast(channel, "session:presence", presence);
   }
 
   notifyInstructor(orgId: ID, courseId: ID, notification: unknown): void {
     const channel = instructorChannel(orgId, courseId);
-    const message: LmsWsMessage = {
-      type: "enrollment:new",
-      channel,
-      data: notification,
-      timestamp: Date.now(),
-    };
-    this.gateway.publish(channel, message);
+    this.gateway.broadcast(channel, "enrollment:new", notification);
   }
 
   notifyLearner(orgId: ID, learnerId: ID, notification: unknown): void {
     const channel = learnerChannel(orgId, learnerId);
-    const message: LmsWsMessage = {
-      type: "module:unlock",
-      channel,
-      data: notification,
-      timestamp: Date.now(),
-    };
-    this.gateway.publish(channel, message);
+    this.gateway.broadcast(channel, "module:unlock", notification);
   }
 
   notifyAdmin(orgId: ID, notification: unknown): void {
     const channel = adminChannel(orgId);
-    const message: LmsWsMessage = {
-      type: "enrollment:new",
-      channel,
-      data: notification,
-      timestamp: Date.now(),
-    };
-    this.gateway.publish(channel, message);
+    this.gateway.broadcast(channel, "enrollment:new", notification);
   }
 }
 
@@ -258,7 +221,7 @@ export function instructorChannel(orgId: ID, courseId: ID): string {
 }
 
 export function learnerChannel(orgId: ID, actorId: ID): string {
-  return `org:${orgId}:actor:${actorId}:lms`;
+  return `org:${actorId}:actor:${actorId}:lms`;
 }
 
 export function adminChannel(orgId: ID): string {
@@ -267,18 +230,13 @@ export function adminChannel(orgId: ID): string {
 
 export function registerLMSRealtime(
   bridge: LMSRealtimeBridge,
-  eventBus: {
-    subscribe: (
-      pattern: string,
-      handler: (event: DomainEvent) => Promise<void>,
-    ) => () => void;
-  },
+  eventBus: EventBus,
 ): void {
   bridge.subscribeToEventBus(eventBus);
 }
 
 export function createLMSRealtimeBridge(
-  gateway: RealTimeGateway,
+  gateway: RealtimeGateway,
 ): LMSRealtimeBridge {
   return new LMSRealtimeBridge(gateway);
 }
