@@ -6,10 +6,35 @@
       "sourceType": "github",
       "computedHash": "ca96444b70257eb3f4f4c76dfdd4a32312c835fe3c8755d2e3d75ac78d384bfd"
     },
+    "elysiajs": {
+      "source": "elysiajs/skills",
+      "sourceType": "github",
+      "computedHash": "55268e69a2c766ed67e56a0db57544f60cc52dba0c7f024a974baf965e525e1b"
+    },
+    "tanstack-query": {
+      "source": "bobmatnyc/claude-mpm-skills",
+      "sourceType": "github",
+      "computedHash": "d5afd919609c4bb92f8a239a3108606089cdea53d1eca8f17410b361c322f8a0"
+    },
+    "turborepo": {
+      "source": "vercel/turborepo",
+      "sourceType": "github",
+      "computedHash": "e2e6ed7e55ec36c2251f92c78e7aeae289e03088ecf4cb40518a34d8ce2b4199"
+    },
+    "ui-styling": {
+      "source": "mrgoonie/claudekit-skills",
+      "sourceType": "github",
+      "computedHash": "9a53132372424cfd8b40a1ba43bf36f5cb4403850e9556a8b34e53713dd829a1"
+    },
     "vercel-react-best-practices": {
       "source": "vercel-labs/agent-skills",
       "sourceType": "github",
       "computedHash": "3462ec83f862abb2d532953df33a4dbf87f4616849da5d4b5cc7c13601aaf997"
+    },
+    "vite-advanced": {
+      "source": "yonatangross/orchestkit",
+      "sourceType": "github",
+      "computedHash": "f689fffe57572cafe9d6456ff515e8e45dbc8b3f1a195639e5de3e71f9f992ec"
     },
     "web-design-guidelines": {
       "source": "vercel-labs/agent-skills",
@@ -20,6 +45,11 @@
       "source": "vercel/workflow",
       "sourceType": "github",
       "computedHash": "1b2310ae65a52ef542cb5070286fd51eeeee9fb36ba4e99a1a19bd3f50e88885"
+    },
+    "zustand-state-management": {
+      "source": "mindrally/skills",
+      "sourceType": "github",
+      "computedHash": "b63b116969df0dbf9af19249ceb16c9feab1f0f86a348faefc9354da7bfee262"
     }
   }
 }

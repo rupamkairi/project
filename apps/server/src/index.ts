@@ -19,6 +19,7 @@ import { AnalyticsModule } from "./modules/analytics";
 import { EcommerceModule } from "./modules/ecommerce";
 import { adminRoutes, storefrontRoutes } from "./modules/ecommerce/routes";
 import { CoreError, getHttpStatus } from "./core/errors";
+import { mountComposeRoutes, prepareActiveCompose } from "./compose/registry";
 
 // All modules
 const modules = [
@@ -35,75 +36,76 @@ const modules = [
   EcommerceModule,
 ];
 
-// Create module registry
-const moduleRegistry = createModuleRegistry();
-
-// Register all modules in registry
-for (const mod of modules) {
-  // Use any cast to avoid complex type issues
-  const registry = moduleRegistry as any;
-  if (registry.modules) {
-    registry.modules.set(mod.manifest.id, mod);
-  }
-}
-
-// Create Elysia app
-const app = new Elysia()
-  // Plugins
-  .use(cors())
-  .use(swagger())
-  .use(bearer())
-  // Ecommerce routes
-  .use(adminRoutes)
-  .use(storefrontRoutes)
-  // Health check
-  .get("/health", () => ({
-    status: "ok",
-    version: env.APP_VERSION,
-    timestamp: Date.now(),
-  }))
-  // List modules
-  .get("/modules", () => {
-    return modules.map((m) => m.manifest);
-  })
-  // Global error handler
-  .onError(({ error, set }) => {
-    if (error instanceof CoreError) {
-      const status = getHttpStatus(error);
-      set.status = status;
-      return {
-        error: error.name,
-        code: error.code,
-        message:
-          env.NODE_ENV === "production" && status === 500
-            ? "Internal server error"
-            : error.message,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ...(error instanceof CoreError && "failures" in error
-          ? { failures: (error as any).failures }
-          : {}),
-      };
-    }
-
-    // Unknown error
-    set.status = 500;
-    return {
-      error: "InternalServerError",
-      code: "INTERNAL_ERROR",
-      message:
-        env.NODE_ENV === "production" ? "Internal server error" : String(error),
-    };
-  });
-
 async function main() {
+  const compose = await prepareActiveCompose({ schedulerMode: "noop" });
+  const moduleRegistry = createModuleRegistry({
+    bootRegistry: compose.bootRegistry,
+  });
+  moduleRegistry.registerMany(modules);
+
   // Boot all modules
   try {
-    await moduleRegistry.bootAll();
+    await moduleRegistry.bootRegistered();
     console.log("✓ All modules booted");
   } catch (error) {
     console.error("Failed to boot modules:", error);
     process.exit(1);
   }
+
+  const activeCompose = await compose.initialize();
+
+  let app: any = new Elysia()
+    // Plugins
+    .use(cors())
+    .use(swagger())
+    .use(bearer())
+    // Ecommerce routes
+    .use(adminRoutes)
+    .use(storefrontRoutes)
+    // Health check
+    .get("/health", () => ({
+      status: "ok",
+      version: env.APP_VERSION,
+      compose: compose.activeComposeId,
+      timestamp: Date.now(),
+    }))
+    // List modules
+    .get("/modules", () => ({
+      modules: moduleRegistry.getManifests(),
+      compose: activeCompose.manifest,
+    }))
+    // Global error handler
+    .onError(({ error, set }) => {
+      if (error instanceof CoreError) {
+        const status = getHttpStatus(error);
+        set.status = status;
+        return {
+          error: error.name,
+          code: error.code,
+          message:
+            env.NODE_ENV === "production" && status === 500
+              ? "Internal server error"
+              : error.message,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          ...(error instanceof CoreError && "failures" in error
+            ? { failures: (error as any).failures }
+            : {}),
+        };
+      }
+
+      // Unknown error
+      set.status = 500;
+      return {
+        error: "InternalServerError",
+        code: "INTERNAL_ERROR",
+        message:
+          env.NODE_ENV === "production"
+            ? "Internal server error"
+            : String(error),
+      };
+    });
+
+  app = mountComposeRoutes(app, activeCompose.routes);
 
   // Start server
   app.listen(env.PORT, () => {
@@ -111,6 +113,7 @@ async function main() {
 🚀 Server running at http://localhost:${env.PORT}
 📦 Environment: ${env.NODE_ENV}
 🔖 Version: ${env.APP_VERSION}
+🧩 Active Compose: ${compose.activeComposeId}
 📚 API Docs: http://localhost:${env.PORT}/swagger
     `);
   });

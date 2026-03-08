@@ -62,16 +62,38 @@ export interface AppModule {
 
 // Module Registry - manages all modules in the system
 export interface ModuleRegistry {
+  register(module: AppModule): void;
+  registerMany(modules: AppModule[]): void;
   getModule(id: string): AppModule | undefined;
   getAllModules(): AppModule[];
   getManifests(): ModuleManifest[];
+  bootRegistered(): Promise<void>;
   bootAll(): Promise<void>;
   shutdownAll(): Promise<void>;
 }
 
 // Create a module registry
-export function createModuleRegistry(): ModuleRegistry {
+export function createModuleRegistry(options?: {
+  bootRegistry?:
+    | Partial<BootRegistry>
+    | (() => Partial<BootRegistry> | undefined);
+}): ModuleRegistry {
   const modules = new Map<string, AppModule>();
+
+  function createBootRegistry(): BootRegistry {
+    const provided =
+      typeof options?.bootRegistry === "function"
+        ? options.bootRegistry() ?? {}
+        : options?.bootRegistry ?? {};
+
+    return {
+      registerCommand: provided.registerCommand ?? (() => {}),
+      registerQuery: provided.registerQuery ?? (() => {}),
+      registerEventHandler: provided.registerEventHandler ?? (() => {}),
+      registerFSM: provided.registerFSM ?? (() => {}),
+      registerEntity: provided.registerEntity ?? (() => {}),
+    };
+  }
 
   // Sort modules by dependencies
   function topologicalSort(): AppModule[] {
@@ -105,6 +127,16 @@ export function createModuleRegistry(): ModuleRegistry {
   }
 
   return {
+    register(module: AppModule): void {
+      modules.set(module.manifest.id, module);
+    },
+
+    registerMany(entries: AppModule[]): void {
+      for (const module of entries) {
+        modules.set(module.manifest.id, module);
+      }
+    },
+
     getModule(id: string): AppModule | undefined {
       return modules.get(id);
     },
@@ -119,19 +151,16 @@ export function createModuleRegistry(): ModuleRegistry {
         : [];
     },
 
-    async bootAll(): Promise<void> {
+    async bootRegistered(): Promise<void> {
       const sorted = topologicalSort();
       for (const module of sorted) {
-        // Create a simple boot registry that does nothing
-        const registry: BootRegistry = {
-          registerCommand: () => {},
-          registerQuery: () => {},
-          registerEventHandler: () => {},
-          registerFSM: () => {},
-          registerEntity: () => {},
-        };
+        const registry = createBootRegistry();
         await module.boot(registry);
       }
+    },
+
+    async bootAll(): Promise<void> {
+      await this.bootRegistered();
     },
 
     async shutdownAll(): Promise<void> {

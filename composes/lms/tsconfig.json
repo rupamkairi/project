@@ -1,10 +1,11 @@
 {
   "compilerOptions": {
-    "lib": ["ES2022"],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "target": "ES2022",
     "module": "ESNext",
     "moduleDetection": "force",
     "allowJs": true,
+    "jsx": "react-jsx",
 
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
@@ -27,6 +28,7 @@
     "baseUrl": ".",
     "paths": {
       "@adapters/*": ["./adapters/*"],
+      "@/*": ["../../apps/web/src/*"],
       "@commands/*": ["./commands/*"],
       "@db/*": ["./db/*"],
       "@events/*": ["./events/*"],

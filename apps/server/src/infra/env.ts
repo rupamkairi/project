@@ -8,6 +8,7 @@ const envSchema = z.object({
     .enum(["development", "production", "test"])
     .default("development"),
   APP_VERSION: z.string().default("0.1.0"),
+  ACTIVE_COMPOSE: z.string().default("lms"),
 
   // Neon (Postgres)
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
