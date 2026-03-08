@@ -16,6 +16,8 @@ import { DocumentModule } from "./modules/document";
 import { NotificationModule } from "./modules/notification";
 import { GeoModule } from "./modules/geo";
 import { AnalyticsModule } from "./modules/analytics";
+import { EcommerceModule } from "./modules/ecommerce";
+import { adminRoutes, storefrontRoutes } from "./modules/ecommerce/routes";
 import { CoreError, getHttpStatus } from "./core/errors";
 
 // All modules
@@ -30,6 +32,7 @@ const modules = [
   NotificationModule,
   GeoModule,
   AnalyticsModule,
+  EcommerceModule,
 ];
 
 // Create module registry
@@ -50,6 +53,9 @@ const app = new Elysia()
   .use(cors())
   .use(swagger())
   .use(bearer())
+  // Ecommerce routes
+  .use(adminRoutes)
+  .use(storefrontRoutes)
   // Health check
   .get("/health", () => ({
     status: "ok",
