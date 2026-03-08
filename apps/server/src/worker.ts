@@ -17,7 +17,6 @@ import { DocumentModule } from "./modules/document";
 import { NotificationModule } from "./modules/notification";
 import { GeoModule } from "./modules/geo";
 import { AnalyticsModule } from "./modules/analytics";
-import { prepareActiveCompose } from "./compose/registry";
 
 // All modules with their queue names
 const moduleQueues = [
@@ -44,10 +43,7 @@ async function main() {
   console.log(`Environment: ${env.NODE_ENV}`);
   console.log(`Version: ${env.APP_VERSION}`);
 
-  const compose = await prepareActiveCompose({ schedulerMode: "real" });
-  const moduleRegistry = createModuleRegistry({
-    bootRegistry: compose.bootRegistry,
-  });
+  const moduleRegistry = createModuleRegistry();
   moduleRegistry.registerMany(moduleQueues.map(({ module }) => module));
 
   // Boot all modules
@@ -58,9 +54,6 @@ async function main() {
     console.error("Failed to boot modules:", error);
     process.exit(1);
   }
-
-  const activeCompose = await compose.initialize();
-  console.log(`✓ Initialized compose: ${compose.activeComposeId}`);
 
   // Create queues and workers for each module
   for (const { module: _mod, queues } of moduleQueues) {
@@ -80,17 +73,6 @@ async function main() {
       console.log(`✓ Created worker: ${queueName}`);
     }
   }
-
-  const composeQueueName = `compose:${compose.activeComposeId}`;
-  createQueue(composeQueueName);
-  const composeWorker = createWorker(composeQueueName, async (job) => {
-    console.log(`Processing compose job ${job.id} (${job.name})`);
-    return { processed: true, compose: compose.activeComposeId };
-  });
-  workers.push({ name: composeQueueName, worker: composeWorker });
-  console.log(
-    `✓ Created compose worker: ${composeQueueName} (${activeCompose.jobs.length} scheduled jobs)`,
-  );
 
   console.log("\nWorker is running. Press Ctrl+C to stop.");
 

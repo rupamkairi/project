@@ -2,8 +2,7 @@
   "name": "projectx",
   "private": true,
   "workspaces": [
-    "apps/*",
-    "composes/*"
+    "apps/*"
   ],
   "scripts": {
     "build": "turbo run build",

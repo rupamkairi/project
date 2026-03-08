@@ -11,4 +11,3 @@ export * from "./document";
 export * from "./notification";
 export * from "./geo";
 export * from "./analytics";
-export * from "./ecommerce";

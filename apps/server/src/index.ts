@@ -16,10 +16,7 @@ import { DocumentModule } from "./modules/document";
 import { NotificationModule } from "./modules/notification";
 import { GeoModule } from "./modules/geo";
 import { AnalyticsModule } from "./modules/analytics";
-import { EcommerceModule } from "./modules/ecommerce";
-import { adminRoutes, storefrontRoutes } from "./modules/ecommerce/routes";
 import { CoreError, getHttpStatus } from "./core/errors";
-import { mountComposeRoutes, prepareActiveCompose } from "./compose/registry";
 
 // All modules
 const modules = [
@@ -33,14 +30,10 @@ const modules = [
   NotificationModule,
   GeoModule,
   AnalyticsModule,
-  EcommerceModule,
 ];
 
 async function main() {
-  const compose = await prepareActiveCompose({ schedulerMode: "noop" });
-  const moduleRegistry = createModuleRegistry({
-    bootRegistry: compose.bootRegistry,
-  });
+  const moduleRegistry = createModuleRegistry();
   moduleRegistry.registerMany(modules);
 
   // Boot all modules
@@ -52,27 +45,20 @@ async function main() {
     process.exit(1);
   }
 
-  const activeCompose = await compose.initialize();
-
   let app: any = new Elysia()
     // Plugins
     .use(cors())
     .use(swagger())
     .use(bearer())
-    // Ecommerce routes
-    .use(adminRoutes)
-    .use(storefrontRoutes)
     // Health check
     .get("/health", () => ({
       status: "ok",
       version: env.APP_VERSION,
-      compose: compose.activeComposeId,
       timestamp: Date.now(),
     }))
     // List modules
     .get("/modules", () => ({
       modules: moduleRegistry.getManifests(),
-      compose: activeCompose.manifest,
     }))
     // Global error handler
     .onError(({ error, set }) => {
@@ -105,15 +91,12 @@ async function main() {
       };
     });
 
-  app = mountComposeRoutes(app, activeCompose.routes);
-
   // Start server
   app.listen(env.PORT, () => {
     console.log(`
 🚀 Server running at http://localhost:${env.PORT}
 📦 Environment: ${env.NODE_ENV}
 🔖 Version: ${env.APP_VERSION}
-🧩 Active Compose: ${compose.activeComposeId}
 📚 API Docs: http://localhost:${env.PORT}/swagger
     `);
   });
