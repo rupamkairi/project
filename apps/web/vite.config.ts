@@ -8,6 +8,10 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "@projectx/platform": path.resolve(
+        __dirname,
+        "./node_modules/@projectx/platform/web",
+      ),
     },
   },
 });

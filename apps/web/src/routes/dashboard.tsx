@@ -184,7 +184,7 @@ function DashboardPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-[500px]">
+              <ScrollArea className="h-full">
                 <div className="space-y-4">
                   {coreLayers.map((component) => (
                     <Card key={component.id} className="p-4">
@@ -296,7 +296,7 @@ function DashboardPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-[500px]">
+              <ScrollArea className="h-full">
                 <div className="grid gap-4 md:grid-cols-2">
                   {schemas.map((schema) => (
                     <Card key={schema.id} className="p-4">

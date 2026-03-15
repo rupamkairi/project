@@ -2,6 +2,7 @@ import { db } from "./client";
 import { organizations, roles, actors, actorRoles } from "./schema/identity";
 import { invLocations } from "./schema/inventory";
 import { ntfTemplates } from "./schema/notification";
+import { seedPlatform } from "./seed/platform";
 import { ulid } from "ulid";
 
 function generateId(): string {
@@ -150,6 +151,9 @@ async function seed() {
   console.log("✓ System notification templates created");
 
   console.log("✓ Core + Module seed complete");
+
+  console.log("Step 6: Seeding platform data...");
+  await seedPlatform();
 }
 
 seed().catch(console.error);

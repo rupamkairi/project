@@ -2,7 +2,9 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@projectx/platform": ["./node_modules/@projectx/platform/web"],
+      "@projectx/platform/*": ["./node_modules/@projectx/platform/*"]
     }
   },
   "files": [],

@@ -18,6 +18,7 @@
         "@elysiajs/cors": "^1.4.1",
         "@elysiajs/swagger": "^1.3.1",
         "@neondatabase/serverless": "^1.0.2",
+        "@projectx/platform": "workspace:*",
         "@sinclair/typebox": "^0.34.48",
         "bullmq": "^5.69.3",
         "cron": "^4.4.0",
@@ -43,6 +44,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@hookform/resolvers": "^5.2.2",
+        "@projectx/platform": "workspace:*",
         "@radix-ui/react-progress": "^1.1.8",
         "@radix-ui/react-radio-group": "^1.3.8",
         "@tanstack/react-query": "^5.90.21",
@@ -96,6 +98,33 @@
         "typescript-eslint": "^8.48.0",
         "vite": "^7.3.1",
       },
+    },
+    "composes/platform": {
+      "name": "@projectx/platform",
+      "version": "0.1.0",
+      "dependencies": {
+        "@projectx/server": "workspace:*",
+        "drizzle-orm": "^0.45.1",
+        "elysia": "^1.4.25",
+        "jose": "^6.1.3",
+        "zod": "^4.3.6",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.3.9",
+        "typescript": "^5.3.3",
+      },
+      "peerDependencies": {
+        "@tanstack/react-router": ">=1",
+        "react": ">=18",
+        "react-dom": ">=18",
+        "zustand": ">=5",
+      },
+      "optionalPeers": [
+        "@tanstack/react-router",
+        "react",
+        "react-dom",
+        "zustand",
+      ],
     },
   },
   "packages": {
@@ -330,6 +359,8 @@
     "@open-draft/until": ["@open-draft/until@2.1.0", "", {}, "sha512-U69T3ItWHvLwGg5eJ0n3I62nWuE6ilHlmz7zM0npLBRvPRd7e6NYmg54vvRtP5mZG7kZqZCFVdsTWo7BPtBujg=="],
 
     "@pinojs/redact": ["@pinojs/redact@0.4.0", "", {}, "sha512-k2ENnmBugE/rzQfEcdWHcCY+/FM3VLzH9cYEsbdsoqrvzAKRhUZeRNhAZvB8OitQJ1TBed3yqWtdjzS6wJKBwg=="],
+
+    "@projectx/platform": ["@projectx/platform@workspace:composes/platform"],
 
     "@projectx/server": ["@projectx/server@workspace:apps/server"],
 

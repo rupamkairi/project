@@ -12,6 +12,10 @@
     "lint": {
       "dependsOn": ["^lint"]
     },
+    "typecheck": {
+      "dependsOn": ["^typecheck"],
+      "inputs": ["*.ts", "*.tsx", "tsconfig.json", "apps/**", "composes/**"]
+    },
     "clean": {
       "cache": false
     }
