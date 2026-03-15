@@ -1,0 +1,23 @@
+#!/bin/bash
+# Git Pre-Commit Hook: Auto-generate documentation
+# 
+# This hook runs documentation generation before each commit.
+# Docs are updated automatically when code changes.
+#
+# Installation: 
+#   cp .githooks/pre-commit .git/hooks/pre-commit
+#   chmod +x .git/hooks/pre-commit
+#
+# Skip: git commit --no-verify
+
+echo "📚 Generating documentation..."
+
+# Run TypeDoc (always)
+echo "   → TypeDoc..."
+bun run docs:generate:skip-openapi
+
+# Add generated docs to commit
+git add docs/generated/ 2>/dev/null || true
+
+echo "✅ Documentation updated"
+echo ""

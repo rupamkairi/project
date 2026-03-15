@@ -1,72 +1,296 @@
+/**
+ * CQRS (Command Query Responsibility Segregation)
+ *
+ * Mediator pattern implementation for CQRS with command/query handlers and middleware.
+ *
+ * @category Core
+ * @packageDocumentation
+ */
+
 import type { ID } from "../entity";
 import { generateId } from "../entity";
 
-// Command and Query definitions
+/**
+ * Command interface for write operations.
+ *
+ * Commands represent intent to change state and are handled by exactly one handler.
+ *
+ * @example
+ * ```typescript
+ * const command: Command<CreateUserPayload> = {
+ *   type: "user.create",
+ *   payload: { email: "user@example.com", name: "John" },
+ *   actorId: currentUserId,
+ *   orgId: orgId,
+ *   correlationId: correlationId
+ * };
+ * ```
+ *
+ * @category Core
+ */
 export interface Command<T = unknown> {
+  /**
+   * Command type (e.g., "user.create", "order.submit")
+   */
   type: string;
+
+  /**
+   * Command payload containing operation data
+   */
   payload: T;
+
+  /**
+   * ID of the actor issuing the command
+   */
   actorId: ID;
+
+  /**
+   * Organization ID for multi-tenancy
+   */
   orgId: ID;
+
+  /**
+   * Correlation ID for tracing command chains
+   */
   correlationId: ID;
+
+  /**
+   * ID of the causing event (for event-driven commands)
+   */
   causedBy?: ID;
+
+  /**
+   * Idempotency key for duplicate detection
+   */
   idempotencyKey?: string;
 }
 
+/**
+ * Query interface for read operations.
+ *
+ * Queries retrieve data without causing side effects.
+ *
+ * @example
+ * ```typescript
+ * const query: Query<GetUserParams> = {
+ *   type: "user.get",
+ *   params: { id: userId },
+ *   actorId: currentUserId,
+ *   orgId: orgId
+ * };
+ * ```
+ *
+ * @category Core
+ */
 export interface Query<T = unknown> {
+  /**
+   * Query type (e.g., "user.get", "order.list")
+   */
   type: string;
+
+  /**
+   * Query parameters
+   */
   params: T;
+
+  /**
+   * ID of the actor issuing the query
+   */
   actorId: ID;
+
+  /**
+   * Organization ID for multi-tenancy
+   */
   orgId: ID;
 }
 
-// Handlers
+/**
+ * Command handler function signature.
+ *
+ * @typeParam TCommand - Command type
+ * @typeParam TResult - Return type
+ *
+ * @category Core
+ */
 export type CommandHandler<TCommand extends Command, TResult = unknown> = (
   command: TCommand,
   context: SystemContext,
 ) => Promise<TResult>;
 
+/**
+ * Query handler function signature.
+ *
+ * @typeParam TQuery - Query type
+ * @typeParam TResult - Return type
+ *
+ * @category Core
+ */
 export type QueryHandler<TQuery extends Query, TResult = unknown> = (
   query: TQuery,
   context: SystemContext,
 ) => Promise<TResult>;
 
-// Forward declare SystemContext (will be implemented in context module)
+/**
+ * System context for command/query execution.
+ *
+ * Provides access to actor, organization, and runtime information.
+ *
+ * @category Core
+ */
 export interface SystemContext {
+  /**
+   * Current actor information
+   */
   actor: {
     id: ID;
     roles: string[];
     orgId: ID;
     type: "human" | "system" | "api_key";
   };
+
+  /**
+   * Organization information
+   */
   org: { id: ID; slug: string; settings: Record<string, unknown> };
+
+  /**
+   * Correlation ID for tracing
+   */
   correlationId: ID;
+
+  /**
+   * Request ID for this specific operation
+   */
   requestId: ID;
+
+  /**
+   * Timestamp when execution started
+   */
   startedAt: number;
 }
 
-// Middleware
+/**
+ * Mediator middleware function signature.
+ *
+ * Middleware can intercept and modify command/query execution.
+ *
+ * @example
+ * ```typescript
+ * const loggingMiddleware: MediatorMiddleware = async (request, ctx, next) => {
+ *   console.log(`Executing ${request.type}`);
+ *   const start = Date.now();
+ *   const result = await next();
+ *   console.log(`Completed in ${Date.now() - start}ms`);
+ *   return result;
+ * };
+ * ```
+ *
+ * @category Core
+ */
 export type MediatorMiddleware = (
   request: Command | Query,
   ctx: SystemContext,
   next: () => Promise<unknown>,
 ) => Promise<unknown>;
 
-// Mediator interface
+/**
+ * Mediator interface for dispatching commands and queries.
+ *
+ * Implements the mediator pattern to decouple senders from handlers.
+ *
+ * @example
+ * ```typescript
+ * const mediator = createMediator();
+ *
+ * // Register handler
+ * mediator.registerCommand("user.create", async (command, ctx) => {
+ *   const user = await createUser(command.payload);
+ *   return user;
+ * });
+ *
+ * // Dispatch command
+ * const user = await mediator.dispatch({
+ *   type: "user.create",
+ *   payload: { email: "user@example.com" },
+ *   actorId: currentUserId,
+ *   orgId: orgId,
+ *   correlationId: correlationId
+ * });
+ *
+ * // Add middleware
+ * mediator.use(loggingMiddleware);
+ * mediator.use(authMiddleware);
+ * ```
+ *
+ * @category Core
+ */
 export interface Mediator {
+  /**
+   * Dispatches a command to its handler.
+   *
+   * @typeParam R - Return type
+   * @param cmd - Command to dispatch
+   * @returns Handler result
+   */
   dispatch<R = unknown>(cmd: Command): Promise<R>;
+
+  /**
+   * Sends a query to its handler.
+   *
+   * @typeParam R - Return type
+   * @param q - Query to send
+   * @returns Handler result
+   */
   query<R = unknown>(q: Query): Promise<R>;
+
+  /**
+   * Registers a command handler.
+   *
+   * @param type - Command type
+   * @param handler - Handler function
+   */
   registerCommand(type: string, handler: CommandHandler<any>): void;
+
+  /**
+   * Registers a query handler.
+   *
+   * @param type - Query type
+   * @param handler - Handler function
+   */
   registerQuery(type: string, handler: QueryHandler<any>): void;
+
+  /**
+   * Adds middleware to the execution pipeline.
+   *
+   * @param middleware - Middleware function
+   */
   use(middleware: MediatorMiddleware): void;
 }
 
-// Idempotency cache entry
+/**
+ * Idempotency cache entry.
+ *
+ * @internal
+ */
 interface IdempotencyEntry {
   result: unknown;
   expiresAt: number;
 }
 
-// Mediator implementation with in-memory idempotency
+/**
+ * Creates an in-memory mediator with idempotency support.
+ *
+ * @returns Mediator instance
+ *
+ * @remarks
+ * Features:
+ * - Command/query handler registration
+ * - Middleware pipeline execution
+ * - Idempotency caching (24 hour TTL)
+ * - Automatic cache cleanup
+ *
+ * @category Core
+ */
 export function createMediator(): Mediator {
   const commandHandlers = new Map<string, CommandHandler<any>>();
   const queryHandlers = new Map<string, QueryHandler<any>>();
