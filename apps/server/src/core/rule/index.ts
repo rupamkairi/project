@@ -1,19 +1,59 @@
-// Rule Engine - expression evaluation and compilation
+/**
+ * Rule Engine
+ *
+ * Expression evaluation and rule compilation for business logic validation.
+ *
+ * @category Core
+ * @packageDocumentation
+ */
 
+/**
+ * Supported comparison operators.
+ *
+ * @category Core
+ */
 export type Op =
-  | "eq"
-  | "neq"
-  | "gt"
-  | "gte"
-  | "lt"
-  | "lte"
-  | "in"
-  | "nin"
-  | "contains"
-  | "matches"
-  | "exists"
-  | "empty";
+  | "eq" // Equal
+  | "neq" // Not equal
+  | "gt" // Greater than
+  | "gte" // Greater than or equal
+  | "lt" // Less than
+  | "lte" // Less than or equal
+  | "in" // In array
+  | "nin" // Not in array
+  | "contains" // String contains
+  | "matches" // Regex match
+  | "exists" // Field exists
+  | "empty"; // Field is empty
 
+/**
+ * Rule expression definition.
+ *
+ * Can be a field comparison, logical operator, or reference to a registered rule.
+ *
+ * @example
+ * ```typescript
+ * // Simple comparison
+ * const rule: RuleExpr = {
+ *   field: "user.age",
+ *   op: "gte",
+ *   value: 18
+ * };
+ *
+ * // Logical AND
+ * const andRule: RuleExpr = {
+ *   and: [
+ *     { field: "user.age", op: "gte", value: 18 },
+ *     { field: "user.verified", op: "eq", value: true }
+ *   ]
+ * };
+ *
+ * // Reference to registered rule
+ * const refRule: RuleExpr = { ref: "isAdult" };
+ * ```
+ *
+ * @category Core
+ */
 export type RuleExpr =
   | { field: string; op: Op; value: unknown }
   | { and: RuleExpr[] }
@@ -21,95 +61,130 @@ export type RuleExpr =
   | { not: RuleExpr }
   | { ref: string };
 
+/**
+ * Rule evaluation explanation with detailed breakdown.
+ *
+ * @category Core
+ */
 export interface RuleExplanation {
+  /**
+   * Whether the rule passed overall
+   */
   passed: boolean;
+
+  /**
+   * Detailed breakdown of each condition
+   */
   details: Array<{
+    /**
+     * Field being evaluated
+     */
     field: string;
+
+    /**
+     * Operator used
+     */
     operator: string;
+
+    /**
+     * Expected value
+     */
     expected: unknown;
+
+    /**
+     * Actual value from context
+     */
     actual: unknown;
+
+    /**
+     * Whether this condition passed
+     */
     passed: boolean;
   }>;
 }
 
-// Get nested value from object using dot notation
-function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
-  return path.split(".").reduce((acc: unknown, part: string) => {
-    if (acc && typeof acc === "object" && part in acc) {
-      return (acc as Record<string, unknown>)[part];
-    }
-    return undefined;
-  }, obj);
-}
-
-// Compare two values using operator
-function compare(actual: unknown, op: Op, expected: unknown): boolean {
-  switch (op) {
-    case "eq":
-      return actual === expected;
-    case "neq":
-      return actual !== expected;
-    case "gt":
-      return (
-        typeof actual === "number" &&
-        typeof expected === "number" &&
-        actual > expected
-      );
-    case "gte":
-      return (
-        typeof actual === "number" &&
-        typeof expected === "number" &&
-        actual >= expected
-      );
-    case "lt":
-      return (
-        typeof actual === "number" &&
-        typeof expected === "number" &&
-        actual < expected
-      );
-    case "lte":
-      return (
-        typeof actual === "number" &&
-        typeof expected === "number" &&
-        actual <= expected
-      );
-    case "in":
-      return Array.isArray(expected) && expected.includes(actual);
-    case "nin":
-      return Array.isArray(expected) && !expected.includes(actual);
-    case "contains":
-      return (
-        typeof actual === "string" &&
-        typeof expected === "string" &&
-        actual.includes(expected)
-      );
-    case "matches":
-      if (typeof actual === "string" && expected instanceof RegExp) {
-        return expected.test(actual);
-      }
-      return false;
-    case "exists":
-      return actual !== undefined && actual !== null;
-    case "empty":
-      if (actual === null || actual === undefined) return true;
-      if (typeof actual === "string") return actual.length === 0;
-      if (Array.isArray(actual)) return actual.length === 0;
-      if (typeof actual === "object") return Object.keys(actual).length === 0;
-      return false;
-    default:
-      return false;
-  }
-}
-
+/**
+ * Rule engine interface for evaluating expressions.
+ *
+ * @category Core
+ */
 export interface RuleEngine {
+  /**
+   * Evaluates a rule expression against context.
+   *
+   * @param expr - Rule expression to evaluate
+   * @param context - Context object with field values
+   * @returns True if rule passes
+   */
   evaluate(expr: RuleExpr, context: Record<string, unknown>): boolean;
+
+  /**
+   * Compiles a rule expression for repeated evaluation.
+   *
+   * @param expr - Rule expression to compile
+   * @returns Compiled rule with evaluate method
+   */
   compile(expr: RuleExpr): { evaluate(ctx: Record<string, unknown>): boolean };
+
+  /**
+   * Registers a reusable rule.
+   *
+   * @param id - Rule identifier
+   * @param expr - Rule expression
+   */
   register(id: string, expr: RuleExpr): void;
+
+  /**
+   * Resolves a registered rule by ID.
+   *
+   * @param id - Rule ID
+   * @returns Rule expression or undefined
+   */
   resolve(id: string): RuleExpr | undefined;
+
+  /**
+   * Explains why a rule passed or failed.
+   *
+   * @param expr - Rule expression
+   * @param context - Context object
+   * @returns Detailed explanation
+   */
   explain(expr: RuleExpr, context: Record<string, unknown>): RuleExplanation;
 }
 
-// In-memory Rule Engine implementation
+/**
+ * Creates an in-memory rule engine.
+ *
+ * @returns Rule engine instance
+ *
+ * @example
+ * ```typescript
+ * const engine = createRuleEngine();
+ *
+ * // Register reusable rule
+ * engine.register("isAdult", {
+ *   field: "user.age",
+ *   op: "gte",
+ *   value: 18
+ * });
+ *
+ * // Evaluate rule
+ * const passed = engine.evaluate(
+ *   { ref: "isAdult" },
+ *   { user: { age: 21 } }
+ * ); // true
+ *
+ * // Get explanation
+ * const explanation = engine.explain(
+ *   { field: "user.age", op: "gte", value: 18 },
+ *   { user: { age: 16 } }
+ * );
+ * console.log(explanation.details);
+ * // [{ field: "user.age", operator: "gte", expected: 18, actual: 16, passed: false }]
+ * ```
+ *
+ * @category Core
+ */
 export function createRuleEngine(): RuleEngine {
   const registeredRules = new Map<string, RuleExpr>();
 
@@ -238,4 +313,90 @@ export function createRuleEngine(): RuleEngine {
       return { passed, details };
     },
   };
+}
+
+/**
+ * Gets a nested value from an object using dot notation.
+ *
+ * @param obj - Source object
+ * @param path - Dot-notation path (e.g., "user.profile.age")
+ * @returns Value at path or undefined
+ *
+ * @internal
+ */
+function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
+  return path.split(".").reduce((acc: unknown, part: string) => {
+    if (acc && typeof acc === "object" && part in acc) {
+      return (acc as Record<string, unknown>)[part];
+    }
+    return undefined;
+  }, obj);
+}
+
+/**
+ * Compares two values using the specified operator.
+ *
+ * @param actual - Actual value from context
+ * @param op - Comparison operator
+ * @param expected - Expected value
+ * @returns Comparison result
+ *
+ * @internal
+ */
+function compare(actual: unknown, op: Op, expected: unknown): boolean {
+  switch (op) {
+    case "eq":
+      return actual === expected;
+    case "neq":
+      return actual !== expected;
+    case "gt":
+      return (
+        typeof actual === "number" &&
+        typeof expected === "number" &&
+        actual > expected
+      );
+    case "gte":
+      return (
+        typeof actual === "number" &&
+        typeof expected === "number" &&
+        actual >= expected
+      );
+    case "lt":
+      return (
+        typeof actual === "number" &&
+        typeof expected === "number" &&
+        actual < expected
+      );
+    case "lte":
+      return (
+        typeof actual === "number" &&
+        typeof expected === "number" &&
+        actual <= expected
+      );
+    case "in":
+      return Array.isArray(expected) && expected.includes(actual);
+    case "nin":
+      return Array.isArray(expected) && !expected.includes(actual);
+    case "contains":
+      return (
+        typeof actual === "string" &&
+        typeof expected === "string" &&
+        actual.includes(expected)
+      );
+    case "matches":
+      if (typeof actual === "string" && expected instanceof RegExp) {
+        return expected.test(actual);
+      }
+      return false;
+    case "exists":
+      return actual !== undefined && actual !== null;
+    case "empty":
+      if (actual === null || actual === undefined) return true;
+      if (typeof actual === "string") return actual.length === 0;
+      if (Array.isArray(actual)) return actual.length === 0;
+      if (typeof actual === "object") return Object.keys(actual).length === 0;
+      return false;
+    default:
+      return false;
+  }
 }

@@ -1,0 +1,67 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["src/core/index.ts", "src/modules/*/index.ts"],
+  "out": "docs/generated",
+  "name": "ProjectX Server API",
+  "includeVersion": true,
+  "readme": "none",
+
+  /* Output Format */
+  "githubPages": false,
+  "html": true,
+
+  /* Visibility */
+  "excludePrivate": true,
+  "excludeProtected": false,
+  "excludeInternal": true,
+  "excludeNotDocumented": false,
+
+  /* Source */
+  "exclude": [
+    "**/node_modules/**",
+    "**/*.spec.ts",
+    "**/*.test.ts",
+    "**/infra/**",
+    "**/worker.ts"
+  ],
+  "sourceLinkTemplate": "https://github.com/your-org/projectx/blob/{gitRevision}/{path}#L{line}",
+
+  /* Theme */
+  "theme": "default",
+
+  /* Navigation */
+  "navigationLinks": {
+    "GitHub": "https://github.com/your-org/projectx",
+    "OpenAPI": "/api/openapi.json"
+  },
+
+  /* Search */
+  "searchInComments": true,
+  "searchInDocuments": true,
+
+  /* Categories */
+  "categorizeByGroup": true,
+  "categoryOrder": [
+    "Core",
+    "Modules",
+    "Types",
+    "Interfaces",
+    "Classes",
+    "Functions",
+    "*"
+  ],
+
+  /* JSDoc */
+  "commentStyle": "jsdoc",
+
+  /* Validation */
+  "validation": {
+    "notExported": false,
+    "invalidLink": true,
+    "notDocumented": false
+  },
+
+  /* Logging */
+  "logLevel": "Info",
+  "pretty": true
+}
