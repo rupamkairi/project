@@ -7,6 +7,10 @@ import { Route as dashboardIndexRoute } from "./dashboard.index";
 import { Route as dashboardUsersRoute } from "./dashboard.users";
 import { Route as dashboardRolesRoute } from "./dashboard.roles";
 import { Route as dashboardNotificationsRoute } from "./dashboard.notifications";
+import { Route as platformRootRoute } from "./__root";
+
+// Export the root route for the host app to integrate
+export { platformRootRoute };
 
 // Platform routes array - these can be added to the host app's route tree
 // Note: The dashboard routes form a nested route tree (layout -> index, users, roles, notifications)

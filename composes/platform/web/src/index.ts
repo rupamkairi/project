@@ -8,4 +8,4 @@ export { platformApi } from "./lib/api/platform";
 export { useAuthStore } from "./stores/auth";
 
 // Routes for host app integration
-export { platformRoutes } from "./routes/index";
+export { platformRoutes, platformRootRoute } from "./routes/index";
