@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { platformApi } from "../lib/api/platform";
+import { platformApi } from "@projectx/platform-web";
 
 interface Actor {
   id: string;

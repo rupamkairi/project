@@ -4,6 +4,18 @@
   "module": "src/index.ts",
   "type": "module",
   "private": true,
+  "exports": {
+    ".": "./src/index.ts",
+    "./infra/db/client": "./src/infra/db/client.ts",
+    "./infra/db/schema/identity": "./src/infra/db/schema/identity.ts",
+    "./infra/db/schema/notification": "./src/infra/db/schema/notification.ts",
+    "./infra/db/schema/platform": "./src/infra/db/schema/platform.ts",
+    "./infra/db/seed/platform": "./src/infra/db/seed/platform.ts",
+    "./infra/env": "./src/infra/env.ts",
+    "./core/entity": "./src/core/entity/index.ts",
+    "./modules/*": "./src/modules/*.ts",
+    "./platform": "./src/platform.ts"
+  },
   "scripts": {
     "dev": "bun run --hot src/index.ts",
     "start": "bun run src/index.ts",

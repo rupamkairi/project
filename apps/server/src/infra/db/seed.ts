@@ -2,7 +2,7 @@ import { db } from "./client";
 import { organizations, roles, actors, actorRoles } from "./schema/identity";
 import { invLocations } from "./schema/inventory";
 import { ntfTemplates } from "./schema/notification";
-import { seedPlatform } from "./seed/platform";
+import { seedPlatform } from "@projectx/platform-server";
 import { ulid } from "ulid";
 
 function generateId(): string {

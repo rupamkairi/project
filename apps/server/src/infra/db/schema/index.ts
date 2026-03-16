@@ -11,4 +11,13 @@ export * from "./document";
 export * from "./notification";
 export * from "./geo";
 export * from "./analytics";
-export * from "./platform";
+
+// Platform schema - re-exported from compose
+export {
+  pltSettings,
+  pltComposeConfig,
+  pltOrganizationSettings,
+  type PltSetting,
+  type PltComposeConfig,
+  type PltOrganizationSetting,
+} from "@projectx/platform-server";

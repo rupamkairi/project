@@ -2,7 +2,6 @@
   "extends": "@repo/config/tsconfig/server",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "src",
     "baseUrl": ".",
     "types": [],
     "paths": {
@@ -10,7 +9,10 @@
       "@modules/*": ["./src/modules/*"],
       "@infra/*": ["./src/infra/*"],
       "@db/*": ["./src/infra/db/*"],
-      "@projectx/platform-server": ["../../composes/platform/server/src"]
+      "@projectx/platform-server": [
+        "../../composes/platform/server/src/index.ts"
+      ],
+      "@projectx/platform-server/*": ["../../composes/platform/server/src/*"]
     }
   },
   "include": ["src/**/*"],

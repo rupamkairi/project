@@ -2,14 +2,14 @@
 
 import Elysia from "elysia";
 import { t } from "elysia";
-import { db } from "../../../../apps/server/src/infra/db/client";
+import { db } from "@projectx/server/infra/db/client";
 import {
   actors,
   sessions,
   actorRoles,
-} from "../../../../apps/server/src/infra/db/schema/identity";
+} from "@projectx/server/infra/db/schema/identity";
 import { eq, and, asc, desc, like, or, gt, isNull } from "drizzle-orm";
-import { generateId } from "../../../../apps/server/src/core/entity";
+import { generateId } from "@projectx/server/core/entity";
 
 export const userRoutes = new Elysia({ prefix: "/users" })
   .get("/", async ({ query, headers, set }) => {

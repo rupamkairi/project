@@ -5,12 +5,16 @@
   "private": true,
   "description": "Platform Compose Server - Dashboard orchestration for user management, roles, notifications, and settings",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./db/schema/platform": "./src/db/schema/platform.ts",
+    "./db/seed/platform": "./src/db/seed/platform.ts"
   },
   "scripts": {
+    "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist node_modules"
   },
   "dependencies": {
+    "@projectx/server": "workspace:*",
     "drizzle-orm": "^0.45.1",
     "elysia": "^1.4.25",
     "jose": "^6.1.3",

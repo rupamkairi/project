@@ -4,10 +4,20 @@ import {
   timestamp,
   jsonb,
   boolean,
-  index,
+  integer,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { baseColumns } from "./helpers";
+
+// Base columns shared across all tables
+const baseColumns = {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at"),
+  version: integer("version").notNull().default(1),
+  meta: jsonb("meta").notNull().default({}),
+};
 
 // plt_settings - Platform-wide configuration
 export const pltSettings = pgTable(

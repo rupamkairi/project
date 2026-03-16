@@ -2,15 +2,15 @@
 
 import Elysia from "elysia";
 import { t } from "elysia";
-import { db } from "../../../../apps/server/src/infra/db/client";
+import { db } from "@projectx/server/infra/db/client";
 import {
   ntfTemplates,
   ntfTriggers,
   ntfLogs,
   ntfPreferences,
-} from "../../../../apps/server/src/infra/db/schema/notification";
+} from "@projectx/server/infra/db/schema/notification";
 import { eq, and, desc, like, or, isNull } from "drizzle-orm";
-import { generateId } from "../../../../apps/server/src/core/entity";
+import { generateId } from "@projectx/server/core/entity";
 
 export const notificationRoutes = new Elysia({ prefix: "/notifications" })
   // ==================== Templates ====================

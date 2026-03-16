@@ -4,8 +4,16 @@
     "outDir": "dist",
     "baseUrl": ".",
     "types": [],
-    "lib": ["ESNext"]
+    "lib": ["ESNext"],
+    "paths": {
+      "@projectx/server": ["../../apps/server/src/index.ts"],
+      "@projectx/server/*": ["../../apps/server/src/*"],
+      "@core/*": ["../../apps/server/src/core/*"],
+      "@modules/*": ["../../apps/server/src/modules/*"],
+      "@infra/*": ["../../apps/server/src/infra/*"],
+      "@db/*": ["../../apps/server/src/infra/db/*"]
+    }
   },
-  "include": [],
+  "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
 }
