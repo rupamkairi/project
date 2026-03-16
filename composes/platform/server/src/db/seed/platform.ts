@@ -1,12 +1,7 @@
-import { db } from "@projectx/server/infra/db/client";
+import { db } from "@db/client";
 import { pltSettings } from "../schema/platform";
-import {
-  organizations,
-  actors,
-  roles,
-  actorRoles,
-} from "@projectx/server/infra/db/schema/identity";
-import { ntfTemplates } from "@projectx/server/infra/db/schema/notification";
+import { organizations, actors, roles, actorRoles } from "@db/schema/identity";
+import { ntfTemplates } from "@db/schema/notification";
 
 // Platform settings seed data
 const platformSettings = [

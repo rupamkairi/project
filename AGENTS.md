@@ -19,6 +19,7 @@ Before making architecture, compose, server, or web decisions, read these docume
 2. [docs/architecture/core.md](/Users/rupamkairi/Projects/projectx/project/docs/architecture/core.md)
 3. [docs/architecture/module.md](/Users/rupamkairi/Projects/projectx/project/docs/architecture/module.md)
 4. [docs/architecture/compose-standards.md](/Users/rupamkairi/Projects/projectx/project/docs/architecture/compose-standards.md)
+5. **docs/monorepo-architecture.md** - Contains detailed monorepo structure, workspaces, and TypeScript config patterns
 
 Then read the compose-specific references relevant to the task:
 
@@ -53,6 +54,160 @@ Then read the compose-specific references relevant to the task:
 - The host server and host web apps should stay thin.
 - Avoid hardcoding compose-specific routes, screens, or business orchestration into app entrypoints.
 - Current hardcoded patterns in the repo are transitional references, not the target standard.
+
+## Shell-Only Pattern
+
+The **apps/server** and **apps/web** are pure shells that must NOT contain feature logic.
+
+### apps/server Shell Responsibilities
+
+- Boot core infra (DB, Redis, Queue, WebSocket gateway)
+- Register compose plugins via `.use()`
+- Expose `/health`, `/core`, `/schemas`, `/modules` endpoints
+- Export the `App` type for compose web apps that need it directly
+- **NEVER** import modules directly or define routes in the shell
+
+### apps/web Shell Responsibilities
+
+- Render the root layout
+- Register compose route trees via `rootRoute.addChildren()`
+- Provide global providers (QueryClient, auth session context)
+- **NEVER** define feature-specific routes or screens in the shell
+
+### Compose Integration Contract
+
+**Server side** — a compose MUST export a named Elysia plugin:
+
+```typescript
+// composes/{name}/server/src/index.ts
+import { Elysia } from "elysia";
+
+export const {name}Compose = new Elysia({ prefix: "/{name}" })
+  .use(authRoutes)
+  .use(userRoutes);
+
+export type {Name}App = typeof {name}Compose;
+```
+
+**Web side** — a compose MUST export a named route array:
+
+```typescript
+// composes/{name}/web/src/routes/index.ts
+export const {name}Routes = [
+  loginRoute,
+  usersRoute,
+  dashboardRoute,
+];
+```
+
+**apps/server** registers it:
+
+```typescript
+// apps/server/src/index.ts
+import { platformCompose } from "@projectx/platform-server";
+
+const app = new Elysia().use(platformCompose).listen(3000);
+```
+
+**apps/web** registers it:
+
+```typescript
+// apps/web/src/router.ts
+import { platformRoutes } from "@projectx/platform-web";
+
+const routeTree = rootRoute.addChildren([...platformRoutes, indexRoute]);
+```
+
+## Monorepo Structure
+
+```
+/
+├── apps/
+│   ├── server/         ← Elysia HTTP server shell
+│   └── web/            ← React (Vite) web shell
+├── composes/
+│   └── {name}/       ← Full-stack feature package
+│       ├── server/     ← Elysia plugin exported for apps/server
+│       │   ├── src/
+│       │   │   ├── routes/       ← Route definitions
+│       │   │   ├── db/schema/    ← Compose-specific schema
+│       │   │   ├── db/seed/      ← Compose seed data
+│       │   │   └── index.ts      ← exports named Elysia plugin
+│       │   └── package.json
+│       └── web/        ← Route tree exported for apps/web
+│           ├── src/
+│           │   ├── routes/       ← Route components
+│           │   ├── components/   ← Compose-specific UI
+│           │   ├── lib/api.ts    ← Eden Treaty client
+│           │   └── index.ts      ← exports route array
+│           └── package.json
+├── packages/           ← Shared packages (config, etc.)
+└── turbo.json
+```
+
+### Path Aliases
+
+**apps/server/tsconfig.json:**
+
+```json
+{
+  "paths": {
+    "@core/*": ["./src/core/*"],
+    "@modules/*": ["./src/modules/*"],
+    "@infra/*": ["./src/infra/*"],
+    "@db/*": ["./src/infra/db/*"]
+  }
+}
+```
+
+**composes/{name}/server/tsconfig.json:**
+
+```json
+{
+  "paths": {
+    "@core/*": ["../../../apps/server/src/core/*"],
+    "@modules/*": ["../../../apps/server/src/modules/*"],
+    "@infra/*": ["../../../apps/server/src/infra/*"],
+    "@db/*": ["../../../apps/server/src/infra/db/*"]
+  }
+}
+```
+
+### Dependency Direction
+
+```
+composes/{name}/web  →  composes/{name}/server   (Eden Treaty types)
+composes/{name}/web  →  apps/server              (optional — combined App type)
+apps/server           →  composes/{name}/server    (Elysia plugin)
+apps/web              →  composes/{name}/web       (route tree)
+apps/web              →  apps/server               (optional — combined App type)
+```
+
+No compose ever imports from another compose. No compose imports from `apps/`.
+
+## Workspace Configuration
+
+The root `package.json` must include composes in workspaces:
+
+```json
+{
+  "workspaces": ["apps/*", "composes/*/server", "composes/*/web", "packages/*"]
+}
+```
+
+Each compose package should have proper exports in its `package.json`:
+
+```json
+// composes/platform/server/package.json
+{
+  "name": "@projectx/platform-server",
+  "exports": {
+    ".": "./src/index.ts",
+    "./db/schema/platform": "./src/db/schema/platform.ts",
+    "./db/seed/platform": "./src/db/seed/platform.ts"
+  }
+}
+```
 
 ## Documentation Rules
 

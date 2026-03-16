@@ -1,5 +1,5 @@
 import { createRoute } from "@tanstack/react-router";
-import { Route as rootRoute } from "../../__root";
+import { Route as rootRoute } from "../__root";
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useAuthStore } from "../../stores/auth";

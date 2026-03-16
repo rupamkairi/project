@@ -301,11 +301,16 @@ async function main() {
     process.exit(1);
   }
 
+  // Dynamic import to avoid circular dependency with platform-compose
+  const { platformCompose } = await import("@projectx/platform-server");
+
   let app: any = new Elysia()
     // Plugins
     .use(cors())
     .use(swagger())
     .use(bearer())
+    // Platform Compose plugin
+    .use(platformCompose)
     // Health check
     .get("/health", () => ({
       status: "ok",

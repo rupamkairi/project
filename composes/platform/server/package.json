@@ -14,7 +14,6 @@
     "clean": "rm -rf dist node_modules"
   },
   "dependencies": {
-    "@projectx/server": "workspace:*",
     "drizzle-orm": "^0.45.1",
     "elysia": "^1.4.25",
     "jose": "^6.1.3",

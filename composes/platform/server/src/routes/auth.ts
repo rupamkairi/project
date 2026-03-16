@@ -2,12 +2,12 @@
 
 import Elysia from "elysia";
 import { t } from "elysia";
-import { db } from "@projectx/server/infra/db/client";
-import { actors, sessions } from "@projectx/server/infra/db/schema/identity";
+import { db } from "@db/client";
+import { actors, sessions } from "@db/schema/identity";
 import { eq, and, isNull } from "drizzle-orm";
-import { generateId } from "@projectx/server/core/entity";
+import { generateId } from "@core/entity";
 import * as jose from "jose";
-import { env } from "@projectx/server/infra/env";
+import { env } from "@infra/env";
 
 // JWT utility functions
 async function createAccessToken(

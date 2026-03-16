@@ -2,6 +2,8 @@
 // This file re-exports platform functionality from @projectx/platform-server
 // The actual implementation lives in composes/platform/server
 
+export { platformCompose, type PlatformApp } from "@projectx/platform-server";
+
 export {
   pltSettings,
   pltComposeConfig,
@@ -10,9 +12,4 @@ export {
   type PltComposeConfig,
   type PltOrganizationSetting,
   seedPlatform,
-  authRoutes,
-  userRoutes,
-  roleRoutes,
-  notificationRoutes,
-  settingsRoutes,
 } from "@projectx/platform-server";

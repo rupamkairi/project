@@ -28,7 +28,7 @@ function DashboardIndex() {
         </Link>
 
         <Link
-          href="/dashboard/roles"
+          to="/dashboard/roles"
           className="block p-6 bg-white rounded-lg shadow hover:shadow-md transition"
         >
           <h3 className="text-lg font-semibold text-gray-900">Roles</h3>
@@ -38,7 +38,7 @@ function DashboardIndex() {
         </Link>
 
         <Link
-          href="/dashboard/notifications"
+          to="/dashboard/notifications"
           className="block p-6 bg-white rounded-lg shadow hover:shadow-md transition"
         >
           <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>

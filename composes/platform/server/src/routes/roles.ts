@@ -2,14 +2,10 @@
 
 import Elysia from "elysia";
 import { t } from "elysia";
-import { db } from "@projectx/server/infra/db/client";
-import {
-  roles,
-  actorRoles,
-  actors,
-} from "@projectx/server/infra/db/schema/identity";
+import { db } from "@db/client";
+import { roles, actorRoles, actors } from "@db/schema/identity";
 import { eq, and, isNull, desc } from "drizzle-orm";
-import { generateId } from "@projectx/server/core/entity";
+import { generateId } from "@core/entity";
 
 export const roleRoutes = new Elysia({ prefix: "/roles" })
   .get("/", async ({ query, headers, set }) => {

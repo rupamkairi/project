@@ -6,3 +6,6 @@ export { platformApi } from "./lib/api/platform";
 
 // Auth Store
 export { useAuthStore } from "./stores/auth";
+
+// Routes for host app integration
+export { platformRoutes } from "./routes/index";

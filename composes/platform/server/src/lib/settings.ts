@@ -1,7 +1,7 @@
 // Platform Settings Library
 // Helper functions for working with platform settings
 
-import { db } from "@projectx/server/infra/db/client";
+import { db } from "@db/client";
 import { pltSettings } from "../db/schema/platform";
 import { eq } from "drizzle-orm";
 
