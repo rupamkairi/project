@@ -1,0 +1,11 @@
+{
+  "extends": "@repo/config/tsconfig/server",
+  "compilerOptions": {
+    "outDir": "dist",
+    "baseUrl": ".",
+    "types": [],
+    "lib": ["ESNext"]
+  },
+  "include": [],
+  "exclude": ["node_modules", "dist"]
+}

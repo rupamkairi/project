@@ -1,0 +1,14 @@
+{
+  "extends": "@repo/config/tsconfig/web",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    "baseUrl": ".",
+    "paths": {
+      "@projectx/platform-web": ["./src"],
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src/lib/**/*", "src/stores/**/*"],
+  "exclude": ["node_modules", "dist", "src/routes"]
+}

@@ -1,17 +1,19 @@
 {
-  "name": "projectx",
+  "name": "repo",
   "private": true,
   "workspaces": [
     "apps/*",
-    "composes/*"
+    "composes/*/server",
+    "composes/*/web",
+    "packages/*"
   ],
   "scripts": {
-    "build": "turbo run build",
     "dev": "turbo run dev",
+    "build": "turbo run build",
+    "check": "turbo run typecheck",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
-    "clean": "turbo run clean && rm -rf node_modules apps/*/node_modules composes/*/node_modules",
-    "format": "prettier --write \"**/*.{ts,tsx,md,json}\""
+    "clean": "turbo run clean && rm -rf node_modules apps/*/node_modules composes/*/node_modules packages/*/node_modules"
   },
   "devDependencies": {
     "mint": "^4.2.434",

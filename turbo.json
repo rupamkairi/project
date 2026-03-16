@@ -3,21 +3,18 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
+      "outputs": ["dist/**"]
     },
     "dev": {
+      "dependsOn": ["^build"],
       "cache": false,
       "persistent": true
     },
-    "lint": {
-      "dependsOn": ["^lint"]
-    },
     "typecheck": {
-      "dependsOn": ["^typecheck"],
-      "inputs": ["*.ts", "*.tsx", "tsconfig.json", "apps/**", "composes/**"]
+      "dependsOn": ["^build"]
     },
-    "clean": {
-      "cache": false
+    "lint": {
+      "dependsOn": ["^build"]
     }
   }
 }

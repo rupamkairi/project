@@ -1,15 +1,13 @@
 {
+  "extends": "@repo/config/tsconfig/web",
   "compilerOptions": {
+    "types": ["vite/client"],
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@projectx/platform": ["./node_modules/@projectx/platform/web"],
-      "@projectx/platform/*": ["./node_modules/@projectx/platform/*"]
+      "@projectx/platform-web": ["../../composes/platform/web/src"],
+      "@projectx/platform-web/*": ["../../composes/platform/web/src/*"]
     }
   },
-  "files": [],
-  "references": [
-    { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" }
-  ]
+  "include": ["src"]
 }
