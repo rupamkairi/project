@@ -1,7 +1,8 @@
 // Platform API client using Eden Treaty patterns
 // This connects to the server's platform compose routes
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const API_BASE =
+  (import.meta.env.VITE_API_URL || "http://localhost:3000") + "/platform";
 
 interface ApiResponse<T> {
   data?: T;

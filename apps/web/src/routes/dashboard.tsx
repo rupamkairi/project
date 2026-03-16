@@ -47,7 +47,7 @@ import {
 
 export const Route = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/dashboard",
+  path: "/_dashboard",
   component: DashboardPage,
 });
 

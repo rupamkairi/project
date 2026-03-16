@@ -13,6 +13,15 @@ export * from "./geo";
 export * from "./analytics";
 
 // Platform schema - re-exported from compose
+import {
+  pltSettings,
+  pltComposeConfig,
+  pltOrganizationSettings,
+  type PltSetting,
+  type PltComposeConfig,
+  type PltOrganizationSetting,
+} from "@projectx/platform-server/db/schema/platform";
+
 export {
   pltSettings,
   pltComposeConfig,
@@ -20,4 +29,4 @@ export {
   type PltSetting,
   type PltComposeConfig,
   type PltOrganizationSetting,
-} from "@projectx/platform-server";
+};
