@@ -14,13 +14,18 @@ The current monorepo structure partially aligns with the architecture documents 
 
 ### 1. Directory Structure Comparison
 
-| Path                        | Expected (per docs)                            | Actual                                  | Status       |
-| --------------------------- | ---------------------------------------------- | --------------------------------------- | ------------ |
-| `apps/server/src/`          | core/, infra/, modules/, index.ts, worker.ts   | ✅ Matches                              | OK           |
-| `apps/web/src/`             | components/, hooks/, lib/, routes/             | components/, lib/, routes/, **stores/** | ⚠️ Minor     |
-| `composes/platform/server/` | hooks/, routes/, permissions/, seed/, index.ts | db/, lib/, routes/, index.ts            | ⚠️ Different |
-| `composes/platform/web/`    | components/, hooks/, lib/, routes/             | lib/, routes/, stores/                  | ⚠️ Different |
-| `packages/config/`          | tsconfig/, eslint/, prettier.config.js         | ✅ Exists                               | OK           |
+| Path                        | Expected (per docs)                            | Actual                       | Status       |
+| --------------------------- | ---------------------------------------------- | ---------------------------- | ------------ |
+| `apps/server/src/`          | core/, infra/, modules/, index.ts, worker.ts   | ✅ Matches                   | OK           |
+| `apps/web/src/`             | components/, hooks/, lib/, routes/             | components/, lib/, routes/   | ✅ Updated   |
+| `packages/router/`          | (new) shared root route for TanStack Router    | ✅ Exists                    | OK           |
+| `composes/platform/server/` | hooks/, routes/, permissions/, seed/, index.ts | db/, lib/, routes/, index.ts | ⚠️ Different |
+| `composes/platform/web/`    | components/, hooks/, lib/, routes/             | lib/, routes/, stores/       | ⚠️ Different |
+| `packages/config/`          | tsconfig/, eslint/, prettier.config.js         | ✅ Exists                    | OK           |
+
+> **Recent Change**: `packages/router/` was added to provide a shared TanStack Router
+> root route (`sharedRootRoute`). This solves the issue of multiple root routes when
+> integrating multiple composes into the host app.
 
 ### 2. Path Aliases Analysis
 

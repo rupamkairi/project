@@ -86,11 +86,12 @@ src/modules/lms/
 
 ### 1. Router Integration (`src/router.ts`)
 
-The root router imports module routes and merges them into the route tree:
+The root router imports module routes and merges them into the route tree using the **shared root route**:
 
 ```typescript
 // src/router.ts
-import { Route as rootRoute } from "./routes/__root";
+import { createRouter } from "@tanstack/react-router";
+import { sharedRootRoute } from "@projectx/shared-router";
 
 // Root-level routes (non-module)
 import { Route as indexRoute } from "./routes/index";
@@ -102,7 +103,7 @@ import { Route as lmsLayoutRoute } from "./modules/lms/routes/layout";
 import { Route as lmsDashboardRoute } from "./modules/lms/routes/dashboard/index";
 // ... more module routes
 
-const routeTree = rootRoute.addChildren([
+const routeTree = sharedRootRoute.addChildren([
   indexRoute,
   aboutRoute,
   lmsLoginRoute,
@@ -114,6 +115,9 @@ const routeTree = rootRoute.addChildren([
 
 export const router = createRouter({ routeTree });
 ```
+
+> **Important**: Use `sharedRootRoute` from `@projectx/shared-router` instead of creating
+> your own root route. This ensures compatibility with all composes and avoids route ID conflicts.
 
 ### 2. Module Entry Point (`index.ts`)
 
@@ -149,6 +153,43 @@ export const lmsMeta = {
   routePrefix: "/lms",
 };
 ```
+
+---
+
+## Shared Router Pattern
+
+> **Critical**: TanStack Router only allows ONE `createRootRoute()` per application.
+> To support multiple composes, we use a shared root route from `@projectx/shared-router`.
+
+### Why This Matters
+
+When each module tries to create its own root route:
+
+```typescript
+// ❌ Don't do this - causes route ID conflicts
+import { createRootRoute } from "@tanstack/react-router";
+export const Route = createRootRoute({ component: AppShell });
+```
+
+Instead, use the shared root route:
+
+```typescript
+// ✅ Do this - use the shared root route
+import { sharedRootRoute } from "@projectx/shared-router";
+
+export const Route = createRoute({
+  getParentRoute: () => sharedRootRoute,
+  path: "/your-path",
+  component: YourComponent,
+});
+```
+
+### Key Points
+
+1. **Single source**: All routes share one root (`sharedRootRoute`)
+2. **Composable**: Composes export route arrays, not root routes
+3. **Layout separation**: The app shell lives in `packages/router/src/routes/root.layout.tsx`
+4. **No conflicts**: Using `sharedRootRoute` prevents duplicate route IDs
 
 ---
 
@@ -225,15 +266,18 @@ export const widgetMeta = {
 ```typescript
 // src/modules/<module-name>/routes/layout.tsx
 import { createRoute } from "@tanstack/react-router";
-import { Route as rootRoute } from "@/routes/__root";
+import { sharedRootRoute } from "@projectx/shared-router";
 import { WidgetLayout } from "../components/layout/widget-layout";
 
 export const Route = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => sharedRootRoute,
   path: "/widgets",
   component: WidgetLayout,
 });
 ```
+
+> **Note**: Always use `sharedRootRoute` from `@projectx/shared-router` as the parent
+> for top-level compose routes. This ensures all composes share the same root route.
 
 ### Step 7: Create Feature Routes
 
@@ -267,11 +311,12 @@ export { widgetNavigation, widgetMeta } from "./config";
 
 ```typescript
 // src/router.ts
+import { sharedRootRoute } from "@projectx/shared-router";
 import { Route as widgetLayoutRoute } from "./modules/widget/routes/layout";
 import { Route as widgetIndexRoute } from "./modules/widget/routes/index";
 // ...
 
-const routeTree = rootRoute.addChildren([
+const routeTree = sharedRootRoute.addChildren([
   // ...existing routes
   widgetLayoutRoute.addChildren([
     widgetIndexRoute,

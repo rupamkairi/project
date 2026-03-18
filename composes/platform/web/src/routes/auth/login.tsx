@@ -1,11 +1,11 @@
 import { createRoute } from "@tanstack/react-router";
-import { Route as rootRoute } from "../__root";
+import { sharedRootRoute } from "@projectx/shared-router";
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useAuthStore } from "../../stores/auth";
 
 export const Route = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => sharedRootRoute,
   path: "/login",
   component: LoginPage,
 });

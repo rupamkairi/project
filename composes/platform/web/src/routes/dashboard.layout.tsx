@@ -1,10 +1,10 @@
 import { createRoute } from "@tanstack/react-router";
-import { Route as rootRoute } from "./__root";
 import { Outlet, Link, useNavigate } from "@tanstack/react-router";
 import { useAuthStore } from "../stores/auth";
+import { sharedRootRoute } from "@projectx/shared-router";
 
 export const Route = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => sharedRootRoute,
   path: "/dashboard",
   component: DashboardLayout,
 });
@@ -27,9 +27,9 @@ function DashboardLayout() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className=" min-h-screen bg-gray-100">
       <nav className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="container mx-auto py-4 px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex">
               <div className="flex-shrink-0 flex items-center">
@@ -72,10 +72,8 @@ function DashboardLayout() {
         </div>
       </nav>
 
-      <main className="py-6">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <Outlet />
-        </div>
+      <main className="container mx-auto p-4">
+        <Outlet />
       </main>
     </div>
   );

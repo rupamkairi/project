@@ -13,13 +13,13 @@
     "check": "turbo run typecheck",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
-    "clean": "turbo run clean && rm -rf node_modules apps/*/node_modules composes/*/node_modules packages/*/node_modules"
+    "clean": "rm -rf node_modules apps/*/node_modules composes/*/node_modules composes/*/server/node_modules composes/*/web/node_modules packages/*/node_modules"
   },
   "devDependencies": {
-    "mint": "^4.2.434",
-    "prettier": "^3.2.5",
-    "turbo": "^2.4.0",
-    "typescript": "^5.3.3"
+    "mint": "^4.2.437",
+    "prettier": "^3.8.1",
+    "turbo": "^2.8.18",
+    "typescript": "^5.9.3"
   },
   "packageManager": "bun@1.0.25"
 }

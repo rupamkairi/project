@@ -1,0 +1,23 @@
+{
+  "name": "@projectx/shared-router",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "Shared Router",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist node_modules"
+  },
+  "dependencies": {
+    "@tanstack/react-router": "^1.161.3"
+  },
+  "devDependencies": {
+    "@repo/config": "workspace:*",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "^5.3.3"
+  }
+}

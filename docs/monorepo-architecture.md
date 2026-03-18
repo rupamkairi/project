@@ -17,7 +17,9 @@ Runtime: **Bun**. Architecture: **Core → Module → Compose**.
 │       ├── server/     ← Elysia plugin exported for apps/server
 │       └── web/        ← Route tree exported for apps/web
 ├── docs/
-├── packages/           ← Shared packages (future — not required yet)
+├── packages/
+│   ├── config/         ← TypeScript, ESLint, Prettier configs
+│   └── router/         ← Shared TanStack Router root route
 └── turbo.json
 ```
 
@@ -238,6 +240,7 @@ No compose ever imports from another compose. No compose imports from `apps/`.
 ```
 packages/
   config/      ← TypeScript configs, ESLint configs, Prettier config
+  router/      ← Shared TanStack Router root route (sharedRootRoute)
 ```
 
 `ui/` is intentionally excluded. All component decisions stay inside each compose's
@@ -538,6 +541,61 @@ export { default } from "@repo/config/prettier.config.js";
 ```
 
 `packages/config` has no `build` step — it ships raw `.json` and `.js` files directly.
+
+---
+
+### `packages/router`
+
+The shared router package solves a critical TanStack Router limitation: **only one `createRootRoute()` can exist per application**. When multiple packages (host app and composes) each try to create their own root route, route ID collisions occur.
+
+The solution is a single shared root route that all packages use:
+
+```
+packages/router/
+├── src/
+│   ├── routes/
+│   │   ├── __root.tsx      ← Creates sharedRootRoute via createRootRoute()
+│   │   ├── root.layout.tsx  ← The shared app shell layout component
+│   │   └── index.ts         ← Exports sharedRootRoute
+│   └── index.ts             ← Re-exports from ./routes
+└── package.json
+```
+
+#### Usage
+
+**Host app** (`apps/web/src/router.ts`):
+
+```typescript
+import { sharedRootRoute } from "@projectx/shared-router";
+import { platformRoutes } from "@projectx/platform-web";
+
+const routeTree = sharedRootRoute.addChildren([
+  indexRoute,
+  dashboardRoute,
+  ...platformRoutes,
+]);
+
+export const router = createRouter({ routeTree });
+```
+
+**Compose routes** use `sharedRootRoute` as their parent:
+
+```typescript
+import { sharedRootRoute } from "@projectx/shared-router";
+
+export const Route = createRoute({
+  getParentRoute: () => sharedRootRoute,
+  path: "/dashboard",
+  component: DashboardLayout,
+});
+```
+
+#### Why This Pattern?
+
+1. **Single root**: TanStack Router requires exactly one root route
+2. **Composable**: Composes can export routes that plug into the shared tree
+3. **Shared layout**: The `root.layout.tsx` provides the app shell (header, navigation)
+4. **No conflicts**: All packages reference the same `sharedRootRoute`
 
 ---
 

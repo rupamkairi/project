@@ -1,5 +1,4 @@
 import { createRoute } from "@tanstack/react-router";
-import { Route as rootRoute } from "./__root";
 import { useState, useEffect, type ReactNode } from "react";
 import {
   fetchCoreLayer,
@@ -44,9 +43,10 @@ import {
   Package,
   BookOpen,
 } from "lucide-react";
+import { sharedRootRoute } from "@projectx/shared-router";
 
 export const Route = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => sharedRootRoute,
   path: "/_dashboard",
   component: DashboardPage,
 });

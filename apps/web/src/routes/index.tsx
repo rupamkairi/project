@@ -1,9 +1,9 @@
 import { createRoute } from "@tanstack/react-router";
-import { Route as rootRoute } from "./__root";
 import { Link } from "@tanstack/react-router";
+import { sharedRootRoute } from "@projectx/shared-router";
 
 export const Route = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => sharedRootRoute,
   path: "/",
   component: HomePage,
 });
