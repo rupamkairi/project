@@ -4,11 +4,12 @@
     "outDir": "dist",
     "rootDir": "src",
     "baseUrl": ".",
+    "jsx": "react-jsx",
     "paths": {
-      "@projectx/platform-web": ["./src"],
+      "@projectx/ui": ["./src"],
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src/lib/**/*", "src/stores/**/*", "src/components/**/*"],
-  "exclude": ["node_modules", "dist", "src/routes"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
 }

@@ -239,12 +239,13 @@ No compose ever imports from another compose. No compose imports from `apps/`.
 
 ```
 packages/
-  config/      ← TypeScript configs, ESLint configs, Prettier config
+  config/      ← TypeScript, ESLint, Prettier, TailwindCSS configs
   router/      ← Shared TanStack Router root route (sharedRootRoute)
+  ui/          ← Centralized UI components (Shadcn + custom)
 ```
 
-`ui/` is intentionally excluded. All component decisions stay inside each compose's
-own `web/` package.
+All web applications (apps/web and composes/\*/web) must use `@projectx/ui` for UI components.
+See [Design System Guidelines](../docs/design-system-guidelines.md) for details.
 
 ---
 
@@ -266,8 +267,27 @@ packages/config/
 │   ├── server.js      ← extends base — Bun/server rules
 │   └── react.js       ← extends base — React + hooks rules
 ├── prettier.config.js ← single Prettier config, imported by all
+├── src/
+│   └── index.css      ← Base TailwindCSS with CSS variables (imported by apps)
+├── tailwind.config.js ← TailwindCSS theme configuration
 └── package.json
 ```
+
+#### TailwindCSS Configuration
+
+The config package provides centralized TailwindCSS configuration:
+
+- **`src/index.css`** - Base CSS with Tailwind directives and CSS variables for theming
+- **`tailwind.config.js`** - Theme configuration with custom colors, animations, and border radius
+
+All web applications import from `@repo/config`:
+
+```typescript
+// apps/web/src/index.css
+@import "@repo/config/src/index.css";
+```
+
+See [Design System Guidelines](../docs/design-system-guidelines.md) for detailed styling standards.
 
 #### TypeScript Configs
 

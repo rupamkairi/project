@@ -20,6 +20,8 @@ Before making architecture, compose, server, or web decisions, read these docume
 3. [docs/architecture/module.md](/Users/rupamkairi/Projects/projectx/project/docs/architecture/module.md)
 4. [docs/architecture/compose-standards.md](/Users/rupamkairi/Projects/projectx/project/docs/architecture/compose-standards.md)
 5. **docs/monorepo-architecture.md** - Contains detailed monorepo structure, workspaces, and TypeScript config patterns
+6. **docs/web-architecture.md** - Web application structure and routing
+7. **docs/design-system-guidelines.md** - UI/UX guidelines, component standards, and styling conventions
 
 Then read the compose-specific references relevant to the task:
 

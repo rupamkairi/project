@@ -12,6 +12,7 @@ export default defineConfig({
         __dirname,
         "../../composes/platform/web/src",
       ),
+      "@projectx/ui": path.resolve(__dirname, "../../packages/ui/src"),
     },
   },
 });
