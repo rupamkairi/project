@@ -16,7 +16,7 @@ apps/web/src/
 ├── routes/
 │   ├── index.tsx   # Home page route
 │   └── dashboard.tsx  # Dashboard page route (legacy - moving to composes)
-├── index.css       # Imports from @repo/config for TailwindCSS
+├── index.css       # Imports from @projectx/config for TailwindCSS
 ├── main.tsx
 └── router.ts       # Registers all compose route trees
 ```
@@ -68,7 +68,7 @@ All TailwindCSS configuration is centralized in `packages/config/`:
 
 ```typescript
 // apps/web/src/index.css
-@import "@repo/config/src/index.css";
+@import "@projectx/config/src/index.css";
 ```
 
 ### UI Components

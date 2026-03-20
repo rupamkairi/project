@@ -1,8 +1,8 @@
-import { createRouter, redirect } from "@tanstack/react-router";
-import { sharedRootRoute } from "@projectx/shared-router";
-import { Route as indexRoute } from "./routes/index";
-import { Route as dashboardRoute } from "./routes/dashboard";
+import { Route as dashboardRoute } from "@/routes/dashboard";
+import { Route as indexRoute } from "@/routes/index";
 import { platformRoutes } from "@projectx/platform-web";
+import { sharedRootRoute } from "@projectx/shared-router";
+import { createRouter } from "@tanstack/react-router";
 
 // Create the route tree
 // Add platform root with its children to avoid duplicate __root__ IDs
@@ -35,7 +35,9 @@ export const router = createRouter({
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold">Page Not Found</h1>
-          <p className="text-gray-600 mt-2">The page you're looking for doesn't exist.</p>
+          <p className="text-gray-600 mt-2">
+            The page you're looking for doesn't exist.
+          </p>
         </div>
       </div>
     );

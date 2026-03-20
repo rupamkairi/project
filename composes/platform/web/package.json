@@ -12,9 +12,9 @@
     "clean": "rm -rf dist node_modules"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
     "@projectx/shared-router": "workspace:*",
     "@projectx/ui": "workspace:*",
-    "@hookform/resolvers": "^5.2.2",
     "@tanstack/react-query": "^5.90.21",
     "@tanstack/react-router": "^1.161.3",
     "date-fns": "^4.1.0",
@@ -25,7 +25,7 @@
     "zustand": "^5.0.11"
   },
   "devDependencies": {
-    "@repo/config": "workspace:*",
+    "@projectx/config": "workspace:*",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "typescript": "^5.3.3"

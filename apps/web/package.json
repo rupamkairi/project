@@ -12,10 +12,10 @@
     "clean": "rm -rf dist node_modules"
   },
   "dependencies": {
-    "@projectx/shared-router": "workspace:*",
-    "@projectx/platform-web": "workspace:*",
-    "@projectx/ui": "workspace:*",
     "@hookform/resolvers": "^5.2.2",
+    "@projectx/platform-web": "workspace:*",
+    "@projectx/shared-router": "workspace:*",
+    "@projectx/ui": "workspace:*",
     "@tanstack/react-query": "^5.90.21",
     "@tanstack/react-query-devtools": "^5.91.3",
     "@tanstack/react-router": "^1.161.3",
@@ -29,8 +29,9 @@
     "zustand": "^5.0.11"
   },
   "devDependencies": {
-    "@repo/config": "workspace:*",
+    "@projectx/config": "workspace:*",
     "@eslint/js": "^9.39.1",
+    "@tailwindcss/vite": "^4.2.2",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",

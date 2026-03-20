@@ -81,7 +81,7 @@ packages/config/
 Create packages/config/package.json:
 
 {
-"name": "@repo/config",
+"name": "@projectx/config",
 "private": true,
 "type": "module",
 "exports": {
@@ -294,7 +294,7 @@ Create apps/server/package.json:
 "db:seed": "bun run src/infra/db/seed.ts"
 },
 "devDependencies": {
-"@repo/config": "workspace:\*",
+"@projectx/config": "workspace:\*",
 "bun-types": "latest",
 "typescript": "latest",
 "drizzle-kit": "latest",
@@ -305,7 +305,7 @@ Create apps/server/package.json:
 Create apps/server/tsconfig.json:
 
 {
-"extends": "@repo/config/tsconfig/server",
+"extends": "@projectx/config/tsconfig/server",
 "compilerOptions": {
 "paths": {
 "@core/_": ["./src/core/_"],
@@ -320,12 +320,12 @@ Create apps/server/tsconfig.json:
 
 Create apps/server/eslint.config.js:
 
-import { server } from '@repo/config/eslint/server'
+import { server } from '@projectx/config/eslint/server'
 export default server
 
 Create apps/server/prettier.config.js:
 
-export { default } from '@repo/config/prettier.config.js'
+export { default } from '@projectx/config/prettier.config.js'
 
 Create the following folder structure inside apps/server/src/.
 Each folder gets a placeholder index.ts — no logic, structure only.
@@ -446,7 +446,7 @@ Create apps/web/package.json:
 "@repo/server": "workspace:_"
 },
 "devDependencies": {
-"@repo/config": "workspace:_",
+"@projectx/config": "workspace:_",
 "vite": "latest",
 "@vitejs/plugin-react": "latest",
 "typescript": "latest",
@@ -464,7 +464,7 @@ bun add react react-dom @tanstack/react-router @tanstack/react-query @elysiajs/e
 Create apps/web/tsconfig.json:
 
 {
-"extends": "@repo/config/tsconfig/web",
+"extends": "@projectx/config/tsconfig/web",
 "include": ["src"],
 "exclude": ["node_modules", "dist"]
 }
@@ -487,12 +487,12 @@ port: 5173,
 
 Create apps/web/eslint.config.js:
 
-import { react } from '@repo/config/eslint/react'
+import { react } from '@projectx/config/eslint/react'
 export default react
 
 Create apps/web/prettier.config.js:
 
-export { default } from '@repo/config/prettier.config.js'
+export { default } from '@projectx/config/prettier.config.js'
 
 Create the following folder structure inside apps/web/src/.
 Shell only — no feature components:
@@ -564,7 +564,7 @@ Create package.json:
 "lint": "eslint ."
 },
 "devDependencies": {
-"@repo/config": "workspace:\*",
+"@projectx/config": "workspace:\*",
 "bun-types": "latest",
 "typescript": "latest",
 "eslint": "latest"
@@ -574,7 +574,7 @@ Create package.json:
 Create tsconfig.json:
 
 {
-"extends": "@repo/config/tsconfig/server",
+"extends": "@projectx/config/tsconfig/server",
 "compilerOptions": {
 "paths": {
 "@core/_": ["../../../apps/server/src/core/_"],
@@ -589,12 +589,12 @@ Create tsconfig.json:
 
 Create eslint.config.js:
 
-import { server } from '@repo/config/eslint/server'
+import { server } from '@projectx/config/eslint/server'
 export default server
 
 Create prettier.config.js:
 
-export { default } from '@repo/config/prettier.config.js'
+export { default } from '@projectx/config/prettier.config.js'
 
 Create folder structure inside composes/platform/server/src/:
 
@@ -654,7 +654,7 @@ Create package.json:
 "@repo/platform-server": "workspace:_"
 },
 "devDependencies": {
-"@repo/config": "workspace:_",
+"@projectx/config": "workspace:_",
 "typescript": "latest",
 "@types/react": "latest",
 "eslint": "latest"
@@ -664,19 +664,19 @@ Create package.json:
 Create tsconfig.json:
 
 {
-"extends": "@repo/config/tsconfig/web",
+"extends": "@projectx/config/tsconfig/web",
 "include": ["src"],
 "exclude": ["node_modules", "dist"]
 }
 
 Create eslint.config.js:
 
-import { react } from '@repo/config/eslint/react'
+import { react } from '@projectx/config/eslint/react'
 export default react
 
 Create prettier.config.js:
 
-export { default } from '@repo/config/prettier.config.js'
+export { default } from '@projectx/config/prettier.config.js'
 
 Create folder structure inside composes/platform/web/src/:
 
@@ -818,6 +818,7 @@ import { Link } from '@tanstack/react-router'
 
 export function Sidebar() {
 return (
+
 <aside>
 {composeRegistry.map(compose => (
 <div key={compose.id}>
@@ -952,9 +953,9 @@ Expected output:
 ## HARD RULES — enforce throughout every file generated
 
 1.  packages/config is built before any app or compose
-2.  Every tsconfig.json extends from @repo/config — never from ../../tsconfig.json or root
-3.  Every eslint.config.js imports from @repo/config — never declares its own rules
-4.  Every prettier.config.js re-exports from @repo/config — never declares its own rules
+2.  Every tsconfig.json extends from @projectx/config — never from ../../tsconfig.json or root
+3.  Every eslint.config.js imports from @projectx/config — never declares its own rules
+4.  Every prettier.config.js re-exports from @projectx/config — never declares its own rules
 5.  Path aliases (@core/_, @modules/_, etc.) are declared per-app only — never in packages/config
 6.  apps/server and apps/web contain ZERO feature logic
 7.  All feature logic lives in composes/

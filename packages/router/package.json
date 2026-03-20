@@ -15,7 +15,7 @@
     "@tanstack/react-router": "^1.161.3"
   },
   "devDependencies": {
-    "@repo/config": "workspace:*",
+    "@projectx/config": "workspace:*",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "typescript": "^5.3.3"

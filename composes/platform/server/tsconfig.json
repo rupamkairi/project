@@ -1,5 +1,5 @@
 {
-  "extends": "@repo/config/tsconfig/server",
+  "extends": "@projectx/config/tsconfig/server",
   "compilerOptions": {
     "outDir": "dist",
     "baseUrl": ".",

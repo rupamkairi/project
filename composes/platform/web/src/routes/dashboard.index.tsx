@@ -1,6 +1,7 @@
 import { createRoute } from "@tanstack/react-router";
 import { Route as dashboardLayoutRoute } from "./dashboard.layout";
 import { Link } from "@tanstack/react-router";
+import { Button } from "@projectx/ui";
 
 export const Route = createRoute({
   getParentRoute: () => dashboardLayoutRoute,
@@ -11,6 +12,9 @@ export const Route = createRoute({
 function DashboardIndex() {
   return (
     <div>
+      <p>Dashboard Button From UI Package</p>
+      <Button variant={"ghost"}>Dashboard Button From UI Package</Button>
+
       <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
       <p className="mt-2 text-sm text-gray-700">
         Welcome to the Platform Dashboard

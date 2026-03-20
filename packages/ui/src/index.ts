@@ -1,6 +1,9 @@
 // UI Components - Re-exported from @projectx/ui
 // These components support className props for customization
 
+// Layout Components
+import "./index.css";
+
 // Basic UI Components
 export { Button, buttonVariants } from "./components/ui/button";
 export type { ButtonProps } from "./components/ui/button";

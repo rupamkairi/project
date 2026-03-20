@@ -1,6 +1,8 @@
 // Platform Compose - Web exports
 // Re-export all client-side functionality
 
+import "@projectx/ui/index.css";
+
 // API Client
 export { platformApi } from "./lib/api/platform";
 

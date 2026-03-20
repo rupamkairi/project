@@ -280,11 +280,11 @@ The config package provides centralized TailwindCSS configuration:
 - **`src/index.css`** - Base CSS with Tailwind directives and CSS variables for theming
 - **`tailwind.config.js`** - Theme configuration with custom colors, animations, and border radius
 
-All web applications import from `@repo/config`:
+All web applications import from `@projectx/config`:
 
 ```typescript
 // apps/web/src/index.css
-@import "@repo/config/src/index.css";
+@import "@projectx/config/src/index.css";
 ```
 
 See [Design System Guidelines](../docs/design-system-guidelines.md) for detailed styling standards.
@@ -365,19 +365,19 @@ get types. No DOM, no Bun-specific types.
 
 #### How Each Consumer Extends
 
-| Consumer            | Extends                        | Adds                                           |
-| ------------------- | ------------------------------ | ---------------------------------------------- |
-| `apps/server`       | `@repo/config/tsconfig/server` | `paths` aliases to its own `src/`              |
-| `apps/web`          | `@repo/config/tsconfig/web`    | nothing                                        |
-| `composes/*/server` | `@repo/config/tsconfig/server` | `paths` aliases pointing to `apps/server/src/` |
-| `composes/*/web`    | `@repo/config/tsconfig/web`    | nothing                                        |
-| `packages/config`   | `@repo/config/tsconfig/lib`    | nothing                                        |
+| Consumer            | Extends                            | Adds                                           |
+| ------------------- | ---------------------------------- | ---------------------------------------------- |
+| `apps/server`       | `@projectx/config/tsconfig/server` | `paths` aliases to its own `src/`              |
+| `apps/web`          | `@projectx/config/tsconfig/web`    | nothing                                        |
+| `composes/*/server` | `@projectx/config/tsconfig/server` | `paths` aliases pointing to `apps/server/src/` |
+| `composes/*/web`    | `@projectx/config/tsconfig/web`    | nothing                                        |
+| `packages/config`   | `@projectx/config/tsconfig/lib`    | nothing                                        |
 
 **`apps/server/tsconfig.json`:**
 
 ```json
 {
-  "extends": "@repo/config/tsconfig/server",
+  "extends": "@projectx/config/tsconfig/server",
   "compilerOptions": {
     "paths": {
       "@core/*": ["./src/core/*"],
@@ -395,7 +395,7 @@ get types. No DOM, no Bun-specific types.
 
 ```json
 {
-  "extends": "@repo/config/tsconfig/web",
+  "extends": "@projectx/config/tsconfig/web",
   "include": ["src"],
   "exclude": ["node_modules", "dist"]
 }
@@ -405,7 +405,7 @@ get types. No DOM, no Bun-specific types.
 
 ```json
 {
-  "extends": "@repo/config/tsconfig/server",
+  "extends": "@projectx/config/tsconfig/server",
   "compilerOptions": {
     "paths": {
       "@core/*": ["../../../apps/server/src/core/*"],
@@ -423,7 +423,7 @@ get types. No DOM, no Bun-specific types.
 
 ```json
 {
-  "extends": "@repo/config/tsconfig/web",
+  "extends": "@projectx/config/tsconfig/web",
   "include": ["src"],
   "exclude": ["node_modules", "dist"]
 }
@@ -500,15 +500,15 @@ Each app and compose has its own `eslint.config.js` that imports the right prese
 
 ```js
 // apps/server/eslint.config.js
-import { server } from '@repo/config/eslint/server'
+import { server } from '@projectx/config/eslint/server'
 export default server
 
 // apps/web/eslint.config.js  |  composes/*/web/eslint.config.js
-import { react } from '@repo/config/eslint/react'
+import { react } from '@projectx/config/eslint/react'
 export default react
 
 // composes/*/server/eslint.config.js
-import { server } from '@repo/config/eslint/server'
+import { server } from '@projectx/config/eslint/server'
 export default server
 ```
 
@@ -530,14 +530,14 @@ export default {
 
 ```js
 // apps/server/prettier.config.js  — and every other app/compose
-export { default } from "@repo/config/prettier.config.js";
+export { default } from "@projectx/config/prettier.config.js";
 ```
 
 #### `packages/config/package.json`
 
 ```json
 {
-  "name": "@repo/config",
+  "name": "@projectx/config",
   "private": true,
   "type": "module",
   "exports": {
