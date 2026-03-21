@@ -13,6 +13,9 @@ const packages = {
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  server: {
+    port: Number(process.env.VITE_PORT) || 10060,
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
