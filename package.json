@@ -23,6 +23,7 @@
   },
   "packageManager": "bun@1.0.25",
   "dependencies": {
+    "lucide-react": "^0.577.0",
     "tailwindcss": "^4.2.2"
   }
 }

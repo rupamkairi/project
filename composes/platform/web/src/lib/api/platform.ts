@@ -300,6 +300,45 @@ class ApiClient {
       body: JSON.stringify({ value }),
     });
   }
+
+  // Invites
+  async getInvites(params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+  }) {
+    const query = new URLSearchParams();
+    if (params?.page) query.set("page", String(params.page));
+    if (params?.limit) query.set("limit", String(params.limit));
+    if (params?.search) query.set("search", params.search);
+    if (params?.status) query.set("status", params.status);
+
+    return this.request<{ data: any[]; pagination: any }>(`/invites?${query}`);
+  }
+
+  async getInvite(id: string) {
+    return this.request<any>(`/invites/${id}`);
+  }
+
+  async createInvite(data: { email: string; roleIds?: string[] }) {
+    return this.request<any>("/invites", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async resendInvite(id: string) {
+    return this.request<any>(`/invites/${id}/resend`, {
+      method: "POST",
+    });
+  }
+
+  async deleteInvite(id: string) {
+    return this.request<any>(`/invites/${id}`, {
+      method: "DELETE",
+    });
+  }
 }
 
 export const platformApi = new ApiClient(API_BASE);

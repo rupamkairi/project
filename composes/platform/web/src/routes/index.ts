@@ -6,6 +6,7 @@ import { Route as dashboardLayoutRoute } from "./dashboard.layout";
 import { Route as dashboardIndexRoute } from "./dashboard.index";
 import { Route as dashboardUsersRoute } from "./dashboard.users";
 import { Route as dashboardRolesRoute } from "./dashboard.roles";
+import { Route as dashboardInvitesRoute } from "./dashboard.invites";
 import { Route as dashboardNotificationsRoute } from "./dashboard.notifications";
 
 // Platform routes array - these can be added to the host app's route tree
@@ -16,6 +17,7 @@ export const platformRoutes = [
     dashboardIndexRoute,
     dashboardUsersRoute,
     dashboardRolesRoute,
+    dashboardInvitesRoute,
     dashboardNotificationsRoute,
   ]),
 ];
@@ -27,5 +29,6 @@ export {
   dashboardIndexRoute,
   dashboardUsersRoute,
   dashboardRolesRoute,
+  dashboardInvitesRoute,
   dashboardNotificationsRoute,
 };

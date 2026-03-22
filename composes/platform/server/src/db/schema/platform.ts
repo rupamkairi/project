@@ -6,7 +6,15 @@ import {
   boolean,
   integer,
   uniqueIndex,
+  pgEnum,
 } from "drizzle-orm/pg-core";
+
+export const inviteStatusEnum = pgEnum("invite_status", [
+  "pending",
+  "accepted",
+  "expired",
+  "revoked",
+]);
 
 // Base columns shared across all tables
 const baseColumns = {
@@ -56,7 +64,19 @@ export const pltOrganizationSettings = pgTable(
   (table) => [uniqueIndex("plt_org_settings_org_idx").on(table.organizationId)],
 );
 
+// plt_invites - User invitations
+export const pltInvites = pgTable("plt_invites", {
+  ...baseColumns,
+  email: text("email").notNull(),
+  roleIds: jsonb("role_ids").notNull().default([]),
+  invitedBy: text("invited_by").notNull(),
+  token: text("token").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  status: inviteStatusEnum("status").notNull().default("pending"),
+});
+
 export type PltSetting = typeof pltSettings.$inferSelect;
 export type PltComposeConfig = typeof pltComposeConfig.$inferSelect;
 export type PltOrganizationSetting =
   typeof pltOrganizationSettings.$inferSelect;
+export type PltInvite = typeof pltInvites.$inferSelect;
