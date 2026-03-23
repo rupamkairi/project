@@ -1,0 +1,23 @@
+{
+  "name": "@projectx/plugin-notification-server",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "Notification Plugin Server - Template management, scheduled messages, and email sending",
+  "exports": {
+    ".": "./src/index.ts",
+    "./types": "./src/types.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist node_modules"
+  },
+  "dependencies": {
+    "elysia": "^1.4.25"
+  },
+  "devDependencies": {
+    "@projectx/config": "workspace:*",
+    "bun-types": "^1.0.0",
+    "typescript": "^5.3.3"
+  }
+}

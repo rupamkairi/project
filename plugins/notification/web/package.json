@@ -1,0 +1,29 @@
+{
+  "name": "@projectx/plugin-notification-web",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "Notification Plugin Web - Template management UI for notifications",
+  "exports": {
+    ".": "./src/index.ts",
+    "./api": "./src/lib/api.ts",
+    "./routes/templates": "./src/routes/templates.tsx",
+    "./routes/send-email": "./src/routes/send-email.tsx"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist node_modules"
+  },
+  "dependencies": {
+    "lucide-react": "^0.577.0",
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@projectx/config": "workspace:*",
+    "@types/react": "^19.0.0",
+    "typescript": "^5.3.3"
+  },
+  "peerDependencies": {
+    "@projectx/shared-router": "workspace:*"
+  }
+}

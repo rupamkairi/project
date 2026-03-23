@@ -5,6 +5,8 @@
     "apps/*",
     "composes/*/server",
     "composes/*/web",
+    "plugins/*/server",
+    "plugins/*/web",
     "packages/*"
   ],
   "scripts": {
@@ -16,6 +18,7 @@
     "clean": "rm -rf node_modules apps/*/node_modules composes/*/node_modules composes/*/server/node_modules composes/*/web/node_modules packages/*/node_modules"
   },
   "devDependencies": {
+    "@types/nodemailer": "^7.0.11",
     "mint": "^4.2.446",
     "prettier": "^3.8.1",
     "turbo": "^2.8.20",
@@ -23,7 +26,9 @@
   },
   "packageManager": "bun@1.0.25",
   "dependencies": {
+    "handlebars": "^4.7.8",
     "lucide-react": "^0.577.0",
+    "nodemailer": "^8.0.3",
     "tailwindcss": "^4.2.2"
   }
 }
