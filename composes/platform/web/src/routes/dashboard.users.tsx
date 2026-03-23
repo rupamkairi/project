@@ -199,10 +199,9 @@ function UsersPage() {
           />
           <button
             type="submit"
-            className="px-4 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-900 flex items-center gap-2"
+            className="px-3 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-900 flex items-center justify-center"
           >
             <Search className="h-4 w-4" />
-            Search
           </button>
         </form>
 

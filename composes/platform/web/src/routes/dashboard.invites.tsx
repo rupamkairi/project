@@ -2,7 +2,7 @@ import { createRoute } from "@tanstack/react-router";
 import { Route as dashboardLayoutRoute } from "./dashboard.layout";
 import { useState, useEffect } from "react";
 import { platformApi } from "../lib/api/platform";
-import { Mail, Copy, RefreshCcw, Trash2, Plus } from "lucide-react";
+import { Mail, Copy, RefreshCcw, Trash2, Plus, Search } from "lucide-react";
 
 export const Route = createRoute({
   getParentRoute: () => dashboardLayoutRoute,
@@ -162,9 +162,9 @@ function InvitesPage() {
           />
           <button
             type="submit"
-            className="px-4 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-900"
+            className="px-3 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-900 flex items-center justify-center"
           >
-            Search
+            <Search className="h-4 w-4" />
           </button>
         </form>
 
