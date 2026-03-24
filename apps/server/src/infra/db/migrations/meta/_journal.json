@@ -15,6 +15,13 @@
       "when": 1773654385944,
       "tag": "0001_peaceful_changeling",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1774372408424,
+      "tag": "0002_medical_black_crow",
+      "breakpoints": true
     }
   ]
 }
