@@ -14,6 +14,7 @@
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
     "@projectx/plugin-notification-web": "workspace:*",
+    "@projectx/plugin-storage-web": "workspace:*",
     "@projectx/shared-router": "workspace:*",
     "@projectx/ui": "workspace:*",
     "@tanstack/react-query": "^5.90.21",

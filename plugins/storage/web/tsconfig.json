@@ -1,0 +1,6 @@
+{
+  "extends": "@projectx/config/tsconfig/web",
+  "compilerOptions": {
+    "skipLibCheck": true
+  }
+}

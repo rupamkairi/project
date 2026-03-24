@@ -20,14 +20,14 @@ const envSchema = z.object({
   JWT_EXPIRES_IN: z.string().default("7d"),
   REFRESH_TOKEN_EXPIRES_IN: z.string().default("30d"),
 
-  // Storage
-  STORAGE_PROVIDER: z.enum(["local", "s3", "gcs", "r2"]).default("local"),
-  STORAGE_LOCAL_PATH: z.string().default("./uploads"),
+  // Storage - S3
+  STORAGE_PROVIDER: z.enum(["local", "s3", "gcs", "r2"]).default("s3"),
+  S3_ENDPOINT: z.string().url().optional(),
+  S3_ACCESS_KEY_ID: z.string().optional(),
+  S3_SECRET_ACCESS_KEY: z.string().optional(),
   S3_BUCKET: z.string().optional(),
-  S3_REGION: z.string().optional(),
-  S3_ACCESS_KEY: z.string().optional(),
-  S3_SECRET_KEY: z.string().optional(),
-  CDN_BASE_URL: z.string().optional(),
+  S3_REGION: z.string().default("ap-south-1"),
+  S3_PUBLIC_URL: z.string().url().optional(),
 
   // Notification
   EMAIL_PROVIDER: z

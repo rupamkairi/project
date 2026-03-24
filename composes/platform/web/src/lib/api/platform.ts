@@ -339,6 +339,65 @@ class ApiClient {
       method: "DELETE",
     });
   }
+
+  // Storage
+  async getUploadUrl(filename: string, contentType: string, folder?: string) {
+    return this.request<{
+      uploadUrl: string;
+      fileId: string;
+      key: string;
+      expiresIn: number;
+    }>("/plugin-storage/upload/url", {
+      method: "POST",
+      body: JSON.stringify({ filename, contentType, folder }),
+    });
+  }
+
+  async completeUpload(fileId: string, metadata?: Record<string, unknown>) {
+    return this.request<{ file: any }>("/plugin-storage/upload/complete", {
+      method: "POST",
+      body: JSON.stringify({ fileId, metadata }),
+    });
+  }
+
+  async listFiles(params?: {
+    page?: number;
+    limit?: number;
+    folder?: string;
+    contentType?: string;
+  }) {
+    const query = new URLSearchParams();
+    if (params?.page) query.set("page", String(params.page));
+    if (params?.limit) query.set("limit", String(params.limit));
+    if (params?.folder) query.set("folder", params.folder);
+    if (params?.contentType) query.set("contentType", params.contentType);
+
+    return this.request<{
+      files: any[];
+      total: number;
+      page: number;
+      limit: number;
+    }>(`/plugin-storage/files?${query}`);
+  }
+
+  async getFile(fileId: string) {
+    return this.request<any>(`/plugin-storage/files/${fileId}`);
+  }
+
+  async deleteFile(fileId: string) {
+    return this.request<{ success: boolean }>(
+      `/plugin-storage/files/${fileId}`,
+      {
+        method: "DELETE",
+      },
+    );
+  }
+
+  async getDownloadUrl(fileId: string) {
+    return this.request<{ url: string }>(
+      `/plugin-storage/files/${fileId}/download`,
+    );
+  }
 }
 
 export const platformApi = new ApiClient(API_BASE);
