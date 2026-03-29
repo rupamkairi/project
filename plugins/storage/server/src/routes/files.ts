@@ -1,6 +1,7 @@
 import { Elysia, t } from "elysia";
 import { db } from "@db/client";
 import { storageFiles } from "@db/schema/storage";
+import { actors } from "@db/schema/identity";
 import { eq, desc, ilike, and, isNull, count } from "drizzle-orm";
 import { getUrl } from "../lib/s3";
 
@@ -33,8 +34,33 @@ export const fileRoutes = new Elysia({ prefix: "/files" })
 
         const [files, totalResult] = await Promise.all([
           db
-            .select()
+            .select({
+              id: storageFiles.id,
+              organizationId: storageFiles.organizationId,
+              bucket: storageFiles.bucket,
+              key: storageFiles.key,
+              filename: storageFiles.filename,
+              contentType: storageFiles.contentType,
+              size: storageFiles.size,
+              meta: storageFiles.meta,
+              uploadedById: storageFiles.uploadedById,
+              status: storageFiles.status,
+              createdAt: storageFiles.createdAt,
+              updatedAt: storageFiles.updatedAt,
+              deletedAt: storageFiles.deletedAt,
+              version: storageFiles.version,
+              uploadedBy: {
+                id: actors.id,
+                email: actors.email,
+                firstName: actors.firstName,
+                lastName: actors.lastName,
+                avatarUrl: actors.avatarUrl,
+                type: actors.type,
+                status: actors.status,
+              },
+            })
             .from(storageFiles)
+            .leftJoin(actors, eq(storageFiles.uploadedById, actors.id))
             .where(and(...conditions))
             .orderBy(desc(storageFiles.createdAt))
             .limit(limit)
@@ -48,7 +74,10 @@ export const fileRoutes = new Elysia({ prefix: "/files" })
         const total = totalResult[0]?.count || 0;
 
         return {
-          files,
+          files: files.map((f) => ({
+            ...f,
+            uploadedBy: f.uploadedBy?.id ? f.uploadedBy : undefined,
+          })),
           total,
           page,
           limit,
@@ -73,8 +102,33 @@ export const fileRoutes = new Elysia({ prefix: "/files" })
       const orgId = "org_platform_default";
 
       const [file] = await db
-        .select()
+        .select({
+          id: storageFiles.id,
+          organizationId: storageFiles.organizationId,
+          bucket: storageFiles.bucket,
+          key: storageFiles.key,
+          filename: storageFiles.filename,
+          contentType: storageFiles.contentType,
+          size: storageFiles.size,
+          meta: storageFiles.meta,
+          uploadedById: storageFiles.uploadedById,
+          status: storageFiles.status,
+          createdAt: storageFiles.createdAt,
+          updatedAt: storageFiles.updatedAt,
+          deletedAt: storageFiles.deletedAt,
+          version: storageFiles.version,
+          uploadedBy: {
+            id: actors.id,
+            email: actors.email,
+            firstName: actors.firstName,
+            lastName: actors.lastName,
+            avatarUrl: actors.avatarUrl,
+            type: actors.type,
+            status: actors.status,
+          },
+        })
         .from(storageFiles)
+        .leftJoin(actors, eq(storageFiles.uploadedById, actors.id))
         .where(
           and(
             eq(storageFiles.id, params.id),
@@ -88,7 +142,10 @@ export const fileRoutes = new Elysia({ prefix: "/files" })
         return { error: "File not found" };
       }
 
-      return file;
+      return {
+        ...file,
+        uploadedBy: file.uploadedBy?.id ? file.uploadedBy : undefined,
+      };
     } catch (error) {
       console.error("Error getting file:", error);
       set.status = 500;

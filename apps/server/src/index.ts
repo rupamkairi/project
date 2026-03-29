@@ -272,6 +272,12 @@ const dbSchemas = [
     tables: ["outbox"],
     filePath: "./infra/db/schema/outbox",
   },
+  {
+    id: "storage",
+    name: "Storage",
+    tables: ["storage_files"],
+    filePath: "./infra/db/schema/storage",
+  },
 ];
 
 // All module layers

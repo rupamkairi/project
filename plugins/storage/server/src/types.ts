@@ -10,6 +10,17 @@ export interface StoragePluginConfig {
   };
 }
 
+// User info from actors table
+export interface StorageActor {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  avatarUrl: string | null;
+  type: "human" | "system" | "api_key";
+  status: "pending" | "active" | "suspended" | "deleted";
+}
+
 // File metadata from database
 export interface StorageFile {
   id: string;
@@ -21,9 +32,11 @@ export interface StorageFile {
   size: number;
   meta: Record<string, unknown>;
   uploadedById: string;
+  uploadedBy?: StorageActor;
+  status: "pending" | "complete" | "failed";
   createdAt: Date;
   updatedAt: Date;
-  deletedAt?: Date;
+  deletedAt?: Date | null;
   version: number;
 }
 
@@ -66,7 +79,7 @@ export interface ListFilesResponse {
 
 // Plugin return type
 export interface StoragePlugin {
-  plugin: import("elysia").Elysia;
+  plugin: unknown;
   config: StoragePluginConfig;
   getUploadUrl: (
     params: GetUploadUrlRequest & { organizationId: string; actorId: string },

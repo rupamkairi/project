@@ -1,3 +1,31 @@
+export interface StorageActor {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  avatarUrl: string | null;
+  type: "human" | "system" | "api_key";
+  status: "pending" | "active" | "suspended" | "deleted";
+}
+
+export interface StorageFile {
+  id: string;
+  organizationId: string;
+  bucket: string;
+  key: string;
+  filename: string;
+  contentType: string;
+  size: number;
+  meta: Record<string, unknown>;
+  uploadedById: string;
+  uploadedBy?: StorageActor;
+  status: "pending" | "complete" | "failed";
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt?: Date | null;
+  version: number;
+}
+
 export class StorageApi {
   private baseUrl: string;
   private token: string;
@@ -34,7 +62,7 @@ export class StorageApi {
     }
 
     const text = await response.text();
-    return text ? JSON.parse(text) : {};
+    return text ? JSON.parse(text) : ({} as T);
   }
 
   async getUploadUrl(
@@ -56,7 +84,7 @@ export class StorageApi {
   async completeUpload(
     fileId: string,
     metadata?: Record<string, unknown>,
-  ): Promise<{ file: unknown }> {
+  ): Promise<{ file: StorageFile }> {
     return this.request("/platform/plugin-storage/upload/complete", {
       method: "POST",
       body: JSON.stringify({ fileId, metadata }),
@@ -69,7 +97,7 @@ export class StorageApi {
     folder?: string;
     contentType?: string;
   }): Promise<{
-    files: unknown[];
+    files: StorageFile[];
     total: number;
     page: number;
     limit: number;
@@ -87,7 +115,7 @@ export class StorageApi {
     );
   }
 
-  async getFile(fileId: string): Promise<unknown> {
+  async getFile(fileId: string): Promise<StorageFile> {
     return this.request(`/platform/plugin-storage/files/${fileId}`);
   }
 

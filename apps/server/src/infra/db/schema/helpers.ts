@@ -15,9 +15,9 @@ export const baseColumns = {
   organizationId: text("organization_id").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
-  deletedAt: timestamp("deleted_at"),
+  deletedAt: timestamp("deleted_at").$type<Date | undefined>(),
   version: integer("version").notNull().default(1),
-  meta: jsonb("meta").notNull().default({}),
+  meta: jsonb("meta").notNull().$type<Record<string, unknown>>().default({}),
 };
 
 export type BaseColumns = typeof baseColumns;

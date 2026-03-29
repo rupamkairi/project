@@ -15,9 +15,9 @@ export const storageFiles = pgTable(
     bucket: text("bucket").notNull(),
     key: text("key").notNull(),
     filename: text("filename").notNull(),
-    contentType: text("content_type"),
-    size: integer("size"),
-    uploadedById: text("uploaded_by_id"),
+    contentType: text("content_type").notNull().default(""),
+    size: integer("size").notNull().default(0),
+    uploadedById: text("uploaded_by_id").notNull(),
     status: text("status").notNull().default("pending"),
   },
   (table) => [

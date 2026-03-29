@@ -1,8 +1,9 @@
 import { Elysia, t } from "elysia";
 import { db } from "@db/client";
 import { storageFiles } from "@db/schema/storage";
+import { actors } from "@db/schema/identity";
 import { eq, isNull, and } from "drizzle-orm";
-import { generateId } from "@core/entity";
+import { generatePrefixedId } from "@core/entity";
 import { getUploadUrl, getBucketName, generateKey } from "../lib/s3";
 
 const EXPIRES_IN = 3600;
@@ -17,7 +18,7 @@ export const uploadRoutes = new Elysia({ prefix: "/upload" })
         const organizationId =
           (headers["x-organization-id"] as string) || "default";
 
-        const fileId = generateId("file");
+        const fileId = generatePrefixedId("file");
         const key = generateKey(filename, folder);
 
         await db.insert(storageFiles).values({
@@ -86,7 +87,26 @@ export const uploadRoutes = new Elysia({ prefix: "/upload" })
           .where(eq(storageFiles.id, fileId))
           .returning();
 
-        return { file: updatedFile };
+        const [uploader] = await db
+          .select({
+            id: actors.id,
+            email: actors.email,
+            firstName: actors.firstName,
+            lastName: actors.lastName,
+            avatarUrl: actors.avatarUrl,
+            type: actors.type,
+            status: actors.status,
+          })
+          .from(actors)
+          .where(eq(actors.id, updatedFile.uploadedById))
+          .limit(1);
+
+        return {
+          file: {
+            ...updatedFile,
+            uploadedBy: uploader || undefined,
+          },
+        };
       } catch (error) {
         console.error("Error completing upload:", error);
         set.status = 500;

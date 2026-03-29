@@ -23,12 +23,12 @@ import {
 import { db } from "@db/client";
 import { storageFiles } from "@db/schema/storage";
 import { eq, desc, ilike, and, isNull } from "drizzle-orm";
-import { generateId } from "@core/entity";
+import { generatePrefixedId } from "@core/entity";
 
 const EXPIRES_IN = 3600;
 
 export function createStoragePlugin(
-  config: StoragePluginConfig
+  config: StoragePluginConfig,
 ): StoragePlugin {
   const plugin = new Elysia({ prefix: "/plugin-storage" })
     .use(fileRoutes)
@@ -36,10 +36,10 @@ export function createStoragePlugin(
     .get("/health", () => ({ status: "ok", provider: "s3" }));
 
   const getUploadUrl = async (
-    params: GetUploadUrlRequest & { organizationId: string; actorId: string }
+    params: GetUploadUrlRequest & { organizationId: string; actorId: string },
   ): Promise<GetUploadUrlResponse> => {
     const { filename, contentType, folder, organizationId, actorId } = params;
-    const fileId = generateId("file");
+    const fileId = generatePrefixedId("file");
     const key = generateKey(filename, folder);
 
     await db.insert(storageFiles).values({
@@ -64,7 +64,7 @@ export function createStoragePlugin(
   };
 
   const completeUpload = async (
-    params: CompleteUploadRequest & { organizationId: string }
+    params: CompleteUploadRequest & { organizationId: string },
   ): Promise<CompleteUploadResponse> => {
     const { fileId, metadata, organizationId } = params;
 
@@ -76,7 +76,7 @@ export function createStoragePlugin(
           eq(storageFiles.id, fileId),
           eq(storageFiles.organizationId, organizationId),
           isNull(storageFiles.deletedAt),
-        )
+        ),
       );
 
     if (!existingFile) {
@@ -86,13 +86,13 @@ export function createStoragePlugin(
     const [updatedFile] = await db
       .update(storageFiles)
       .set({
-        status: "complete",
+        status: "complete" as const,
         meta: metadata || {},
       })
       .where(eq(storageFiles.id, fileId))
       .returning();
 
-    return { file: updatedFile };
+    return { file: updatedFile as StorageFile };
   };
 
   const deleteFile = async (params: {
@@ -109,7 +109,7 @@ export function createStoragePlugin(
           eq(storageFiles.id, fileId),
           eq(storageFiles.organizationId, organizationId),
           isNull(storageFiles.deletedAt),
-        )
+        ),
       );
 
     if (!existing) {
@@ -125,9 +125,15 @@ export function createStoragePlugin(
   };
 
   const listFiles = async (
-    params: ListFilesQuery & { organizationId: string }
+    params: ListFilesQuery & { organizationId: string },
   ): Promise<ListFilesResponse> => {
-    const { page = 1, limit = 20, folder, contentType, organizationId } = params;
+    const {
+      page = 1,
+      limit = 20,
+      folder,
+      contentType,
+      organizationId,
+    } = params;
 
     const conditions = [
       eq(storageFiles.organizationId, organizationId),
@@ -153,7 +159,7 @@ export function createStoragePlugin(
       .offset(offset);
 
     return {
-      files,
+      files: files as StorageFile[],
       total: files.length,
       page,
       limit,
@@ -174,10 +180,10 @@ export function createStoragePlugin(
           eq(storageFiles.id, fileId),
           eq(storageFiles.organizationId, organizationId),
           isNull(storageFiles.deletedAt),
-        )
+        ),
       );
 
-    return file || null;
+    return (file as StorageFile) || null;
   };
 
   const getDownloadUrl = async (params: {
@@ -194,7 +200,7 @@ export function createStoragePlugin(
           eq(storageFiles.id, fileId),
           eq(storageFiles.organizationId, organizationId),
           isNull(storageFiles.deletedAt),
-        )
+        ),
       );
 
     if (!file) {
