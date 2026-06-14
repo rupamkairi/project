@@ -134,19 +134,65 @@ export const {name}Manifest: ComposeManifest = {
   prefix: "/{name}",
   navItems: [
     { label: "Section", path: "/{name}/section", icon: SomeIcon },
+    {
+      label: "Sub-section",
+      path: "/{name}/sub",
+      icon: SomeIcon,
+      children: [
+        { label: "Detail", path: "/{name}/sub/detail" },
+      ],
+    },
   ],
+  version: "1.0.0",
+  description: "Optional — shown in app switcher or admin panel",
 }
 ```
 
-Register in `apps/web/src/router.tsx`:
+### `ComposeManifest` type
+
+Exported from `@projectx/shared-router`. **Target contract — not yet implemented in packages/router.**
 
 ```typescript
-import { {name}Routes } from "@projectx/{name}-web";
-import { {name}Manifest } from "@projectx/{name}-web";
+export interface ComposeManifest {
+  id: string;                  // unique compose key: "platform", "crm", "erp"
+  label: string;               // display name: "Platform Admin", "CRM"
+  icon: ComponentType;         // icon component for nav + app switcher
+  prefix: string;              // route prefix: "/platform", "/crm"
+  navItems: Array<{
+    label: string;
+    path: string;
+    icon: ComponentType;
+    children?: Array<{
+      label: string;
+      path: string;
+      icon?: ComponentType;
+    }>;
+  }>;
+  version?: string;            // semver — shown in admin/debug views
+  description?: string;        // shown in app switcher tooltip
+}
+```
+
+### Compose registry
+
+`apps/web` collects all manifests and renders the sidebar dynamically. No hardcoded nav in the shell:
+
+```typescript
+// apps/web/src/lib/compose-registry.ts
+import type { ComposeManifest } from "@projectx/shared-router";
+
+export const composeRegistry: ComposeManifest[] = [];
+```
+
+```typescript
+// apps/web/src/router.tsx
+import { {name}Routes, {name}Manifest } from "@projectx/{name}-web";
 
 const routeTree = sharedRootRoute.addChildren([...platformRoutes, ...{name}Routes]);
 composeRegistry.push({name}Manifest);
 ```
+
+The shell sidebar reads `composeRegistry` to build navigation. Adding a new compose updates nav without touching shell components.
 
 ---
 

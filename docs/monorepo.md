@@ -38,12 +38,14 @@ Root `package.json` workspace glob:
     "apps/*",
     "composes/*/server",
     "composes/*/web",
+    "plugins/*/server",
+    "plugins/*/web",
     "packages/*"
   ]
 }
 ```
 
-When adding a new compose, this glob picks it up automatically — no root `package.json` edit needed.
+When adding a new compose or plugin, these globs pick it up automatically — no root `package.json` edit needed.
 
 ---
 
@@ -58,6 +60,8 @@ When adding a new compose, this glob picks it up automatically — no root `pack
 | `packages/config` | `@projectx/config` |
 | `packages/router` | `@projectx/shared-router` |
 | `packages/ui` | `@projectx/ui` |
+| `plugins/{name}/server` | `@projectx/plugin-{name}-server` |
+| `plugins/{name}/web` | `@projectx/plugin-{name}-web` |
 
 ---
 

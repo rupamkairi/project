@@ -15,6 +15,7 @@
     "clean": "rm -rf dist node_modules"
   },
   "dependencies": {
+    "@projectx/plugin-auth-server": "workspace:*",
     "@projectx/plugin-notification-server": "workspace:*",
     "@projectx/plugin-storage-server": "workspace:*",
     "drizzle-orm": "^0.45.1",

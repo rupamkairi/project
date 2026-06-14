@@ -1,0 +1,30 @@
+{
+  "name": "@projectx/plugin-auth-web",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "Auth Plugin Web - Auth store, hooks, and components for React apps",
+  "exports": {
+    ".": "./src/index.ts",
+    "./store": "./src/lib/store.ts",
+    "./hooks": "./src/hooks/use-auth.ts",
+    "./components": "./src/components/auth-guard.tsx",
+    "./providers": "./src/providers/auth-provider.tsx"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist node_modules"
+  },
+  "dependencies": {
+    "react": "^19.0.0",
+    "zustand": "^5.0.11"
+  },
+  "devDependencies": {
+    "@projectx/config": "workspace:*",
+    "@types/react": "^19.0.0",
+    "typescript": "^5.3.3"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  }
+}

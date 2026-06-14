@@ -31,6 +31,7 @@ import type { DomainEvent } from "../event";
  * @category Core
  */
 export type AdapterType =
+  | "auth"
   | "storage"
   | "notification.email"
   | "notification.sms"
@@ -185,6 +186,36 @@ export interface NotificationAdapter {
   channel: "email" | "sms" | "push" | "whatsapp" | "webhook" | "in-app";
   send(to: string, message: NotificationPayload): Promise<NotificationResult>;
   health(): Promise<boolean>;
+}
+
+// ---------------------------------------------------------------------------
+// Auth — HTTP authentication layer
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolved session returned by auth adapter.
+ *
+ * @category Core
+ */
+export interface AuthSession {
+  sessionId: string;
+  actorId: string;
+  orgId: string;
+  roles: string[];
+  expiresAt: Date;
+  revokedAt?: Date | null;
+}
+
+/**
+ * Adapter for authentication providers (local JWT, Auth0, Clerk, Supabase Auth).
+ * Owned by the auth plugin. Never imported by modules — injected via AdapterRegistry.
+ *
+ * @category Core
+ */
+export interface AuthAdapter {
+  verifyToken(token: string): Promise<{ actorId: string; orgId: string; sessionId: string } | null>;
+  resolveSession(sessionId: string): Promise<AuthSession | null>;
+  issueToken(payload: { actorId: string; orgId: string; sessionId: string }): Promise<string>;
 }
 
 // ---------------------------------------------------------------------------

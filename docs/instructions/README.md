@@ -25,7 +25,7 @@ Read these before writing any code:
 | Server setup (Elysia, DB, middleware) | [docs/setup/server.md](../setup/server.md) |
 | Web setup (React, TanStack Router, auth) | [docs/setup/web.md](../setup/web.md) |
 | UI work | [docs/design-system.md](../design-system.md) |
-| Plugin work (storage, notification) | [docs/plugins/README.md](../plugins/README.md) |
+| Plugin work (auth, logging, security, storage, notification) | [docs/plugins/README.md](../plugins/README.md) |
 | Building a new plugin | [docs/plugins/development.md](../plugins/development.md) |
 | Choosing modules for a compose | [docs/composes/index.md](../composes/index.md) |
 | Compose-specific detail | `docs/composes/{name}.md` |

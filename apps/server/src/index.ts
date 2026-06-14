@@ -1,11 +1,27 @@
-// Elysia HTTP Server Entry Point
-
 import Elysia from "elysia";
 import { cors } from "@elysiajs/cors";
 import { swagger } from "@elysiajs/swagger";
 import { bearer } from "@elysiajs/bearer";
 import { env } from "./infra/env";
-import { createModuleRegistry } from "@core";
+import {
+  createModuleRegistry,
+  createMediator,
+  createSystemContext,
+  createEntitySchemaRegistry,
+  createFSMEngine,
+  createStateMachineRegistry,
+  createRuleEngine,
+  createAdapterRegistry,
+  createInMemoryBridge,
+  InMemoryEventBus,
+  InMemoryEventStore,
+  InMemoryQueue,
+  InMemoryScheduler,
+  generateId,
+  type BootRegistry,
+  type StateMachineRegistry,
+} from "@core";
+import type { Command } from "@core";
 import { IdentityModule } from "./modules/identity";
 import { CatalogModule } from "./modules/catalog";
 import { InventoryModule } from "./modules/inventory";
@@ -295,12 +311,64 @@ const moduleLayers = [
 ];
 
 async function main() {
-  const moduleRegistry = createModuleRegistry();
+  // --- Build BootRegistry ---
+  const fsmEngine = createFSMEngine();
+
+  // FSM registry adapter — routes fsms.register() into the engine so
+  // context.fsm.transition() finds the same machines
+  const fsmRegistry: StateMachineRegistry = {
+    register: (m) => fsmEngine.register(m),
+    resolve: (id) => fsmEngine.resolve(id),
+    list: () => [],
+  };
+
+  const bus = new InMemoryEventBus();
+  const store = new InMemoryEventStore();
+  const realtimeBridge = createInMemoryBridge();
+
+  const mediator = createMediator({
+    contextFactory: (req) =>
+      createSystemContext({
+        actorId: req.actorId,
+        orgId: req.orgId,
+        correlationId: "correlationId" in req ? (req as Command).correlationId : generateId(),
+        eventBus: bus,
+        fsm: fsmEngine,
+        logger: console as any,
+      }),
+  });
+
+  // Minimal DatabaseAdapter stub — identity module imports @db/client directly,
+  // so registry.db is unused. Other modules may swap this for a real adapter.
+  const dbAdapter: BootRegistry["db"] = {
+    select: async () => [],
+    insert: async () => ({} as any),
+    update: async () => ({} as any),
+    deleteRow: async () => {},
+    transaction: async (fn) => fn({ commit: async () => {}, rollback: async () => {} }),
+    raw: async () => [],
+  };
+
+  const bootRegistry: BootRegistry = {
+    mediator,
+    bus,
+    store,
+    schemas: createEntitySchemaRegistry(),
+    fsms: fsmRegistry,
+    rules: createRuleEngine(),
+    queue: new InMemoryQueue(),
+    scheduler: new InMemoryScheduler(),
+    realtime: realtimeBridge,
+    db: dbAdapter,
+    adapters: createAdapterRegistry(),
+    logger: console as any,
+  };
+
+  const moduleRegistry = createModuleRegistry(bootRegistry);
   moduleRegistry.registerMany(moduleLayers);
 
-  // Boot all modules
   try {
-    await moduleRegistry.bootRegistered();
+    await moduleRegistry.boot();
     console.log("✓ All modules booted");
   } catch (error) {
     console.error("Failed to boot modules:", error);
@@ -308,7 +376,8 @@ async function main() {
   }
 
   // Dynamic import to avoid circular dependency with platform-compose
-  const { platformCompose } = await import("@projectx/platform-server");
+  const { createPlatformCompose } = await import("@projectx/platform-server");
+  const platformCompose = createPlatformCompose(mediator);
 
   let app: any = new Elysia()
     // Plugins

@@ -1,0 +1,25 @@
+{
+  "name": "@projectx/plugin-auth-server",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "Auth Plugin Server - JWT middleware, session resolution, and auth routes",
+  "exports": {
+    ".": "./src/index.ts",
+    "./types": "./src/types.ts",
+    "./middleware": "./src/middleware.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist node_modules"
+  },
+  "dependencies": {
+    "elysia": "^1.4.25",
+    "jose": "^6.1.3"
+  },
+  "devDependencies": {
+    "@projectx/config": "workspace:*",
+    "bun-types": "^1.0.0",
+    "typescript": "^5.3.3"
+  }
+}

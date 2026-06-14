@@ -55,14 +55,22 @@ plugins/
 |---|---|---|---|---|
 | Storage | `@projectx/plugin-storage-server` | `@projectx/plugin-storage-web` | `createStoragePlugin()` | Implemented |
 | Notification | `@projectx/plugin-notification-server` | `@projectx/plugin-notification-web` | `createNotificationPlugin()` | Implemented |
-| Auth | `@projectx/plugin-auth` | — | `createAuthPlugin()` | Planned |
-| Payment | `@projectx/plugin-payment` | — | `createPaymentPlugin()` | Planned |
-| Search | `@projectx/plugin-search` | — | `createSearchPlugin()` | Planned |
+| Auth | `@projectx/plugin-auth-server` | `@projectx/plugin-auth-web` | `createAuthPlugin()` | Documented |
+| Logging | `@projectx/plugin-logging-server` | — | `createLoggingPlugin()` | Documented |
+| Security | `@projectx/plugin-security-server` | — | `createSecurityPlugin()` | Documented |
+| Payment | `@projectx/plugin-payment-server` | `@projectx/plugin-payment-web` | `createPaymentPlugin()` | Planned |
+| Jobs | `@projectx/plugin-jobs-server` | — | `createJobsPlugin()` | Planned |
+| Search | `@projectx/plugin-search-server` | `@projectx/plugin-search-web` | `createSearchPlugin()` | Planned |
+
+**Status key:** Implemented = code exists · Documented = spec complete, not yet coded · Planned = on roadmap
 
 ---
 
 ## Plugin docs
 
+- [auth.md](./auth.md) — JWT middleware, session resolution, provider adapters, web hooks
+- [logging.md](./logging.md) — Structured request logging, log shipping (Datadog, Logtail, Axiom)
+- [security.md](./security.md) — Security headers, rate limiting, CORS, IP access control
 - [storage.md](./storage.md) — S3-compatible file uploads, metadata, REST API
 - [notification.md](./notification.md) — Email templates, SMTP, scheduled sends
 - [development.md](./development.md) — How to build a new plugin

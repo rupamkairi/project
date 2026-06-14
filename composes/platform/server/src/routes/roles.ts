@@ -1,136 +1,97 @@
-// Platform Role Management Routes - CRUD operations for roles
-
-import Elysia from "elysia";
-import { t } from "elysia";
+import Elysia, { t } from "elysia";
+import type { Mediator } from "@core";
+import { generateId } from "@core";
 import { db } from "@db/client";
 import { roles, actorRoles, actors } from "@db/schema/identity";
 import { eq, and, isNull, desc } from "drizzle-orm";
-import { generateId } from "@core/entity";
+import type { AuthActor } from "@projectx/plugin-auth-server";
 
-export const roleRoutes = new Elysia({ prefix: "/roles" })
-  .get("/", async ({ query, headers, set }) => {
-    // Auth check - simplified for demo
-    const authHeader = headers.authorization;
-    if (!authHeader?.startsWith("Bearer ")) {
-      set.status = 401;
-      return { error: "Unauthorized" };
-    }
+export function createRoleRoutes(mediator: Mediator) {
+  return new Elysia({ prefix: "/roles" })
+  .get("/", async (ctx) => {
+      const actor = (ctx as any).actor as AuthActor;
+      const q = (ctx as any).query ?? {};
+      const page = parseInt(q.page as string) || 1;
+      const limit = parseInt(q.limit as string) || 20;
+      const offset = (page - 1) * limit;
 
-    const page = parseInt(query.page as string) || 1;
-    const limit = parseInt(query.limit as string) || 20;
+      const roleList = await mediator.query<any[]>({
+        type: "identity.listRoles",
+        params: {},
+        actorId: actor.id,
+        orgId: actor.orgId,
+      });
 
-    const orgId = "org_platform_default"; // In real app, get from token
+      const paged = roleList.slice(offset, offset + limit);
 
-    const offset = (page - 1) * limit;
+      return {
+        data: paged.map((r: any) => ({
+          id: r.id,
+          name: r.name,
+          description: r.description,
+          permissions: r.permissions,
+          isDefault: r.isDefault,
+          isSystem: r.isSystem,
+          createdAt: r.createdAt,
+        })),
+        pagination: {
+          page,
+          limit,
+          total: roleList.length,
+          totalPages: Math.ceil(roleList.length / limit),
+        },
+      };
+    })
+  .get("/:id", async (ctx) => {
+      const actor = (ctx as any).actor as AuthActor;
+      const { params, set } = ctx as any;
 
-    const [roleList, countResult] = await Promise.all([
-      db
+      const [role] = await db
         .select()
         .from(roles)
-        .where(and(eq(roles.organizationId, orgId), isNull(roles.deletedAt)))
-        .orderBy(desc(roles.createdAt))
-        .limit(limit)
-        .offset(offset),
-      db
-        .select({ count: roles.id })
-        .from(roles)
-        .where(and(eq(roles.organizationId, orgId), isNull(roles.deletedAt))),
-    ]);
+        .where(
+          and(
+            eq(roles.id, params.id),
+            eq(roles.organizationId, actor.orgId),
+            isNull(roles.deletedAt),
+          ),
+        )
+        .limit(1);
 
-    const total = Number(countResult[0]?.count ?? 0);
-
-    return {
-      data: roleList.map((r) => ({
-        id: r.id,
-        name: r.name,
-        description: r.description,
-        permissions: r.permissions,
-        isDefault: r.isDefault,
-        isSystem: r.isSystem,
-        createdAt: r.createdAt,
-      })),
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
-    };
-  })
-  .get("/:id", async ({ params, headers, set }) => {
-    const authHeader = headers.authorization;
-    if (!authHeader?.startsWith("Bearer ")) {
-      set.status = 401;
-      return { error: "Unauthorized" };
-    }
-
-    const orgId = "org_platform_default";
-
-    const [role] = await db
-      .select()
-      .from(roles)
-      .where(
-        and(
-          eq(roles.id, params.id),
-          eq(roles.organizationId, orgId),
-          isNull(roles.deletedAt),
-        ),
-      )
-      .limit(1);
-
-    if (!role) {
-      set.status = 404;
-      return { error: "Role not found" };
-    }
-
-    // Get actors with this role
-    const roleAssignments = await db
-      .select()
-      .from(actorRoles)
-      .where(eq(actorRoles.roleId, role.id));
-
-    const actorIds = roleAssignments.map((ra) => ra.actorId);
-
-    const assignedActors = actorIds.length
-      ? await db
-          .select({
-            id: actors.id,
-            email: actors.email,
-            firstName: actors.firstName,
-            lastName: actors.lastName,
-          })
-          .from(actors)
-          .where(
-            and(eq(actors.organizationId, orgId), isNull(actors.deletedAt)),
-          )
-      : [];
-
-    return {
-      id: role.id,
-      name: role.name,
-      description: role.description,
-      permissions: role.permissions,
-      isDefault: role.isDefault,
-      isSystem: role.isSystem,
-      createdAt: role.createdAt,
-      memberCount: roleAssignments.length,
-      members: assignedActors.map((a) => ({
-        id: a.id,
-        email: a.email,
-        firstName: a.firstName,
-        lastName: a.lastName,
-      })),
-    };
-  })
-  .post(
-    "/",
-    async ({ body, headers, set }) => {
-      const authHeader = headers.authorization;
-      if (!authHeader?.startsWith("Bearer ")) {
-        set.status = 401;
-        return { error: "Unauthorized" };
+      if (!role) {
+        set.status = 404;
+        return { error: "Role not found" };
       }
 
+      const roleAssignments = await db
+        .select()
+        .from(actorRoles)
+        .where(eq(actorRoles.roleId, role.id));
+
+      const assignedActors = roleAssignments.length
+        ? await db
+            .select({ id: actors.id, email: actors.email, firstName: actors.firstName, lastName: actors.lastName })
+            .from(actors)
+            .where(and(eq(actors.organizationId, actor.orgId), isNull(actors.deletedAt)))
+        : [];
+
+      return {
+        id: role.id,
+        name: role.name,
+        description: role.description,
+        permissions: role.permissions,
+        isDefault: role.isDefault,
+        isSystem: role.isSystem,
+        createdAt: role.createdAt,
+        memberCount: roleAssignments.length,
+        members: assignedActors.map((a) => ({ id: a.id, email: a.email, firstName: a.firstName, lastName: a.lastName })),
+      };
+    })
+  .post(
+    "/",
+    async (ctx) => {
+      const actor = (ctx as any).actor as AuthActor;
+      const { body, set } = ctx as any;
       const { name, description, permissions, isDefault } = body as {
         name: string;
         description?: string;
@@ -138,20 +99,12 @@ export const roleRoutes = new Elysia({ prefix: "/roles" })
         isDefault?: boolean;
       };
 
-      const orgId = "org_platform_default";
       const now = new Date();
 
-      // Check if role name already exists
       const [existing] = await db
         .select()
         .from(roles)
-        .where(
-          and(
-            eq(roles.name, name),
-            eq(roles.organizationId, orgId),
-            isNull(roles.deletedAt),
-          ),
-        )
+        .where(and(eq(roles.name, name), eq(roles.organizationId, actor.orgId), isNull(roles.deletedAt)))
         .limit(1);
 
       if (existing) {
@@ -159,12 +112,11 @@ export const roleRoutes = new Elysia({ prefix: "/roles" })
         return { error: "Role name already exists" };
       }
 
-      // Create role
       const [role] = await db
         .insert(roles)
         .values({
           id: generateId(),
-          organizationId: orgId,
+          organizationId: actor.orgId,
           name,
           description: description || null,
           permissions: permissions || [],
@@ -178,18 +130,13 @@ export const roleRoutes = new Elysia({ prefix: "/roles" })
         })
         .returning();
 
-      if (!role) {
-        set.status = 500;
-        return { error: "Failed to create role" };
-      }
-
       return {
-        id: role.id,
-        name: role.name,
-        description: role.description,
-        permissions: role.permissions,
-        isDefault: role.isDefault,
-        createdAt: role.createdAt,
+        id: role!.id,
+        name: role!.name,
+        description: role!.description,
+        permissions: role!.permissions,
+        isDefault: role!.isDefault,
+        createdAt: role!.createdAt,
       };
     },
     {
@@ -201,174 +148,108 @@ export const roleRoutes = new Elysia({ prefix: "/roles" })
       }),
     },
   )
-  .patch("/:id", async ({ params, body, headers, set }) => {
-    const authHeader = headers.authorization;
-    if (!authHeader?.startsWith("Bearer ")) {
-      set.status = 401;
-      return { error: "Unauthorized" };
-    }
-
-    const { name, description, permissions } = body as {
-      name?: string;
-      description?: string;
-      permissions?: string[];
-    };
-
-    const orgId = "org_platform_default";
-
-    const [existing] = await db
-      .select()
-      .from(roles)
-      .where(
-        and(
-          eq(roles.id, params.id),
-          eq(roles.organizationId, orgId),
-          isNull(roles.deletedAt),
-        ),
-      )
-      .limit(1);
-
-    if (!existing) {
-      set.status = 404;
-      return { error: "Role not found" };
-    }
-
-    // Cannot modify system roles
-    if (existing.isSystem) {
-      set.status = 403;
-      return { error: "Cannot modify system roles" };
-    }
-
-    // Check for duplicate name if name is being changed
-    if (name && name !== existing.name) {
-      const [duplicate] = await db
-        .select()
-        .from(roles)
-        .where(
-          and(
-            eq(roles.name, name),
-            eq(roles.organizationId, orgId),
-            isNull(roles.deletedAt),
-          ),
-        )
-        .limit(1);
-
-      if (duplicate) {
-        set.status = 409;
-        return { error: "Role name already exists" };
-      }
-    }
-
-    const [updated] = await db
-      .update(roles)
-      .set({
-        name: name ?? existing.name,
-        description: description ?? existing.description,
-        permissions: permissions ?? existing.permissions,
-        updatedAt: new Date(),
-      })
-      .where(eq(roles.id, params.id))
-      .returning();
-
-    if (!updated) {
-      set.status = 500;
-      return { error: "Failed to update role" };
-    }
-
-    return {
-      id: updated.id,
-      name: updated.name,
-      description: updated.description,
-      permissions: updated.permissions,
-      isDefault: updated.isDefault,
-      isSystem: updated.isSystem,
-    };
-  })
-  .delete("/:id", async ({ params, headers, set }) => {
-    const authHeader = headers.authorization;
-    if (!authHeader?.startsWith("Bearer ")) {
-      set.status = 401;
-      return { error: "Unauthorized" };
-    }
-
-    const orgId = "org_platform_default";
-
-    const [existing] = await db
-      .select()
-      .from(roles)
-      .where(
-        and(
-          eq(roles.id, params.id),
-          eq(roles.organizationId, orgId),
-          isNull(roles.deletedAt),
-        ),
-      )
-      .limit(1);
-
-    if (!existing) {
-      set.status = 404;
-      return { error: "Role not found" };
-    }
-
-    // Cannot delete system roles or default roles
-    if (existing.isSystem) {
-      set.status = 403;
-      return { error: "Cannot delete system roles" };
-    }
-
-    if (existing.isDefault) {
-      set.status = 403;
-      return { error: "Cannot delete default roles" };
-    }
-
-    // Check if role has members
-    const roleAssignments = await db
-      .select()
-      .from(actorRoles)
-      .where(eq(actorRoles.roleId, params.id));
-
-    if (roleAssignments.length > 0) {
-      set.status = 400;
-      return { error: "Cannot delete role with assigned members" };
-    }
-
-    // Soft delete
-    await db
-      .update(roles)
-      .set({
-        deletedAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .where(eq(roles.id, params.id));
-
-    return { success: true };
-  })
-  .post(
-    "/:id/assign",
-    async ({ params, body, headers, set }) => {
-      const authHeader = headers.authorization;
-      if (!authHeader?.startsWith("Bearer ")) {
-        set.status = 401;
-        return { error: "Unauthorized" };
-      }
-
-      const { actorIds } = body as {
-        actorIds: string[];
+  .patch("/:id", async (ctx) => {
+      const actor = (ctx as any).actor as AuthActor;
+      const { params, body, set } = ctx as any;
+      const { name, description, permissions } = body as {
+        name?: string;
+        description?: string;
+        permissions?: string[];
       };
 
-      const orgId = "org_platform_default";
+      const [existing] = await db
+        .select()
+        .from(roles)
+        .where(and(eq(roles.id, params.id), eq(roles.organizationId, actor.orgId), isNull(roles.deletedAt)))
+        .limit(1);
 
-      // Verify role exists
+      if (!existing) {
+        set.status = 404;
+        return { error: "Role not found" };
+      }
+
+      if (existing.isSystem) {
+        set.status = 403;
+        return { error: "Cannot modify system roles" };
+      }
+
+      if (name && name !== existing.name) {
+        const [dup] = await db
+          .select()
+          .from(roles)
+          .where(and(eq(roles.name, name), eq(roles.organizationId, actor.orgId), isNull(roles.deletedAt)))
+          .limit(1);
+        if (dup) {
+          set.status = 409;
+          return { error: "Role name already exists" };
+        }
+      }
+
+      const [updated] = await db
+        .update(roles)
+        .set({ name: name ?? existing.name, description: description ?? existing.description, permissions: permissions ?? existing.permissions, updatedAt: new Date() })
+        .where(eq(roles.id, params.id))
+        .returning();
+
+      return {
+        id: updated!.id,
+        name: updated!.name,
+        description: updated!.description,
+        permissions: updated!.permissions,
+        isDefault: updated!.isDefault,
+        isSystem: updated!.isSystem,
+      };
+    })
+  .delete("/:id", async (ctx) => {
+      const actor = (ctx as any).actor as AuthActor;
+      const { params, set } = ctx as any;
+
+      const [existing] = await db
+        .select()
+        .from(roles)
+        .where(and(eq(roles.id, params.id), eq(roles.organizationId, actor.orgId), isNull(roles.deletedAt)))
+        .limit(1);
+
+      if (!existing) {
+        set.status = 404;
+        return { error: "Role not found" };
+      }
+
+      if (existing.isSystem) {
+        set.status = 403;
+        return { error: "Cannot delete system roles" };
+      }
+
+      if (existing.isDefault) {
+        set.status = 403;
+        return { error: "Cannot delete default roles" };
+      }
+
+      const roleAssignments = await db.select().from(actorRoles).where(eq(actorRoles.roleId, params.id));
+
+      if (roleAssignments.length > 0) {
+        set.status = 400;
+        return { error: "Cannot delete role with assigned members" };
+      }
+
+      await db
+        .update(roles)
+        .set({ deletedAt: new Date(), updatedAt: new Date() })
+        .where(eq(roles.id, params.id));
+
+      return { success: true };
+    })
+  .post(
+    "/:id/assign",
+    async (ctx) => {
+      const actor = (ctx as any).actor as AuthActor;
+      const { params, body, set } = ctx as any;
+      const { actorIds } = body as { actorIds: string[] };
+
       const [role] = await db
         .select()
         .from(roles)
-        .where(
-          and(
-            eq(roles.id, params.id),
-            eq(roles.organizationId, orgId),
-            isNull(roles.deletedAt),
-          ),
-        )
+        .where(and(eq(roles.id, params.id), eq(roles.organizationId, actor.orgId), isNull(roles.deletedAt)))
         .limit(1);
 
       if (!role) {
@@ -376,39 +257,17 @@ export const roleRoutes = new Elysia({ prefix: "/roles" })
         return { error: "Role not found" };
       }
 
-      // Verify actors exist and belong to org
-      const validActors = await db
-        .select({ id: actors.id })
-        .from(actors)
-        .where(and(eq(actors.organizationId, orgId), isNull(actors.deletedAt)));
-
-      const validActorIds = validActors.map((a) => a.id);
-      const actorIdsToAssign = actorIds.filter((id) =>
-        validActorIds.includes(id),
-      );
-
-      // Assign roles to actors
-      const assignments = actorIdsToAssign.map((actorId) => ({
-        actorId,
-        roleId: role.id,
-        assignedAt: new Date(),
-        assignedBy: null, // Would come from authenticated user
-      }));
-
-      // Use INSERT ... ON CONFLICT DO NOTHING to avoid duplicates
-      for (const assignment of assignments) {
-        await db
-          .insert(actorRoles)
-          .values(assignment)
-          .onConflictDoNothing({
-            target: [actorRoles.actorId, actorRoles.roleId],
-          });
+      for (const actorId of actorIds) {
+        await mediator.dispatch({
+          type: "identity.assignRole",
+          payload: { actorId, roleId: params.id },
+          actorId: actor.id,
+          orgId: actor.orgId,
+          correlationId: generateId(),
+        });
       }
 
-      return {
-        success: true,
-        assignedCount: actorIdsToAssign.length,
-      };
+      return { success: true, assignedCount: actorIds.length };
     },
     {
       body: t.Object({
@@ -418,58 +277,27 @@ export const roleRoutes = new Elysia({ prefix: "/roles" })
   )
   .post(
     "/:id/revoke",
-    async ({ params, body, headers, set }) => {
-      const authHeader = headers.authorization;
-      if (!authHeader?.startsWith("Bearer ")) {
-        set.status = 401;
-        return { error: "Unauthorized" };
-      }
+    async (ctx) => {
+      const actor = (ctx as any).actor as AuthActor;
+      const { params, body, set } = ctx as any;
+      const { actorIds } = body as { actorIds: string[] };
 
-      const { actorIds } = body as {
-        actorIds: string[];
-      };
-
-      const orgId = "org_platform_default";
-
-      // Verify role exists
-      const [role] = await db
-        .select()
-        .from(roles)
-        .where(
-          and(
-            eq(roles.id, params.id),
-            eq(roles.organizationId, orgId),
-            isNull(roles.deletedAt),
-          ),
-        )
-        .limit(1);
-
-      if (!role) {
-        set.status = 404;
-        return { error: "Role not found" };
-      }
-
-      // Revoke role from actors
-      const firstActorId = actorIds[0];
-      if (!firstActorId) {
+      if (!actorIds.length) {
         set.status = 400;
         return { error: "At least one actor ID is required" };
       }
 
-      const revokedCount = await db
-        .delete(actorRoles)
-        .where(
-          and(
-            eq(actorRoles.roleId, params.id),
-            eq(actorRoles.actorId, firstActorId),
-          ),
-        )
-        .returning();
+      for (const actorId of actorIds) {
+        await mediator.dispatch({
+          type: "identity.revokeRole",
+          payload: { actorId, roleId: params.id },
+          actorId: actor.id,
+          orgId: actor.orgId,
+          correlationId: generateId(),
+        });
+      }
 
-      return {
-        success: true,
-        revokedCount: revokedCount.length,
-      };
+      return { success: true, revokedCount: actorIds.length };
     },
     {
       body: t.Object({
@@ -477,5 +305,6 @@ export const roleRoutes = new Elysia({ prefix: "/roles" })
       }),
     },
   );
+}
 
-export type RoleRoutes = typeof roleRoutes;
+export type RoleRoutes = ReturnType<typeof createRoleRoutes>;

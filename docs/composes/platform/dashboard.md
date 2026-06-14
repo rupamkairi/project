@@ -166,6 +166,25 @@ GET    /notifications/logs                → notification.getLog(orgId, filter)
 POST   /notifications/send                → notification.send(templateKey, to, vars) [admin-only]
 ```
 
+### Invites
+
+```
+GET    /invites                   → list pending/sent invites (org-scoped, paginated)
+POST   /invites                   → create invite (generate token, send email, set 7-day expiry)
+POST   /invites/:id/resend        → regenerate token + resend invite email
+DELETE /invites/:id               → revoke invite (soft-delete)
+```
+
+Invite lifecycle:
+```
+pending ──(resend)──► pending (new token, new expiry)
+pending ──(accept via /auth/register?token=)──► accepted
+pending ──(revoke)──► deleted
+pending ──(7d elapsed)──► expired (read-only — no transition needed, checked at read time)
+```
+
+Invite tokens are generated as 32-byte hex strings. Invite links are `/invite/{token}`. Accepted invites transition via the `/auth/register` endpoint when the invitee submits their password.
+
 ---
 
 ## 5. Event → Notification Trigger Map
@@ -251,11 +270,20 @@ POST   /notifications/send                → notification.send(templateKey, to,
 
 ```typescript
 PlatformCompose.integrations = {
-  email: [ResendAdapter], // transactional email — welcome, invites, password reset
+  auth:  [LocalJWTProvider],  // JWT signing + session middleware (via auth plugin)
+  email: [ResendAdapter],     // transactional email — welcome, invites, password reset
 };
 ```
 
-No payment, no storage, no geo. Only email transport.
+No payment, no storage, no geo.
+
+### Auth plugin wiring
+
+Platform compose configures the auth plugin with `LocalJWTProvider`. It passes a session lookup callback from the identity module. The auth plugin's `/platform/auth/*` routes (§4) are mounted by Platform at boot — they call identity module commands to issue and revoke tokens.
+
+Other composes in the same deployment receive `ctx.actor` from the auth middleware automatically. They do not configure auth themselves.
+
+→ Full auth plugin reference: [plugins/auth.md](../../plugins/auth.md)
 
 ---
 

@@ -66,6 +66,9 @@ Architecture: `Core → Module → Compose → Host Shell`
 | File | Covers |
 |---|---|
 | [plugins/README.md](./plugins/README.md) | Plugin system architecture, dependency rules, available plugins |
+| [plugins/auth.md](./plugins/auth.md) | Auth plugin: JWT middleware, session resolution, provider adapters, web hooks |
+| [plugins/logging.md](./plugins/logging.md) | Logging plugin: structured request logging, log shipping (Datadog, Logtail, Axiom) |
+| [plugins/security.md](./plugins/security.md) | Security plugin: security headers, rate limiting, CORS, IP access control |
 | [plugins/storage.md](./plugins/storage.md) | Storage plugin: S3 uploads, file management, REST API |
 | [plugins/notification.md](./plugins/notification.md) | Notification plugin: email, templates, scheduling |
 | [plugins/development.md](./plugins/development.md) | How to build a new plugin |
@@ -90,8 +93,10 @@ Architecture: `Core → Module → Compose → Host Shell`
 ## Current repo state (as of Wave 1)
 
 - **Core:** Fully implemented (`bun test src/core` → 343 pass)
-- **Modules:** Scaffold only — subdirs are placeholder stubs
-- **Platform compose:** Server complete; web missing `platformManifest` export
-- **Other composes:** Documented but not built
+- **Modules:** All 10 scaffold only — placeholder stubs. DB schema exists in `infra/db/schema/` but not wired to Entity Schema system.
+- **Platform compose:** Server mostly functional (auth routes, user CRUD, invite CRUD, notification templates). Auth is baked into platform routes — not yet extracted to auth plugin. Password hashing is a dev stub.
+- **Other composes:** Documented but not built.
+- **Plugins:** Storage + Notification implemented. Auth, Logging, Security fully specified (docs complete, code not started).
+- **ComposeManifest / mergeManifests:** Specified in `compose.md` — not yet implemented in `packages/router`.
 
 When code and docs conflict → **docs are the target**. Code is transitional.

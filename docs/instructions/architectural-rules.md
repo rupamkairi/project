@@ -49,6 +49,9 @@ Non-negotiable. Apply to all work regardless of scope.
 - A module never imports from a plugin
 - The compose is the only place plugins and modules meet (at boot, via factory)
 - Plugin packages live in `plugins/{capability}/`; package name `@projectx/plugin-{capability}-{server|web}`
+- **Infrastructure plugins** (auth, logging, security) are registered at the Shell level, before composes
+- **Capability plugins** (storage, notification, payment) are registered inside the compose that uses them
+- Auth is a plugin, not an intrinsic part of any compose — the identity module owns domain data; the auth plugin owns the HTTP middleware and token lifecycle
 
 ---
 

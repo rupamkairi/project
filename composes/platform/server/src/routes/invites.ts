@@ -1,12 +1,10 @@
-// Platform Invite Management Routes - CRUD operations for user invites
-
-import Elysia from "elysia";
-import { t } from "elysia";
+import Elysia, { t } from "elysia";
+import { generateId } from "@core";
 import { db } from "@db/client";
 import { pltInvites } from "../db/schema/platform";
-import { eq, and, isNull, desc, like, or } from "drizzle-orm";
-import { generateId } from "@core/entity";
+import { eq, and, isNull, desc, like } from "drizzle-orm";
 import { randomBytes } from "crypto";
+import type { AuthActor } from "@projectx/plugin-auth-server";
 
 const INVITE_EXPIRY_DAYS = 7;
 
@@ -18,35 +16,30 @@ function generateInviteLink(token: string): string {
   return `/invite/${token}`;
 }
 
-export const inviteRoutes = new Elysia({ prefix: "/invites" })
-  .get("/", async ({ query, headers, set }) => {
-    const authHeader = headers.authorization;
-    if (!authHeader?.startsWith("Bearer ")) {
-      set.status = 401;
-      return { error: "Unauthorized" };
-    }
+export function createInviteRoutes() {
+  return new Elysia({ prefix: "/invites" })
+  .get("/", async (ctx) => {
+      const actor = (ctx as any).actor as AuthActor;
+      const q = (ctx as any).query ?? {};
+      const page = parseInt(q.page as string) || 1;
+      const limit = parseInt(q.limit as string) || 20;
+      const search = (q.search as string) || "";
+      const status = (q.status as string) || "";
 
-    const page = parseInt(query.page as string) || 1;
-    const limit = parseInt(query.limit as string) || 20;
-    const search = (query.search as string) || "";
-    const status = (query.status as string) || "";
+      const conditions: any[] = [
+        eq(pltInvites.organizationId, actor.orgId),
+        isNull(pltInvites.deletedAt),
+      ];
 
-    const orgId = "org_platform_default";
+      if (search) {
+        conditions.push(like(pltInvites.email, `%${search}%`));
+      }
 
-    const conditions = [
-      eq(pltInvites.organizationId, orgId),
-      isNull(pltInvites.deletedAt),
-    ];
+      if (status) {
+        conditions.push(eq(pltInvites.status, status as any));
+      }
 
-    if (search) {
-      conditions.push(like(pltInvites.email, `%${search}%`));
-    }
-
-    if (status) {
-      conditions.push(eq(pltInvites.status, status as any));
-    }
-
-    const offset = (page - 1) * limit;
+      const offset = (page - 1) * limit;
 
     const [invites, countResult] = await Promise.all([
       db
@@ -82,14 +75,10 @@ export const inviteRoutes = new Elysia({ prefix: "/invites" })
       },
     };
   })
-  .get("/:id", async ({ params, headers, set }) => {
-    const authHeader = headers.authorization;
-    if (!authHeader?.startsWith("Bearer ")) {
-      set.status = 401;
-      return { error: "Unauthorized" };
-    }
-
-    const orgId = "org_platform_default";
+  .get("/:id", async (ctx) => {
+      const actor = (ctx as any).actor as AuthActor;
+      const { params, set } = ctx as any;
+      const orgId = actor.orgId;
 
     const [invite] = await db
       .select()
@@ -120,19 +109,15 @@ export const inviteRoutes = new Elysia({ prefix: "/invites" })
   })
   .post(
     "/",
-    async ({ body, headers, set }) => {
-      const authHeader = headers.authorization;
-      if (!authHeader?.startsWith("Bearer ")) {
-        set.status = 401;
-        return { error: "Unauthorized" };
-      }
-
+    async (ctx) => {
+      const actor = (ctx as any).actor as AuthActor;
+      const { body, set } = ctx as any;
       const { email, roleIds } = body as {
         email: string;
         roleIds?: string[];
       };
 
-      const orgId = "org_platform_default";
+      const orgId = actor.orgId;
       const now = new Date();
       const expiresAt = new Date(now);
       expiresAt.setDate(expiresAt.getDate() + INVITE_EXPIRY_DAYS);
@@ -164,7 +149,7 @@ export const inviteRoutes = new Elysia({ prefix: "/invites" })
           organizationId: orgId,
           email,
           roleIds: roleIds || [],
-          invitedBy: "admin", // In real app, get from token
+          invitedBy: actor.id,
           token,
           expiresAt,
           status: "pending",
@@ -199,14 +184,10 @@ export const inviteRoutes = new Elysia({ prefix: "/invites" })
       }),
     },
   )
-  .post("/:id/resend", async ({ params, headers, set }) => {
-    const authHeader = headers.authorization;
-    if (!authHeader?.startsWith("Bearer ")) {
-      set.status = 401;
-      return { error: "Unauthorized" };
-    }
-
-    const orgId = "org_platform_default";
+  .post("/:id/resend", async (ctx) => {
+      const actor = (ctx as any).actor as AuthActor;
+      const { params, set } = ctx as any;
+      const orgId = actor.orgId;
 
     const [existing] = await db
       .select()
@@ -260,46 +241,33 @@ export const inviteRoutes = new Elysia({ prefix: "/invites" })
       inviteLink: generateInviteLink(updated.token),
     };
   })
-  .delete("/:id", async ({ params, headers, set }) => {
-    const authHeader = headers.authorization;
-    if (!authHeader?.startsWith("Bearer ")) {
-      set.status = 401;
-      return { error: "Unauthorized" };
-    }
+  .delete("/:id", async (ctx) => {
+      const actor = (ctx as any).actor as AuthActor;
+      const { params, set } = ctx as any;
 
-    const orgId = "org_platform_default";
+      const [existing] = await db
+        .select()
+        .from(pltInvites)
+        .where(and(eq(pltInvites.id, params.id), eq(pltInvites.organizationId, actor.orgId), isNull(pltInvites.deletedAt)))
+        .limit(1);
 
-    const [existing] = await db
-      .select()
-      .from(pltInvites)
-      .where(
-        and(
-          eq(pltInvites.id, params.id),
-          eq(pltInvites.organizationId, orgId),
-          isNull(pltInvites.deletedAt),
-        ),
-      )
-      .limit(1);
+      if (!existing) {
+        set.status = 404;
+        return { error: "Invite not found" };
+      }
 
-    if (!existing) {
-      set.status = 404;
-      return { error: "Invite not found" };
-    }
+      if (existing.status === "accepted") {
+        set.status = 400;
+        return { error: "Cannot revoke accepted invites" };
+      }
 
-    if (existing.status === "accepted") {
-      set.status = 400;
-      return { error: "Cannot revoke accepted invites" };
-    }
+      await db
+        .update(pltInvites)
+        .set({ status: "revoked", updatedAt: new Date() })
+        .where(eq(pltInvites.id, params.id));
 
-    await db
-      .update(pltInvites)
-      .set({
-        status: "revoked",
-        updatedAt: new Date(),
-      })
-      .where(eq(pltInvites.id, params.id));
+      return { success: true };
+    });
+}
 
-    return { success: true };
-  });
-
-export type InviteRoutes = typeof inviteRoutes;
+export type InviteRoutes = ReturnType<typeof createInviteRoutes>;

@@ -2,6 +2,7 @@
 
 import Elysia from "elysia";
 import { t } from "elysia";
+import { createHash } from "node:crypto";
 import { db } from "@db/client";
 import { actors, sessions } from "@db/schema/identity";
 import { eq, and, isNull } from "drizzle-orm";
@@ -9,7 +10,6 @@ import { generateId } from "@core/entity";
 import * as jose from "jose";
 import { env } from "@infra/env";
 
-// JWT utility functions
 async function createAccessToken(
   payload: Record<string, unknown>,
 ): Promise<string> {
@@ -31,18 +31,16 @@ async function verifyToken(token: string): Promise<jose.JWTPayload | null> {
   }
 }
 
-// Simple hash function for demo - use bcrypt in production
-function hashPassword(password: string): string {
-  return Buffer.from(password).toString("base64");
+function hashToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
 }
 
 export const authRoutes = new Elysia({ prefix: "/auth" })
   .post(
     "/login",
-    async ({ body, set }) => {
+    async ({ body, set, request }) => {
       const { email, password } = body as { email: string; password: string };
 
-      // Find actor by email
       const [actor] = await db
         .select()
         .from(actors)
@@ -59,13 +57,15 @@ export const authRoutes = new Elysia({ prefix: "/auth" })
         return { error: "Account is not active" };
       }
 
-      // Verify password (simple comparison - use bcrypt in production)
-      if (actor.passwordHash !== hashPassword(password)) {
+      const validPassword = actor.passwordHash
+        ? await Bun.password.verify(password, actor.passwordHash)
+        : false;
+
+      if (!validPassword) {
         set.status = 401;
         return { error: "Invalid credentials" };
       }
 
-      // Create session token
       const token = await createAccessToken({
         sub: actor.id,
         email: actor.email,
@@ -73,17 +73,22 @@ export const authRoutes = new Elysia({ prefix: "/auth" })
       });
 
       const now = new Date();
-      const expiresAt = new Date(now.getTime() + 8 * 60 * 60 * 1000); // 8 hours
+      const expiresAt = new Date(now.getTime() + 8 * 60 * 60 * 1000);
 
-      // Insert session
+      const ip =
+        request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+        request.headers.get("x-real-ip") ??
+        "unknown";
+      const userAgent = request.headers.get("user-agent") ?? "unknown";
+
       await db.insert(sessions).values({
         id: generateId(),
         organizationId: actor.organizationId,
         actorId: actor.id,
-        tokenHash: hashPassword(token),
+        tokenHash: hashToken(token),
         expiresAt,
-        ip: "unknown",
-        userAgent: "unknown",
+        ip,
+        userAgent,
         createdAt: now,
         updatedAt: now,
         version: 1,
@@ -91,7 +96,6 @@ export const authRoutes = new Elysia({ prefix: "/auth" })
         meta: {},
       });
 
-      // Update last login
       await db
         .update(actors)
         .set({ lastLoginAt: now, updatedAt: now })
@@ -123,9 +127,8 @@ export const authRoutes = new Elysia({ prefix: "/auth" })
     }
 
     const token = authHeader.slice(7);
-    const tokenHash = hashPassword(token);
+    const tokenHash = hashToken(token);
 
-    // Revoke session
     await db
       .update(sessions)
       .set({ revokedAt: new Date() })
