@@ -401,7 +401,7 @@ src/core/cqrs/index.ts
 
 src/core/context/index.ts
   interface SystemContext {
-    actor: { id: ID; roles: string[]; orgId: ID; type: 'human'|'system'|'api_key' }
+    actor: { id: ID; roles: string[]; orgId: ID; type: 'human'|'system'|'api-key' }
     org: { id: ID; slug: string; settings: Record<string, unknown> }
     correlationId: ID
     requestId: ID

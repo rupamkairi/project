@@ -1,6 +1,6 @@
 // Catalog Module
 
-import type { AppModule, BootRegistry } from "../../core/module";
+import type { AppModule, BootRegistry } from "@core";
 
 export const CatalogModule: AppModule = {
   manifest: {
@@ -8,6 +8,7 @@ export const CatalogModule: AppModule = {
     version: "0.1.0",
     dependsOn: [],
     entities: [],
+    idPrefixes: {},
     events: [],
     commands: [],
     queries: [],

@@ -1,19 +1,72 @@
-// Core Layer - Public API
-// This is the ONLY file that modules should import from
+// Core Layer — Public API
+// Single import point for all modules. Never import from internal core paths.
+// Grouped by spec section (core.md §"Core Public API").
 
-// Errors & Results
-export * from "./errors";
+// ---------------------------------------------------------------------------
+// Entity
+// ---------------------------------------------------------------------------
+export type { Entity, ID, Timestamp, Meta } from "./entity";
+export {
+  generateId,
+  generatePrefixedId,
+  isValidId,
+  extractTimestamp,
+  createEntity,
+  isDeleted,
+  softDelete,
+  updateEntity,
+} from "./entity";
 
-// Primitives
-export * from "./primitives";
+// IDGenerator
+export type { IDGenerator } from "./entity/id";
+export { createIdGenerator, defaultIdGenerator } from "./entity/id";
 
-// Entity & ID
-export * from "./entity";
+// Schema system
+export type {
+  FieldType,
+  FieldSchema,
+  EntitySchema,
+  EntityHooks,
+  Validator,
+  ValidatorFn,
+  ValidationContext,
+  ValidationResult,
+  GeoPoint,
+  GeoPolygon,
+  GeoLinestring,
+} from "./entity/schema";
+export { Validators } from "./entity/schema";
 
-// Event Sourcing
-export * from "./event";
+// EntitySchemaRegistry
+export type { EntitySchemaRegistry } from "./entity/registry";
+export { createEntitySchemaRegistry } from "./entity/registry";
 
-// State Machine - re-export with explicit names to avoid conflicts
+// ---------------------------------------------------------------------------
+// Events
+// ---------------------------------------------------------------------------
+export type {
+  DomainEvent,
+  EventHandler,
+  SubscribeOptions,
+  Unsubscribe,
+  EventBus,
+  ReadOptions,
+  EventFilter,
+  EventStore,
+  OutboxRecord,
+  EventOutbox,
+  CreateDomainEventOptions,
+} from "./event";
+export {
+  createDomainEvent,
+  InMemoryEventBus,
+  InMemoryEventStore,
+  InMemoryEventOutbox,
+} from "./event";
+
+// ---------------------------------------------------------------------------
+// State Machine
+// ---------------------------------------------------------------------------
 export type {
   StateMachine,
   StateNode,
@@ -23,14 +76,19 @@ export type {
   FSMContext,
   TransitionResult,
   FSMEngine,
+  StateMachineRegistry,
 } from "./state";
-export { createFSMEngine } from "./state";
+export { createFSMEngine, createStateMachineRegistry } from "./state";
 
-// Rules Engine - re-export with explicit names to avoid conflicts
-export type { RuleExpr, RuleExplanation, RuleEngine } from "./rule";
+// ---------------------------------------------------------------------------
+// Rules Engine
+// ---------------------------------------------------------------------------
+export type { RuleExpr, Op, RuleExplanation, RuleEngine, CompiledRule } from "./rule";
 export { createRuleEngine } from "./rule";
 
+// ---------------------------------------------------------------------------
 // CQRS
+// ---------------------------------------------------------------------------
 export type {
   Command,
   Query,
@@ -38,18 +96,41 @@ export type {
   QueryHandler,
   MediatorMiddleware,
   Mediator,
+  MediatorOptions,
 } from "./cqrs";
-export { createMediator } from "./cqrs";
+export {
+  createMediator,
+  AuthorizationMiddleware,
+  ValidationMiddleware,
+  IdempotencyMiddleware,
+  LoggingMiddleware,
+  TracingMiddleware,
+  RateLimitMiddleware,
+  tracingStore,
+} from "./cqrs";
 
-// Context - use SystemContext from context (not cqrs)
-export type { SystemContext } from "./context";
-export { createSystemContext } from "./context";
-
+// ---------------------------------------------------------------------------
 // Repository
-export * from "./repository";
-
-// Module System
+// ---------------------------------------------------------------------------
 export type {
+  Transaction,
+  DbQuery,
+  DatabaseAdapter,
+  FilterOperator,
+  Filter,
+  QueryOptions,
+  PaginatedResult,
+  Repository,
+} from "./repository";
+export { BaseRepository } from "./repository";
+
+// ---------------------------------------------------------------------------
+// Module System
+// ---------------------------------------------------------------------------
+export type {
+  Migration,
+  JobDefinition,
+  WorkerDefinition,
   ModuleManifest,
   BootRegistry,
   AppModule,
@@ -57,16 +138,94 @@ export type {
 } from "./module";
 export { createModuleRegistry } from "./module";
 
-// Real-time
-export * from "./realtime";
-
-// Queue - re-export with explicit names to avoid conflicts
+// ---------------------------------------------------------------------------
+// Queue and Scheduler
+// ---------------------------------------------------------------------------
 export type {
-  Queue,
-  Worker,
-  Scheduler,
-  Job,
-  JobOptions,
   JobStatus,
+  JobOptions,
+  Job,
+  JobHandler,
+  Queue,
+  ScheduledJob,
+  SchedulerOptions,
+  Scheduler,
   BulkJob,
+  Worker,
 } from "./queue";
+export { InMemoryQueue, InMemoryScheduler } from "./queue";
+
+// ---------------------------------------------------------------------------
+// Real-Time
+// ---------------------------------------------------------------------------
+export type {
+  RealTimeClient,
+  RealTimeGateway,
+  RealTimeBridge,
+  RealtimeMessageType,
+  RealtimeMessage,
+  RealtimeServerMessageType,
+  RealtimeServerMessage,
+} from "./realtime";
+export { createInMemoryGateway, createInMemoryBridge } from "./realtime";
+
+// ---------------------------------------------------------------------------
+// Context
+// ---------------------------------------------------------------------------
+export type { SystemContext, SystemContextOptions } from "./context";
+export type { Logger } from "./context";
+export { createSystemContext } from "./context";
+
+// ---------------------------------------------------------------------------
+// Errors
+// ---------------------------------------------------------------------------
+export {
+  CoreError,
+  NotFoundError,
+  ValidationError,
+  AuthenticationError,
+  AuthorizationError,
+  ConflictError,
+  BusinessError,
+  IntegrationError,
+  isOk,
+  isErr,
+  getHttpStatus,
+} from "./errors";
+export type { Result } from "./errors";
+export { Ok, Err } from "./errors";
+
+// ---------------------------------------------------------------------------
+// Primitives
+// ---------------------------------------------------------------------------
+export type {
+  Money,
+  SortSpec,
+  PageOptions,
+} from "./primitives";
+export {
+  moneyAdd,
+  moneySubtract,
+  moneyMultiply,
+  moneyFormat,
+  createPaginatedResult,
+  getDefaultPageOptions,
+} from "./primitives";
+
+// ---------------------------------------------------------------------------
+// Adapters
+// ---------------------------------------------------------------------------
+export type {
+  AdapterType,
+  AdapterRegistry,
+  FileMeta,
+  StoredFile,
+  StorageAdapter,
+  NotificationPayload,
+  NotificationResult,
+  NotificationAdapter,
+  PaymentAdapter,
+  GeoAdapter,
+  SearchAdapter,
+} from "./adapters";
+export { createAdapterRegistry } from "./adapters";

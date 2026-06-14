@@ -1,13 +1,24 @@
 /**
- * Entity & ID Generation
+ * Entity & ID Generation — Barrel
  *
- * Core types and utilities for domain entities, ID generation, and entity lifecycle management.
+ * Public API for the entity sub-system. Re-exports:
+ *   - Primitive types (ID, Timestamp, Meta, Entity) and entity helpers
+ *   - IDGenerator interface + default implementation (id.ts)
+ *   - EntitySchema system — FieldType, FieldSchema, Validators, etc. (schema.ts)
+ *   - EntitySchemaRegistry (registry.ts)
+ *
+ * ALL existing consumers importing from this barrel continue to work unchanged.
  *
  * @category Core
  * @packageDocumentation
  */
 
 import { ulid } from "ulid";
+
+// ---------------------------------------------------------------------------
+// Primitive types — defined here for backward compatibility.
+// types.ts holds an internal copy; keep these in sync.
+// ---------------------------------------------------------------------------
 
 /**
  * Unique identifier type using ULID (Universally Unique Lexicographically Sortable Identifier).
@@ -102,6 +113,11 @@ export interface Entity {
    */
   meta: Meta;
 }
+
+// ---------------------------------------------------------------------------
+// Legacy / backward-compat ID functions
+// (kept here so existing imports don't break)
+// ---------------------------------------------------------------------------
 
 /**
  * Generates a new ULID.
@@ -294,3 +310,31 @@ export function updateEntity<T extends Entity>(
     version: entity.version + 1,
   };
 }
+
+// ---------------------------------------------------------------------------
+// New exports — Entity Schema System
+// ---------------------------------------------------------------------------
+
+// IDGenerator interface + default implementation
+export type { IDGenerator } from "./id";
+export { createIdGenerator, defaultIdGenerator } from "./id";
+
+// Schema system types and Validators
+export type {
+  FieldType,
+  FieldSchema,
+  EntitySchema,
+  EntityHooks,
+  Validator,
+  ValidatorFn,
+  ValidationContext,
+  ValidationResult,
+  GeoPoint,
+  GeoPolygon,
+  GeoLinestring,
+} from "./schema";
+export { Validators } from "./schema";
+
+// EntitySchemaRegistry
+export type { EntitySchemaRegistry } from "./registry";
+export { createEntitySchemaRegistry } from "./registry";

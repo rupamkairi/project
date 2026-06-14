@@ -1,6 +1,6 @@
 // Inventory Module
 
-import type { AppModule, BootRegistry } from "../../core/module";
+import type { AppModule, BootRegistry } from "@core";
 
 export const InventoryModule: AppModule = {
   manifest: {
@@ -8,6 +8,7 @@ export const InventoryModule: AppModule = {
     version: "0.1.0",
     dependsOn: ["catalog"],
     entities: [],
+    idPrefixes: {},
     events: [],
     commands: [],
     queries: [],

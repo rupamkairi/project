@@ -8,6 +8,8 @@
  * @packageDocumentation
  */
 
+import type { Meta } from "../entity";
+
 /**
  * Base class for all custom errors in the system.
  *
@@ -36,7 +38,7 @@ export class CoreError extends Error {
   /**
    * Additional metadata about the error context
    */
-  public readonly meta?: Record<string, unknown>;
+  public readonly meta?: Meta;
 
   /**
    * The original error that caused this error (if any)
@@ -54,7 +56,7 @@ export class CoreError extends Error {
   constructor(
     code: string,
     message: string,
-    meta?: Record<string, unknown>,
+    meta?: Meta,
     cause?: unknown,
   ) {
     super(message);
@@ -109,7 +111,7 @@ export class NotFoundError extends CoreError {
    */
   constructor(
     message: string,
-    meta?: Record<string, unknown>,
+    meta?: Meta,
     cause?: unknown,
   ) {
     super("NOT_FOUND", message, meta, cause);
@@ -149,9 +151,9 @@ export class ValidationError extends CoreError {
   constructor(
     message: string,
     failures: Array<{ field: string; message: string }> = [],
-    meta?: Record<string, unknown>,
+    meta?: Meta,
   ) {
-    super("VALIDATION_ERROR", message, { ...meta, failures }, undefined);
+    super("VALIDATION_ERROR", message, meta, undefined);
     this.name = "ValidationError";
     this.failures = failures;
   }
@@ -194,7 +196,7 @@ export class AuthenticationError extends CoreError {
    */
   constructor(
     message: string = "Authentication required",
-    meta?: Record<string, unknown>,
+    meta?: Meta,
   ) {
     super("AUTHENTICATION_ERROR", message, meta);
     this.name = "AuthenticationError";
@@ -224,7 +226,7 @@ export class AuthorizationError extends CoreError {
    */
   constructor(
     message: string = "Access denied",
-    meta?: Record<string, unknown>,
+    meta?: Meta,
   ) {
     super("AUTHORIZATION_ERROR", message, meta);
     this.name = "AuthorizationError";
@@ -256,7 +258,7 @@ export class ConflictError extends CoreError {
    */
   constructor(
     message: string,
-    meta?: Record<string, unknown>,
+    meta?: Meta,
     cause?: unknown,
   ) {
     super("CONFLICT", message, meta, cause);
@@ -285,7 +287,7 @@ export class BusinessError extends CoreError {
    * @param message - Human-readable error message
    * @param meta - Optional metadata
    */
-  constructor(message: string, meta?: Record<string, unknown>) {
+  constructor(message: string, meta?: Meta) {
     super("BUSINESS_ERROR", message, meta);
     this.name = "BusinessError";
   }
@@ -317,7 +319,7 @@ export class IntegrationError extends CoreError {
    */
   constructor(
     message: string,
-    meta?: Record<string, unknown>,
+    meta?: Meta,
     cause?: unknown,
   ) {
     super("INTEGRATION_ERROR", message, meta, cause);
@@ -325,60 +327,11 @@ export class IntegrationError extends CoreError {
   }
 }
 
-/**
- * Result type for functional error handling.
- *
- * Provides a type-safe alternative to try-catch blocks.
- *
- * @typeParam T - The success value type
- * @typeParam E - The error type (defaults to CoreError)
- *
- * @example
- * ```typescript
- * function divide(a: number, b: number): Result<number, ValidationError> {
- *   if (b === 0) {
- *     return Err(new ValidationError("Division by zero"));
- *   }
- *   return Ok(a / b);
- * }
- *
- * const result = divide(10, 2);
- * if (isOk(result)) {
- *   console.log(result.value); // 5
- * }
- * ```
- *
- * @category Core
- */
-export type Result<T, E extends CoreError = CoreError> =
-  | { ok: true; value: T }
-  | { ok: false; error: E };
-
-/**
- * Creates a successful Result.
- *
- * @typeParam T - The value type
- * @param value - The success value
- * @returns A successful Result
- *
- * @category Core
- */
-export function Ok<T>(value: T): Result<T> {
-  return { ok: true, value };
-}
-
-/**
- * Creates a failed Result.
- *
- * @typeParam E - The error type
- * @param error - The error value
- * @returns A failed Result
- *
- * @category Core
- */
-export function Err<E extends CoreError>(error: E): Result<never, E> {
-  return { ok: false, error };
-}
+// Result, Ok, and Err live in primitives — re-exported here so any consumer
+// importing from errors still works without changes.
+export type { Result } from "../primitives/result";
+export { Ok, Err } from "../primitives/result";
+import type { Result } from "../primitives/result";
 
 /**
  * Type guard to check if a Result is successful.

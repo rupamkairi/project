@@ -7,227 +7,27 @@
  * @packageDocumentation
  */
 
-import type { ID, Timestamp } from "../entity";
+import type { Entity, ID, Timestamp } from "../entity";
 import { generateId } from "../entity";
 import type { Command, Query } from "../cqrs";
 import type { DomainEvent } from "../event";
 import type { RuleEngine } from "../rule";
-import type { FSMEngine, FSMContext } from "../state";
+import type { FSMEngine } from "../state";
+import type { Repository } from "../repository";
+import type { Queue, Scheduler } from "../queue";
+import type { RealTimeGateway } from "../realtime";
+import type { AdapterRegistry } from "../adapters";
 
-/**
- * Queue interface for background job processing.
- *
- * @category Core
- */
-export interface Queue {
-  /**
-   * Adds a job to the queue.
-   *
-   * @param name - Job type name
-   * @param data - Job data payload
-   * @param opts - Job options (priority, delay, attempts)
-   * @returns The created job
-   */
-  add(name: string, data: unknown, opts?: JobOptions): Promise<Job>;
-
-  /**
-   * Adds multiple jobs in bulk.
-   *
-   * @param jobs - Array of jobs to add
-   * @returns Array of created jobs
-   */
-  addBulk(jobs: BulkJob[]): Promise<Job[]>;
-
-  /**
-   * Gets a job by ID.
-   *
-   * @param id - Job ID
-   * @returns The job or undefined
-   */
-  getJob(id: string): Promise<Job | undefined>;
-
-  /**
-   * Gets jobs by type.
-   *
-   * @param types - Job types to filter
-   * @returns Array of jobs
-   */
-  getJobs(types: string[]): Promise<Job[]>;
-
-  /**
-   * Subscribes to queue events.
-   *
-   * @param event - Event name
-   * @param handler - Event handler
-   */
-  on(event: string, handler: (...args: unknown[]) => void): void;
-}
-
-/**
- * Job processing options.
- *
- * @category Core
- */
-export interface JobOptions {
-  /**
-   * Custom job ID
-   */
-  id?: string;
-
-  /**
-   * Priority (higher = more urgent)
-   */
-  priority?: number;
-
-  /**
-   * Delay before processing (milliseconds)
-   */
-  delay?: number;
-
-  /**
-   * Maximum retry attempts
-   */
-  attempts?: number;
-
-  /**
-   * Backoff strategy for retries
-   */
-  backoff?: number | { type: string; delay: number };
-
-  /**
-   * Remove job on completion (true or keep count)
-   */
-  removeOnComplete?: boolean | number;
-
-  /**
-   * Remove job on failure (true or keep count)
-   */
-  removeOnFail?: boolean | number;
-}
-
-/**
- * Job representation.
- *
- * @category Core
- */
-export interface Job {
-  /**
-   * Unique job identifier
-   */
-  id: string;
-
-  /**
-   * Job type name
-   */
-  name: string;
-
-  /**
-   * Job data payload
-   */
-  data: unknown;
-
-  /**
-   * Progress percentage (0-100)
-   */
-  progress: number;
-
-  /**
-   * Number of attempts made
-   */
-  attemptsMade: number;
-
-  /**
-   * Processing timestamp
-   */
-  processedOn?: number;
-
-  /**
-   * Completion timestamp
-   */
-  finishedOn?: number;
-
-  /**
-   * Return value (if completed)
-   */
-  returnvalue?: unknown;
-
-  /**
-   * Failure reason (if failed)
-   */
-  failedReason?: string;
-}
-
-/**
- * Bulk job input.
- *
- * @category Core
- */
-export interface BulkJob {
-  /**
-   * Job type name
-   */
-  name: string;
-
-  /**
-   * Job data payload
-   */
-  data: unknown;
-
-  /**
-   * Job options
-   */
-  opts?: JobOptions;
-}
-
-/**
- * Logger interface for structured logging.
- *
- * @category Core
- */
-export interface Logger {
-  /**
-   * Logs a fatal error (application crash)
-   */
-  fatal: (msg: string, meta?: Record<string, unknown>) => void;
-
-  /**
-   * Logs an error (operation failed)
-   */
-  error: (msg: string, meta?: Record<string, unknown>) => void;
-
-  /**
-   * Logs a warning (potential issue)
-   */
-  warn: (msg: string, meta?: Record<string, unknown>) => void;
-
-  /**
-   * Logs an info message (normal operation)
-   */
-  info: (msg: string, meta?: Record<string, unknown>) => void;
-
-  /**
-   * Logs a debug message (debugging info)
-   */
-  debug: (msg: string, meta?: Record<string, unknown>) => void;
-
-  /**
-   * Logs a trace message (detailed debugging)
-   */
-  trace: (msg: string, meta?: Record<string, unknown>) => void;
-
-  /**
-   * Creates a child logger with additional context.
-   *
-   * @param bindings - Additional context to attach to logs
-   * @returns Child logger instance
-   */
-  child(bindings: Record<string, unknown>): Logger;
-}
+// Logger lives in primitives — re-exported here so any consumer importing from
+// context still works without changes.
+export type { Logger } from "../primitives/logger";
+import type { Logger } from "../primitives/logger";
 
 /**
  * System context for command/query execution.
  *
  * Provides access to actor, organization, and system services.
+ * Canonical shape defined in core.md §11.
  *
  * @category Core
  */
@@ -239,7 +39,7 @@ export interface SystemContext {
     id: ID;
     roles: string[];
     orgId: ID;
-    type: "human" | "system" | "api_key";
+    type: "human" | "system" | "api-key";
   };
 
   /**
@@ -265,6 +65,16 @@ export interface SystemContext {
    * Timestamp when execution started (Unix epoch ms)
    */
   startedAt: Timestamp;
+
+  /**
+   * Client IP address (optional, present on HTTP requests)
+   */
+  ip?: string;
+
+  /**
+   * Client user-agent string (optional, present on HTTP requests)
+   */
+  userAgent?: string;
 
   /**
    * Dispatches a command (auto-fills actorId, orgId, correlationId).
@@ -296,6 +106,13 @@ export interface SystemContext {
   ): Promise<void>;
 
   /**
+   * Publishes multiple domain events.
+   *
+   * @param events - Full domain events to publish
+   */
+  publishBatch(events: DomainEvent[]): Promise<void>;
+
+  /**
    * Rule engine for business logic evaluation
    */
   rules: RuleEngine;
@@ -306,9 +123,32 @@ export interface SystemContext {
   fsm: FSMEngine;
 
   /**
+   * Repository factory — returns a repository scoped to orgId automatically
+   *
+   * @param entityName - Entity name
+   * @returns Org-scoped repository
+   */
+  repo<T extends Entity>(entityName: string): Repository<T>;
+
+  /**
    * Queue for background job processing
    */
   queue: Queue;
+
+  /**
+   * Scheduler for recurring jobs
+   */
+  scheduler: Scheduler;
+
+  /**
+   * Real-time gateway for WebSocket/push
+   */
+  realtime: RealTimeGateway;
+
+  /**
+   * Adapter registry for external integrations
+   */
+  adapters: AdapterRegistry;
 
   /**
    * Logger for structured logging
@@ -350,7 +190,7 @@ export interface SystemContextOptions {
   /**
    * Actor type (default: "system")
    */
-  actorType?: "human" | "system" | "api_key";
+  actorType?: "human" | "system" | "api-key";
 
   /**
    * Correlation ID (auto-generated if not provided)
@@ -361,6 +201,16 @@ export interface SystemContextOptions {
    * Request ID (auto-generated if not provided)
    */
   requestId?: ID;
+
+  /**
+   * Client IP address
+   */
+  ip?: string;
+
+  /**
+   * Client user-agent string
+   */
+  userAgent?: string;
 
   /**
    * Mediator for command/query dispatch
@@ -375,6 +225,7 @@ export interface SystemContextOptions {
    */
   eventBus?: {
     publish: (event: DomainEvent) => Promise<void>;
+    publishBatch?: (events: DomainEvent[]) => Promise<void>;
   };
 
   /**
@@ -396,10 +247,36 @@ export interface SystemContextOptions {
    * Logger instance
    */
   logger?: Logger;
+
+  /**
+   * Scheduler instance
+   */
+  scheduler?: Scheduler;
+
+  /**
+   * Real-time gateway instance
+   */
+  realtime?: RealTimeGateway;
+
+  /**
+   * Adapter registry instance
+   */
+  adapters?: AdapterRegistry;
+
+  /**
+   * Repository factory — receives orgId + entityName and returns a scoped Repository
+   */
+  repoFactory?: <T extends Entity>(
+    orgId: ID,
+    entityName: string,
+  ) => Repository<T>;
 }
 
 /**
  * Creates a system context with all required services.
+ *
+ * Required services that are not provided in opts will throw a clear error
+ * on first access rather than silently returning an empty object.
  *
  * @param opts - Context options
  * @returns System context instance
@@ -415,7 +292,6 @@ export interface SystemContextOptions {
  *   logger
  * });
  *
- * // Use context to dispatch commands
  * await ctx.dispatch({
  *   type: "user.create",
  *   payload: { email: "user@example.com" }
@@ -429,6 +305,10 @@ export function createSystemContext(opts: SystemContextOptions): SystemContext {
   const orgId = opts.orgId ?? "system";
   const correlationId = opts.correlationId ?? generateId();
   const requestId = opts.requestId ?? generateId();
+
+  function notConfigured(name: string): never {
+    throw new Error(`${name}: not configured (wire it at module boot)`);
+  }
 
   return {
     actor: {
@@ -445,6 +325,9 @@ export function createSystemContext(opts: SystemContextOptions): SystemContext {
     correlationId,
     requestId,
     startedAt: Date.now() as Timestamp,
+    ip: opts.ip,
+    userAgent: opts.userAgent,
+
     dispatch: async function <R = unknown>(
       cmd: Omit<Command, "actorId" | "orgId" | "correlationId">,
     ): Promise<R> {
@@ -458,6 +341,7 @@ export function createSystemContext(opts: SystemContextOptions): SystemContext {
         correlationId,
       } as Command);
     },
+
     query: async function <R = unknown>(
       q: Omit<Query, "actorId" | "orgId">,
     ): Promise<R> {
@@ -470,6 +354,7 @@ export function createSystemContext(opts: SystemContextOptions): SystemContext {
         orgId,
       } as Query);
     },
+
     publish: async function (
       event: Omit<DomainEvent, "actorId" | "orgId" | "correlationId">,
     ): Promise<void> {
@@ -483,9 +368,55 @@ export function createSystemContext(opts: SystemContextOptions): SystemContext {
         correlationId,
       } as DomainEvent);
     },
-    rules: opts.rules ?? ({} as RuleEngine),
-    fsm: opts.fsm ?? ({} as FSMEngine),
-    queue: opts.queue ?? ({} as Queue),
+
+    publishBatch: async function (events: DomainEvent[]): Promise<void> {
+      if (!opts.eventBus) {
+        throw new Error("EventBus not configured in context");
+      }
+      if (opts.eventBus.publishBatch) {
+        await opts.eventBus.publishBatch(events);
+      } else {
+        for (const event of events) {
+          await opts.eventBus.publish(event);
+        }
+      }
+    },
+
+    get rules(): RuleEngine {
+      if (!opts.rules) notConfigured("SystemContext.rules");
+      return opts.rules;
+    },
+
+    get fsm(): FSMEngine {
+      if (!opts.fsm) notConfigured("SystemContext.fsm");
+      return opts.fsm;
+    },
+
+    get queue(): Queue {
+      if (!opts.queue) notConfigured("SystemContext.queue");
+      return opts.queue;
+    },
+
+    get scheduler(): Scheduler {
+      if (!opts.scheduler) notConfigured("SystemContext.scheduler");
+      return opts.scheduler;
+    },
+
+    get realtime(): RealTimeGateway {
+      if (!opts.realtime) notConfigured("SystemContext.realtime");
+      return opts.realtime;
+    },
+
+    get adapters(): AdapterRegistry {
+      if (!opts.adapters) notConfigured("SystemContext.adapters");
+      return opts.adapters;
+    },
+
+    repo<T extends Entity>(entityName: string): Repository<T> {
+      if (!opts.repoFactory) notConfigured("SystemContext.repo");
+      return opts.repoFactory<T>(orgId, entityName);
+    },
+
     logger: opts.logger ?? (console as unknown as Logger),
   };
 }

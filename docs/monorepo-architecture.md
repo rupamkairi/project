@@ -722,7 +722,9 @@ The manifest describes the compose's identity and nav items. `apps/web` collects
 all manifests to render the sidebar — it never hardcodes nav links.
 
 ```typescript
-// Manifest type — lives in apps/web/src/types/compose.ts
+// Manifest type — lives in a shared package (e.g. @projectx/shared-router or @projectx/compose-types)
+// Both apps/web (shell) and every compose web import from this shared package.
+// Do NOT define this type locally in apps/web/src/types/compose.ts.
 export interface ComposeManifest {
   id: string;
   label: string;
@@ -741,7 +743,7 @@ Each compose web exports its manifest:
 ```typescript
 // composes/crm/web/src/manifest.ts
 import { Users, Kanban, BarChart } from "lucide-react";
-import type { ComposeManifest } from "@repo/web/types";
+import type { ComposeManifest } from "@projectx/shared-router"; // shared package, not apps/web
 
 export const crmManifest: ComposeManifest = {
   id: "crm",

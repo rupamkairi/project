@@ -11,7 +11,7 @@ interface Money {
   amount: number;
   currency: string;
 } // integer in smallest unit
-type Meta = Record<string, unknown>;
+type Meta = Record<string, string | number | boolean | null>;
 
 interface Entity {
   id: ID;

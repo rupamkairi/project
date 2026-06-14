@@ -21,15 +21,19 @@ export type Op =
   | "lte" // Less than or equal
   | "in" // In array
   | "nin" // Not in array
-  | "contains" // String contains
+  | "contains" // Array/string field contains value
+  | "containsAll" // Array field contains all values
   | "matches" // Regex match
   | "exists" // Field exists
-  | "empty"; // Field is empty
+  | "empty" // Array or string is empty
+  | "withinDays" // Date field within N days of now
+  | "spatialWithin"; // Geo point within polygon (uses PostGIS)
 
 /**
  * Rule expression definition.
  *
- * Can be a field comparison, logical operator, or reference to a registered rule.
+ * Can be a field comparison, logical operator, reference to a registered rule,
+ * or a template rule with injectable parameters.
  *
  * @example
  * ```typescript
@@ -50,6 +54,9 @@ export type Op =
  *
  * // Reference to registered rule
  * const refRule: RuleExpr = { ref: "isAdult" };
+ *
+ * // Template rule with injectable params
+ * const tmplRule: RuleExpr = { template: "hasRole", params: { role: "admin" } };
  * ```
  *
  * @category Core
@@ -59,7 +66,8 @@ export type RuleExpr =
   | { and: RuleExpr[] }
   | { or: RuleExpr[] }
   | { not: RuleExpr }
-  | { ref: string };
+  | { ref: string }
+  | { kind: "template"; template: string; params: Record<string, unknown> };
 
 /**
  * Rule evaluation explanation with detailed breakdown.
@@ -73,9 +81,9 @@ export interface RuleExplanation {
   passed: boolean;
 
   /**
-   * Detailed breakdown of each condition
+   * List of conditions that failed
    */
-  details: Array<{
+  failures: Array<{
     /**
      * Field being evaluated
      */
@@ -84,7 +92,7 @@ export interface RuleExplanation {
     /**
      * Operator used
      */
-    operator: string;
+    op: Op | string;
 
     /**
      * Expected value
@@ -97,10 +105,27 @@ export interface RuleExplanation {
     actual: unknown;
 
     /**
-     * Whether this condition passed
+     * Human-readable failure message
      */
-    passed: boolean;
+    message: string;
   }>;
+}
+
+/**
+ * A compiled rule ready for repeated evaluation.
+ *
+ * @category Core
+ */
+export interface CompiledRule {
+  /**
+   * Evaluates the compiled rule against a context.
+   */
+  evaluate(context: Record<string, unknown>): boolean;
+
+  /**
+   * Explains which conditions failed for the given context.
+   */
+  explain(context: Record<string, unknown>): RuleExplanation;
 }
 
 /**
@@ -122,9 +147,9 @@ export interface RuleEngine {
    * Compiles a rule expression for repeated evaluation.
    *
    * @param expr - Rule expression to compile
-   * @returns Compiled rule with evaluate method
+   * @returns Compiled rule with evaluate and explain methods
    */
-  compile(expr: RuleExpr): { evaluate(ctx: Record<string, unknown>): boolean };
+  compile(expr: RuleExpr): CompiledRule;
 
   /**
    * Registers a reusable rule.
@@ -141,6 +166,13 @@ export interface RuleEngine {
    * @returns Rule expression or undefined
    */
   resolve(id: string): RuleExpr | undefined;
+
+  /**
+   * Removes a registered rule by ID.
+   *
+   * @param id - Rule ID to remove
+   */
+  unregister(id: string): void;
 
   /**
    * Explains why a rule passed or failed.
@@ -179,8 +211,8 @@ export interface RuleEngine {
  *   { field: "user.age", op: "gte", value: 18 },
  *   { user: { age: 16 } }
  * );
- * console.log(explanation.details);
- * // [{ field: "user.age", operator: "gte", expected: 18, actual: 16, passed: false }]
+ * console.log(explanation.failures);
+ * // [{ field: "user.age", op: "gte", expected: 18, actual: 16, message: "..." }]
  * ```
  *
  * @category Core
@@ -197,6 +229,15 @@ export function createRuleEngine(): RuleEngine {
       const ref = registeredRules.get(expr.ref);
       if (!ref) return false;
       return evaluateInternal(ref, context);
+    }
+
+    // Handle template rule — evaluate by looking up by template name with params
+    if ("kind" in expr && expr.kind === "template") {
+      const tmpl = registeredRules.get(expr.template);
+      if (!tmpl) return false;
+      // Merge params into context for template evaluation
+      const merged = { ...context, ...expr.params };
+      return evaluateInternal(tmpl, merged);
     }
 
     // Handle negation
@@ -226,46 +267,67 @@ export function createRuleEngine(): RuleEngine {
   function explainInternal(
     expr: RuleExpr,
     context: Record<string, unknown>,
-    details: RuleExplanation["details"],
+    failures: RuleExplanation["failures"],
   ): boolean {
     // Handle reference
     if ("ref" in expr) {
       const ref = registeredRules.get(expr.ref);
       if (!ref) {
-        details.push({
+        failures.push({
           field: expr.ref,
-          operator: "ref",
+          op: "ref",
           expected: "registered rule",
           actual: "not found",
-          passed: false,
+          message: `Rule "${expr.ref}" is not registered`,
         });
         return false;
       }
-      return explainInternal(ref, context, details);
+      return explainInternal(ref, context, failures);
+    }
+
+    // Handle template rule
+    if ("kind" in expr && expr.kind === "template") {
+      const tmpl = registeredRules.get(expr.template);
+      if (!tmpl) {
+        failures.push({
+          field: expr.template,
+          op: "template",
+          expected: "registered template",
+          actual: "not found",
+          message: `Template "${expr.template}" is not registered`,
+        });
+        return false;
+      }
+      const merged = { ...context, ...expr.params };
+      return explainInternal(tmpl, merged, failures);
     }
 
     // Handle negation
     if ("not" in expr) {
-      const result = !explainInternal(expr.not, context, details);
-      details.push({
-        field: "not",
-        operator: "not",
-        expected: "false",
-        actual: result.toString(),
-        passed: result,
-      });
+      const innerFailures: RuleExplanation["failures"] = [];
+      const innerPassed = explainInternal(expr.not, context, innerFailures);
+      const result = !innerPassed;
+      if (!result) {
+        failures.push({
+          field: "not",
+          op: "not",
+          expected: "inner rule to fail",
+          actual: "inner rule passed",
+          message: "NOT condition failed: inner rule passed when it should not",
+        });
+      }
       return result;
     }
 
     // Handle conjunction
     if ("and" in expr) {
-      const results = expr.and.map((e) => explainInternal(e, context, details));
+      const results = expr.and.map((e) => explainInternal(e, context, failures));
       return results.every((r) => r);
     }
 
     // Handle disjunction
     if ("or" in expr) {
-      const results = expr.or.map((e) => explainInternal(e, context, details));
+      const results = expr.or.map((e) => explainInternal(e, context, failures));
       return results.some((r) => r);
     }
 
@@ -273,13 +335,15 @@ export function createRuleEngine(): RuleEngine {
     if ("field" in expr && "op" in expr) {
       const actual = getNestedValue(context, expr.field);
       const passed = compare(actual, expr.op, expr.value);
-      details.push({
-        field: expr.field,
-        operator: expr.op,
-        expected: expr.value,
-        actual,
-        passed,
-      });
+      if (!passed) {
+        failures.push({
+          field: expr.field,
+          op: expr.op,
+          expected: expr.value,
+          actual,
+          message: `Field "${expr.field}" failed op "${expr.op}": expected ${JSON.stringify(expr.value)}, got ${JSON.stringify(actual)}`,
+        });
+      }
       return passed;
     }
 
@@ -291,11 +355,14 @@ export function createRuleEngine(): RuleEngine {
       return evaluateInternal(expr, context);
     },
 
-    compile(expr: RuleExpr): {
-      evaluate(ctx: Record<string, unknown>): boolean;
-    } {
+    compile(expr: RuleExpr): CompiledRule {
       return {
         evaluate: (ctx: Record<string, unknown>) => evaluateInternal(expr, ctx),
+        explain: (ctx: Record<string, unknown>) => {
+          const failures: RuleExplanation["failures"] = [];
+          const passed = explainInternal(expr, ctx, failures);
+          return { passed, failures };
+        },
       };
     },
 
@@ -307,10 +374,14 @@ export function createRuleEngine(): RuleEngine {
       return registeredRules.get(id);
     },
 
+    unregister(id: string): void {
+      registeredRules.delete(id);
+    },
+
     explain(expr: RuleExpr, context: Record<string, unknown>): RuleExplanation {
-      const details: RuleExplanation["details"] = [];
-      const passed = explainInternal(expr, context, details);
-      return { passed, details };
+      const failures: RuleExplanation["failures"] = [];
+      const passed = explainInternal(expr, context, failures);
+      return { passed, failures };
     },
   };
 }
@@ -378,11 +449,16 @@ function compare(actual: unknown, op: Op, expected: unknown): boolean {
     case "nin":
       return Array.isArray(expected) && !expected.includes(actual);
     case "contains":
+      if (Array.isArray(actual)) return actual.includes(expected);
       return (
         typeof actual === "string" &&
         typeof expected === "string" &&
         actual.includes(expected)
       );
+    case "containsAll":
+      // Array field must contain all values in expected array
+      if (!Array.isArray(actual) || !Array.isArray(expected)) return false;
+      return expected.every((v) => actual.includes(v));
     case "matches":
       if (typeof actual === "string" && expected instanceof RegExp) {
         return expected.test(actual);
@@ -395,6 +471,21 @@ function compare(actual: unknown, op: Op, expected: unknown): boolean {
       if (typeof actual === "string") return actual.length === 0;
       if (Array.isArray(actual)) return actual.length === 0;
       if (typeof actual === "object") return Object.keys(actual).length === 0;
+      return false;
+    case "withinDays": {
+      // Check that actual (a date string or timestamp) is within N days of now
+      if (typeof expected !== "number") return false;
+      const date =
+        actual instanceof Date
+          ? actual
+          : new Date(actual as string | number);
+      if (isNaN(date.getTime())) return false;
+      const diffMs = Math.abs(Date.now() - date.getTime());
+      const diffDays = diffMs / (1000 * 60 * 60 * 24);
+      return diffDays <= expected;
+    }
+    case "spatialWithin":
+      // TODO: geo engine not available yet — always false until PostGIS integration
       return false;
     default:
       return false;

@@ -1,6 +1,6 @@
 // Notification Module
 
-import type { AppModule, BootRegistry } from "../../core/module";
+import type { AppModule, BootRegistry } from "@core";
 
 export const NotificationModule: AppModule = {
   manifest: {
@@ -8,6 +8,7 @@ export const NotificationModule: AppModule = {
     version: "0.1.0",
     dependsOn: ["identity"],
     entities: [],
+    idPrefixes: {},
     events: [],
     commands: [],
     queries: [],

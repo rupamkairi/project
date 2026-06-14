@@ -2,11 +2,21 @@
  * Core Primitives
  *
  * Fundamental types and utilities used throughout the system.
- * Includes monetary values and pagination support.
+ * Includes monetary values, pagination support, logger, and result type.
  *
  * @category Core
  * @packageDocumentation
  */
+
+// Logger — canonical location
+export type { Logger } from "./logger";
+
+// Result type — canonical location
+// Note: Result depends on CoreError from errors/index.ts, which in turn
+// imports from primitives — to avoid a circular dependency the import in
+// result.ts goes directly to ../errors (not through this barrel).
+export type { Result } from "./result";
+export { Ok, Err } from "./result";
 
 /**
  * Monetary value with currency.
@@ -118,7 +128,35 @@ export function moneyMultiply(m: Money, factor: number): Money {
 }
 
 /**
+ * ISO 4217 currencies that have no minor unit (i.e. the amount is already
+ * in the major unit — no division by 100 needed).
+ *
+ * @see https://en.wikipedia.org/wiki/ISO_4217#List_of_ISO_4217_currency_codes
+ */
+const ZERO_DECIMAL_CURRENCIES = new Set([
+  "JPY",
+  "KRW",
+  "VND",
+  "BIF",
+  "CLP",
+  "GNF",
+  "ISK",
+  "KMF",
+  "MGA",
+  "PYG",
+  "RWF",
+  "UGX",
+  "UZS",
+  "XAF",
+  "XOF",
+  "XPF",
+]);
+
+/**
  * Formats a monetary value as a localized currency string.
+ *
+ * Amounts in zero-decimal currencies (e.g. JPY, KRW) are used as-is;
+ * all other currencies are divided by 100 to convert from the smallest unit.
  *
  * @param m - Monetary value to format
  * @param locale - Locale for formatting (default: "en-US")
@@ -129,15 +167,19 @@ export function moneyMultiply(m: Money, factor: number): Money {
  * moneyFormat({ amount: 999, currency: "USD" }); // "$9.99"
  * moneyFormat({ amount: 999, currency: "EUR" }, "de-DE"); // "9,99 €"
  * moneyFormat({ amount: 100, currency: "INR" }, "en-IN"); // "₹1.00"
+ * moneyFormat({ amount: 500, currency: "JPY" }); // "¥500"
  * ```
  *
  * @category Core
  */
 export function moneyFormat(m: Money, locale: string = "en-US"): string {
+  const amount = ZERO_DECIMAL_CURRENCIES.has(m.currency.toUpperCase())
+    ? m.amount
+    : m.amount / 100;
   return new Intl.NumberFormat(locale, {
     style: "currency",
     currency: m.currency,
-  }).format(m.amount / 100);
+  }).format(amount);
 }
 
 /**
