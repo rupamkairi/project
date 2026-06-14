@@ -1,6 +1,6 @@
 // Document Module
 
-import type { AppModule, BootRegistry } from "../../core/module";
+import type { AppModule, BootRegistry } from "@core";
 
 export const DocumentModule: AppModule = {
   manifest: {
@@ -8,6 +8,7 @@ export const DocumentModule: AppModule = {
     version: "0.1.0",
     dependsOn: ["identity"],
     entities: [],
+    idPrefixes: {},
     events: [],
     commands: [],
     queries: [],

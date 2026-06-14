@@ -21,6 +21,7 @@
     "start": "bun run src/index.ts",
     "worker": "bun run src/worker.ts",
     "worker:dev": "bun run --hot src/worker.ts",
+    "test": "bun test",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",

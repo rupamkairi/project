@@ -5,10 +5,9 @@
     "rootDir": "src",
     "baseUrl": ".",
     "paths": {
-      "@projectx/platform-web": ["./src"],
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src/lib/**/*", "src/stores/**/*"],
-  "exclude": ["node_modules", "dist", "src/routes"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
 }

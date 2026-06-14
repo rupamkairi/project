@@ -9,6 +9,7 @@
 
 import type { ID, Timestamp, Meta } from "../entity";
 import { generateId } from "../entity";
+import type { Transaction } from "../repository";
 
 /**
  * Domain event interface for event sourcing.
@@ -119,9 +120,20 @@ export interface EventHandler {
  */
 export interface SubscribeOptions {
   /**
-   * If true, unsubscribe after first event
+   * If true, unsubscribe after first matched event
    */
   once?: boolean;
+
+  /**
+   * Lower number = higher priority. Handlers are sorted by priority before calling.
+   */
+  priority?: number;
+
+  /**
+   * Fine-grained predicate applied after pattern matching, before calling the handler.
+   * Return false to skip this handler for the event.
+   */
+  filter?: (event: DomainEvent) => boolean;
 }
 
 /**
@@ -195,9 +207,19 @@ export interface EventBus {
  */
 export interface ReadOptions {
   /**
-   * Start reading from this version (exclusive)
+   * Version cursor — read events with version > after (exclusive)
    */
-  fromVersion?: number;
+  after?: number;
+
+  /**
+   * Start timestamp (inclusive)
+   */
+  from?: Timestamp;
+
+  /**
+   * End timestamp (inclusive)
+   */
+  to?: Timestamp;
 
   /**
    * Maximum number of events to return
@@ -212,9 +234,9 @@ export interface ReadOptions {
  */
 export interface EventFilter {
   /**
-   * Filter by aggregate ID
+   * Filter by one or more event types
    */
-  aggregateId?: ID;
+  types?: string[];
 
   /**
    * Filter by aggregate type
@@ -222,14 +244,14 @@ export interface EventFilter {
   aggregateType?: string;
 
   /**
-   * Filter by event type
-   */
-  type?: string;
-
-  /**
    * Filter by organization ID
    */
   orgId?: ID;
+
+  /**
+   * Filter by actor ID
+   */
+  actorId?: ID;
 }
 
 /**
@@ -274,7 +296,7 @@ export interface EventStore {
    * Reads events for a specific aggregate.
    *
    * @param aggregateId - Aggregate ID to read events for
-   * @param opts - Read options (fromVersion, limit)
+   * @param opts - Read options (after, from, to, limit)
    * @returns Async iterable of events
    */
   read(aggregateId: ID, opts?: ReadOptions): AsyncIterable<DomainEvent>;
@@ -338,9 +360,9 @@ export interface OutboxRecord {
   createdAt: Timestamp;
 
   /**
-   * Published timestamp (if successful)
+   * Timestamp when successfully published
    */
-  processedAt?: Timestamp;
+  publishedAt?: Timestamp;
 }
 
 /**
@@ -353,12 +375,20 @@ export interface OutboxRecord {
  */
 export interface EventOutbox {
   /**
-   * Writes an event to the outbox within a transaction.
+   * Writes a single event to the outbox within a transaction.
    *
    * @param event - Event to write
    * @param tx - Database transaction
    */
-  write(event: DomainEvent, tx: unknown): Promise<void>;
+  write(event: DomainEvent, tx: Transaction): Promise<void>;
+
+  /**
+   * Writes multiple events to the outbox within a transaction.
+   *
+   * @param events - Events to write
+   * @param tx - Database transaction (optional for in-memory)
+   */
+  writeBatch(events: DomainEvent[], tx?: Transaction): Promise<void>;
 
   /**
    * Polls for unpublished events.
@@ -485,6 +515,8 @@ interface Subscription {
   pattern: string[];
   handler: EventHandler;
   once: boolean;
+  priority: number;
+  filter?: (event: DomainEvent) => boolean;
 }
 
 /**
@@ -519,17 +551,39 @@ export class InMemoryEventBus implements EventBus {
   /**
    * Publishes an event to all matching subscribers.
    *
+   * Handlers are called in ascending priority order (lower number = higher priority).
+   * Once-handlers are removed only when they actually match and are called.
+   *
    * @param event - Event to publish
    */
   async publish(event: DomainEvent): Promise<void> {
-    const promises = this.subscriptions
-      .filter((sub) => this.matchesPattern(event.type, sub.pattern))
-      .map((sub) => sub.handler(event));
+    // Sort by priority ascending (lower number = higher priority)
+    const sorted = [...this.subscriptions].sort(
+      (a, b) => a.priority - b.priority,
+    );
+
+    const matched: Subscription[] = [];
+    const promises: Promise<void>[] = [];
+
+    for (const sub of sorted) {
+      if (!this.matchesPattern(event.type, sub.pattern)) continue;
+      if (sub.filter && !sub.filter(event)) continue;
+
+      matched.push(sub);
+      promises.push(sub.handler(event));
+    }
 
     await Promise.all(promises);
 
-    // Remove once handlers after execution
-    this.subscriptions = this.subscriptions.filter((sub) => !sub.once);
+    // F1 FIX: only remove once-subs that were actually matched and called
+    if (matched.length > 0) {
+      const toRemove = new Set(matched.filter((s) => s.once));
+      if (toRemove.size > 0) {
+        this.subscriptions = this.subscriptions.filter(
+          (sub) => !toRemove.has(sub),
+        );
+      }
+    }
   }
 
   /**
@@ -558,6 +612,8 @@ export class InMemoryEventBus implements EventBus {
       pattern: pattern.split("."),
       handler,
       once: opts?.once ?? false,
+      priority: opts?.priority ?? 0,
+      filter: opts?.filter,
     };
     this.subscriptions.push(subscription);
 
@@ -653,22 +709,27 @@ export class InMemoryEventStore implements EventStore {
   /**
    * Reads events for an aggregate.
    *
+   * Supports filtering by version cursor (`after`), timestamp range (`from`/`to`), and `limit`.
+   *
    * @param aggregateId - Aggregate ID
    * @param opts - Read options
    * @returns Async iterable of events
    */
   async *read(aggregateId: ID, opts?: ReadOptions): AsyncIterable<DomainEvent> {
     const events = this.events.get(aggregateId) ?? [];
-    let version = opts?.fromVersion ?? 0;
+    const afterVersion = opts?.after ?? 0;
+    const from = opts?.from;
+    const to = opts?.to;
     const limit = opts?.limit ?? Infinity;
 
     let count = 0;
     for (const event of events) {
-      if (event.version > version && count < limit) {
-        yield event;
-        count++;
-        version = event.version;
-      }
+      if (count >= limit) break;
+      if (event.version <= afterVersion) continue;
+      if (from !== undefined && event.occurredAt < from) continue;
+      if (to !== undefined && event.occurredAt > to) continue;
+      yield event;
+      count++;
     }
   }
 
@@ -683,16 +744,23 @@ export class InMemoryEventStore implements EventStore {
     type: string,
     opts?: ReadOptions,
   ): AsyncIterable<DomainEvent> {
+    const afterVersion = opts?.after ?? 0;
+    const from = opts?.from;
+    const to = opts?.to;
     const limit = opts?.limit ?? Infinity;
     let count = 0;
 
     for (const [, events] of this.events) {
       for (const event of events) {
-        if (event.type === type && count < limit) {
-          yield event;
-          count++;
-        }
+        if (count >= limit) break;
+        if (event.type !== type) continue;
+        if (event.version <= afterVersion) continue;
+        if (from !== undefined && event.occurredAt < from) continue;
+        if (to !== undefined && event.occurredAt > to) continue;
+        yield event;
+        count++;
       }
+      if (count >= limit) break;
     }
   }
 
@@ -700,15 +768,16 @@ export class InMemoryEventStore implements EventStore {
    * Replays events matching a filter.
    *
    * @param filter - Event filter
-   * @param _from - Start timestamp (not used in in-memory implementation)
+   * @param from - Start timestamp (inclusive)
    * @returns Async iterable of events
    */
   async *replay(
     filter: EventFilter,
-    _from: Timestamp,
+    from: Timestamp,
   ): AsyncIterable<DomainEvent> {
     for (const [, events] of this.events) {
       for (const event of events) {
+        if (event.occurredAt < from) continue;
         if (this.matchesFilter(event, filter)) {
           yield event;
         }
@@ -739,12 +808,105 @@ export class InMemoryEventStore implements EventStore {
    * @internal
    */
   private matchesFilter(event: DomainEvent, filter: EventFilter): boolean {
-    if (filter.aggregateId && event.aggregateId !== filter.aggregateId)
-      return false;
+    if (filter.types && filter.types.length > 0) {
+      if (!filter.types.includes(event.type)) return false;
+    }
     if (filter.aggregateType && event.aggregateType !== filter.aggregateType)
       return false;
-    if (filter.type && event.type !== filter.type) return false;
     if (filter.orgId && event.orgId !== filter.orgId) return false;
+    if (filter.actorId && event.actorId !== filter.actorId) return false;
     return true;
+  }
+}
+
+/**
+ * In-memory event outbox implementation.
+ *
+ * Suitable for testing and development. Use a database-backed
+ * implementation in production.
+ *
+ * @category Core
+ */
+export class InMemoryEventOutbox implements EventOutbox {
+  private records: Map<ID, OutboxRecord> = new Map();
+
+  /**
+   * Writes a single event to the outbox.
+   *
+   * @param event - Event to write
+   * @param _tx - Transaction (unused in in-memory implementation)
+   */
+  async write(event: DomainEvent, _tx: Transaction): Promise<void> {
+    const record: OutboxRecord = {
+      id: generateId(),
+      event,
+      attempts: 0,
+      createdAt: Date.now() as Timestamp,
+      publishedAt: undefined,
+    };
+    this.records.set(record.id, record);
+  }
+
+  /**
+   * Writes multiple events to the outbox.
+   *
+   * @param events - Events to write
+   * @param _tx - Transaction (unused in in-memory implementation)
+   */
+  async writeBatch(events: DomainEvent[], _tx?: Transaction): Promise<void> {
+    for (const event of events) {
+      const record: OutboxRecord = {
+        id: generateId(),
+        event,
+        attempts: 0,
+        createdAt: Date.now() as Timestamp,
+        publishedAt: undefined,
+      };
+      this.records.set(record.id, record);
+    }
+  }
+
+  /**
+   * Polls for unpublished outbox records (no publishedAt set).
+   *
+   * @param limit - Maximum number of records to return
+   * @returns Array of unpublished outbox records
+   */
+  async pollUnpublished(limit: number): Promise<OutboxRecord[]> {
+    const results: OutboxRecord[] = [];
+    for (const record of this.records.values()) {
+      if (results.length >= limit) break;
+      if (!record.publishedAt) {
+        results.push(record);
+      }
+    }
+    return results;
+  }
+
+  /**
+   * Marks an outbox record as successfully published.
+   *
+   * @param id - Record ID
+   */
+  async markPublished(id: ID): Promise<void> {
+    const record = this.records.get(id);
+    if (record) {
+      record.publishedAt = Date.now() as Timestamp;
+      record.attempts += 1;
+    }
+  }
+
+  /**
+   * Marks an outbox record as failed.
+   *
+   * @param id - Record ID
+   * @param error - Error message
+   */
+  async markFailed(id: ID, error: string): Promise<void> {
+    const record = this.records.get(id);
+    if (record) {
+      record.attempts += 1;
+      record.lastError = error;
+    }
   }
 }

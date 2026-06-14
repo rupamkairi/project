@@ -1,6 +1,6 @@
 // Geo Module
 
-import type { AppModule, BootRegistry } from "../../core/module";
+import type { AppModule, BootRegistry } from "@core";
 
 export const GeoModule: AppModule = {
   manifest: {
@@ -8,6 +8,7 @@ export const GeoModule: AppModule = {
     version: "0.1.0",
     dependsOn: [],
     entities: [],
+    idPrefixes: {},
     events: [],
     commands: [],
     queries: [],

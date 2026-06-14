@@ -402,7 +402,7 @@ export interface ActorContext {
     id: ID;
     roles: string[];
     orgId: ID;
-    type: "human" | "system" | "api_key";
+    type: "human" | "system" | "api-key";
   };
   org: {
     id: ID;
@@ -530,6 +530,11 @@ import type { PluginContext, EventBus, FSMEngine, ... } from './interfaces';
 // PLUGIN MANIFEST
 // ============================================================
 
+// NOTE: PLUGIN_MANIFEST is a SERVER-SIDE declaration only.
+// It is NOT the same as ComposeManifest (web/UI navigation type).
+// ComposeManifest lives in a shared package (e.g. @projectx/shared-router or @projectx/compose-types)
+// and is imported by apps/web (shell) and every compose web for sidebar navigation.
+// PLUGIN_MANIFEST lives here in the server entry point and declares server capabilities.
 export const PLUGIN_MANIFEST = {
   id: '{name}',                           // kebab-case
   name: '{Human Readable Name}',

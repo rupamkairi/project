@@ -9,6 +9,6 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src/lib/**/*", "src/stores/**/*", "src/components/**/*"],
-  "exclude": ["node_modules", "dist", "src/routes"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
 }

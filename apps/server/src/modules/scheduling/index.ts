@@ -1,6 +1,6 @@
 // Scheduling Module
 
-import type { AppModule, BootRegistry } from "../../core/module";
+import type { AppModule, BootRegistry } from "@core";
 
 export const SchedulingModule: AppModule = {
   manifest: {
@@ -8,6 +8,7 @@ export const SchedulingModule: AppModule = {
     version: "0.1.0",
     dependsOn: ["identity", "catalog"],
     entities: [],
+    idPrefixes: {},
     events: [],
     commands: [],
     queries: [],

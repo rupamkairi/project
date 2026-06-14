@@ -5,7 +5,7 @@ import { cors } from "@elysiajs/cors";
 import { swagger } from "@elysiajs/swagger";
 import { bearer } from "@elysiajs/bearer";
 import { env } from "./infra/env";
-import { createModuleRegistry } from "./core/module";
+import { createModuleRegistry } from "@core";
 import { IdentityModule } from "./modules/identity";
 import { CatalogModule } from "./modules/catalog";
 import { InventoryModule } from "./modules/inventory";
@@ -16,7 +16,7 @@ import { DocumentModule } from "./modules/document";
 import { NotificationModule } from "./modules/notification";
 import { GeoModule } from "./modules/geo";
 import { AnalyticsModule } from "./modules/analytics";
-import { CoreError, getHttpStatus } from "./core/errors";
+import { CoreError, getHttpStatus } from "@core";
 
 // Core Layer definitions for introspection
 const coreLayer = [

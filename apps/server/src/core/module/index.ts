@@ -7,11 +7,65 @@
  * @packageDocumentation
  */
 
-import type { Entity } from "../entity";
-import type { DomainEvent } from "../event";
-import type { Command, Query } from "../cqrs";
+import type { EntitySchema } from "../entity";
+import type { EntitySchemaRegistry } from "../entity";
+import type { Mediator } from "../cqrs";
+import type { EventBus, EventStore } from "../event";
+import type { RuleEngine } from "../rule";
+import type { Queue, Scheduler } from "../queue";
+import type { RealTimeBridge } from "../realtime";
+import type { AdapterRegistry } from "../adapters";
+import type { Logger, SystemContext } from "../context";
 import type { StateMachine } from "../state";
-import type { ID } from "../entity";
+import type { StateMachineRegistry } from "../state";
+import type { DatabaseAdapter } from "../repository";
+import { NotFoundError } from "../errors";
+
+// ---------------------------------------------------------------------------
+// Supporting types
+// ---------------------------------------------------------------------------
+
+/**
+ * Database migration definition.
+ *
+ * @category Core
+ */
+export interface Migration {
+  /** Unique migration identifier (e.g., "001_create_users") */
+  id: string;
+  /** Apply migration */
+  up(): Promise<void>;
+  /** Roll back migration */
+  down(): Promise<void>;
+}
+
+/**
+ * Scheduled job definition for cron-based tasks.
+ *
+ * @category Core
+ */
+export interface JobDefinition {
+  /** Human-readable job name */
+  name: string;
+  /** Cron expression (e.g., "0 * * * *") */
+  cron: string;
+}
+
+/**
+ * Queue worker definition.
+ *
+ * @category Core
+ */
+export interface WorkerDefinition {
+  /** Worker name matching the queue name */
+  name: string;
+  /** Maximum concurrent jobs processed (default: 1) */
+  concurrency?: number;
+}
+
+// ---------------------------------------------------------------------------
+// ModuleManifest
+// ---------------------------------------------------------------------------
 
 /**
  * Module manifest declaring module metadata and capabilities.
@@ -21,160 +75,103 @@ import type { ID } from "../entity";
  * const manifest: ModuleManifest = {
  *   id: "identity",
  *   version: "1.0.0",
- *   dependsOn: [],
- *   entities: ["User", "Organization", "Role"],
+ *   entities: [],
+ *   idPrefixes: { User: "usr_", Organization: "org_" },
  *   events: ["user.created", "user.deleted"],
  *   commands: ["user.create", "user.update"],
  *   queries: ["user.get", "user.list"],
  *   fsms: ["user:lifecycle"],
- *   migrations: ["001_create_users", "002_create_roles"]
+ *   migrations: []
  * };
  * ```
  *
  * @category Core
  */
 export interface ModuleManifest {
-  /**
-   * Unique module identifier
-   */
+  /** Unique module identifier */
   id: string;
 
-  /**
-   * Module version (semver)
-   */
+  /** Module version (semver) */
   version: string;
 
-  /**
-   * List of module IDs this module depends on
-   */
-  dependsOn: string[];
+  /** List of module IDs this module depends on (optional — treated as [] when absent) */
+  dependsOn?: string[];
+
+  /** Entity schemas provided by this module */
+  entities: EntitySchema[];
 
   /**
-   * Entity class names provided by this module
+   * ID prefix map for entities owned by this module.
+   * @example { Product: 'prod_', Category: 'cat_' }
    */
-  entities: string[];
+  idPrefixes: Record<string, string>;
 
-  /**
-   * Event types emitted by this module
-   */
+  /** Event types emitted by this module */
   events: string[];
 
-  /**
-   * Command types handled by this module
-   */
+  /** Command types handled by this module */
   commands: string[];
 
-  /**
-   * Query types handled by this module
-   */
+  /** Query types handled by this module */
   queries: string[];
 
-  /**
-   * FSM IDs defined by this module
-   */
+  /** FSM IDs defined by this module */
   fsms: string[];
 
-  /**
-   * Database migration files
-   */
-  migrations: string[];
+  /** Database migrations, run in version order */
+  migrations: Migration[];
+
+  /** Cron jobs to register on boot */
+  scheduledJobs?: JobDefinition[];
+
+  /** Queue workers to register on boot */
+  queueWorkers?: WorkerDefinition[];
+
+  /** Defaults for module-level config overrides */
+  defaultConfig?: Record<string, unknown>;
 }
 
+// ---------------------------------------------------------------------------
+// BootRegistry — service-instance bundle (C4 redesign)
+// ---------------------------------------------------------------------------
+
 /**
- * Boot registry for module initialization.
+ * Service-instance bundle passed to each module's boot() function.
  *
- * Provided to modules during boot phase for registration.
+ * Modules receive this during startup and wire themselves to the services
+ * they need (register command handlers, subscribe to events, etc.).
  *
  * @category Core
  */
 export interface BootRegistry {
-  /**
-   * Registers a command handler.
-   *
-   * @param type - Command type
-   * @param handler - Command handler function
-   */
-  registerCommand(
-    type: string,
-    handler: (cmd: Command, ctx: SystemContext) => Promise<unknown>,
-  ): void;
-
-  /**
-   * Registers a query handler.
-   *
-   * @param type - Query type
-   * @param handler - Query handler function
-   */
-  registerQuery(
-    type: string,
-    handler: (q: Query, ctx: SystemContext) => Promise<unknown>,
-  ): void;
-
-  /**
-   * Registers an event handler with pattern matching.
-   *
-   * @param pattern - Event pattern (e.g., "user.*", "*.created")
-   * @param handler - Event handler function
-   */
-  registerEventHandler(
-    pattern: string,
-    handler: (event: DomainEvent) => Promise<void>,
-  ): void;
-
-  /**
-   * Registers a state machine.
-   *
-   * @param machine - State machine definition
-   */
-  registerFSM<S extends string, E extends string>(
-    machine: StateMachine<S, E>,
-  ): void;
-
-  /**
-   * Registers an entity schema.
-   *
-   * @param name - Entity name
-   * @param schema - Entity schema
-   */
-  registerEntity(name: string, schema: unknown): void;
+  mediator: Mediator;
+  bus: EventBus;
+  store: EventStore;
+  schemas: EntitySchemaRegistry;
+  fsms: StateMachineRegistry;
+  rules: RuleEngine;
+  queue: Queue;
+  scheduler: Scheduler;
+  realtime: RealTimeBridge;
+  db: DatabaseAdapter;
+  adapters: AdapterRegistry;
+  logger: Logger;
 }
+
+// ---------------------------------------------------------------------------
+// Re-export SystemContext (C3 compat — canonical def lives in ../context)
+// ---------------------------------------------------------------------------
 
 /**
- * System context for module execution.
- *
- * @category Core
+ * Re-export SystemContext so that existing imports of
+ * `SystemContext` from "../module" continue to resolve.
+ * The canonical definition lives in ../context.
  */
-export interface SystemContext {
-  /**
-   * Current actor information
-   */
-  actor: {
-    id: ID;
-    roles: string[];
-    orgId: ID;
-    type: "human" | "system" | "api_key";
-  };
+export type { SystemContext };
 
-  /**
-   * Organization information
-   */
-  org: { id: ID; slug: string; settings: Record<string, unknown> };
-
-  /**
-   * Correlation ID for tracing
-   */
-  correlationId: ID;
-
-  /**
-   * Request ID for this operation
-   */
-  requestId: ID;
-
-  /**
-   * Timestamp when execution started
-   */
-  startedAt: number;
-}
+// ---------------------------------------------------------------------------
+// AppModule
+// ---------------------------------------------------------------------------
 
 /**
  * Application module interface.
@@ -187,19 +184,17 @@ export interface SystemContext {
  *   manifest: {
  *     id: "identity",
  *     version: "1.0.0",
- *     dependsOn: [],
- *     entities: ["User", "Organization"],
+ *     entities: [],
+ *     idPrefixes: { User: "usr_" },
  *     events: ["user.created"],
  *     commands: ["user.create"],
  *     queries: ["user.get"],
  *     fsms: ["user:lifecycle"],
- *     migrations: ["001_create_users"]
+ *     migrations: []
  *   },
  *
  *   async boot(registry) {
- *     registry.registerCommand("user.create", handleCreateUser);
- *     registry.registerQuery("user.get", handleGetUser);
- *     registry.registerEventHandler("user.*", handleUserEvents);
+ *     registry.mediator.registerCommand("user.create", handleCreateUser);
  *   },
  *
  *   async shutdown() {
@@ -211,17 +206,16 @@ export interface SystemContext {
  * @category Core
  */
 export interface AppModule {
-  /**
-   * Module manifest with metadata
-   */
+  /** Module manifest with metadata */
   manifest: ModuleManifest;
 
   /**
    * Bootstraps the module.
    *
    * Called during application startup in dependency order.
+   * The registry bundle provides all platform services.
    *
-   * @param registry - Boot registry for registrations
+   * @param registry - Service-instance bundle
    */
   boot(registry: BootRegistry): Promise<void>;
 
@@ -233,138 +227,117 @@ export interface AppModule {
   shutdown(): Promise<void>;
 }
 
+// ---------------------------------------------------------------------------
+// ModuleRegistry
+// ---------------------------------------------------------------------------
+
 /**
  * Module registry interface for managing module lifecycle.
  *
  * @category Core
  */
 export interface ModuleRegistry {
-  /**
-   * Registers a single module.
-   *
-   * @param module - Module to register
-   */
+  /** Registers a single module. */
   register(module: AppModule): void;
 
   /**
-   * Registers multiple modules.
+   * Resolves a registered module by ID.
    *
-   * @param modules - Modules to register
+   * @throws {NotFoundError} if the module is not registered
+   */
+  resolve(id: string): AppModule;
+
+  /**
+   * Boots registered modules in topological (dependency) order.
+   *
+   * @param ids - If provided, boot only these modules plus their transitive deps.
+   *              If omitted, boot all registered modules.
+   * @throws Error if BootRegistry services were not provided to createModuleRegistry
+   */
+  boot(ids?: string[]): Promise<void>;
+
+  /** Shuts down all booted modules in reverse boot order. */
+  shutdown(): Promise<void>;
+
+  // -----------------------------------------------------------------------
+  // Deprecated aliases — Wave 2 removes these
+  // -----------------------------------------------------------------------
+
+  /**
+   * @deprecated Use register() instead. Will be removed in Wave 2.
    */
   registerMany(modules: AppModule[]): void;
 
   /**
-   * Gets a module by ID.
-   *
-   * @param id - Module ID
-   * @returns Module or undefined
+   * @deprecated Use resolve() instead (resolve throws on missing). Will be removed in Wave 2.
    */
   getModule(id: string): AppModule | undefined;
 
   /**
-   * Gets all registered modules.
-   *
-   * @returns Array of modules
+   * @deprecated Use resolve() or iterate boot order instead. Will be removed in Wave 2.
    */
   getAllModules(): AppModule[];
 
   /**
-   * Gets manifests of all modules in dependency order.
-   *
-   * @returns Array of manifests
+   * @deprecated Use resolve().manifest or iterate modules. Will be removed in Wave 2.
    */
   getManifests(): ModuleManifest[];
 
   /**
-   * Boots all registered modules in dependency order.
+   * @deprecated Use boot() instead. Will be removed in Wave 2.
    */
   bootRegistered(): Promise<void>;
 
   /**
-   * Boots all modules (alias for bootRegistered).
+   * @deprecated Use boot() instead. Will be removed in Wave 2.
    */
   bootAll(): Promise<void>;
 
   /**
-   * Shuts down all modules in reverse dependency order.
+   * @deprecated Use shutdown() instead. Will be removed in Wave 2.
    */
   shutdownAll(): Promise<void>;
 }
 
-/**
- * Options for creating a module registry.
- *
- * @category Core
- */
-export interface CreateModuleRegistryOptions {
-  /**
-   * Custom boot registry or factory
-   */
-  bootRegistry?:
-    | Partial<BootRegistry>
-    | (() => Partial<BootRegistry> | undefined);
-}
+// ---------------------------------------------------------------------------
+// createModuleRegistry
+// ---------------------------------------------------------------------------
 
 /**
  * Creates a module registry with dependency-ordered boot/shutdown.
  *
- * @param options - Registry options
+ * @param services - Service-instance bundle (BootRegistry) to pass to modules on boot.
+ *                   Can be omitted during construction and provided later — but boot()
+ *                   will throw if called without services.
  * @returns Module registry instance
  *
  * @example
  * ```typescript
- * const registry = createModuleRegistry();
+ * const registry = createModuleRegistry(services);
  *
- * // Register modules
- * registry.registerMany([
- *   IdentityModule,
- *   CatalogModule,
- *   OrderModule
- * ]);
+ * registry.register(IdentityModule);
+ * registry.register(CatalogModule);
+ * registry.register(InventoryModule);
  *
- * // Boot all modules (in dependency order)
- * await registry.bootRegistered();
+ * // Boot all modules in dependency order
+ * await registry.boot();
  *
- * // Get module info
- * const manifests = registry.getManifests();
- * console.log(`Loaded ${manifests.length} modules`);
+ * // Boot a subset (+ their transitive deps)
+ * await registry.boot(["inventory"]);
  *
- * // Shutdown
- * await registry.shutdownAll();
+ * // Shutdown in reverse order
+ * await registry.shutdown();
  * ```
  *
  * @category Core
  */
-export function createModuleRegistry(
-  options?: CreateModuleRegistryOptions,
-): ModuleRegistry {
+export function createModuleRegistry(services?: BootRegistry): ModuleRegistry {
   const modules = new Map<string, AppModule>();
+  const bootedOrder: string[] = [];
 
-  function createBootRegistry(): BootRegistry {
-    const provided =
-      typeof options?.bootRegistry === "function"
-        ? (options.bootRegistry() ?? {})
-        : (options?.bootRegistry ?? {});
-
-    return {
-      registerCommand: provided.registerCommand ?? (() => {}),
-      registerQuery: provided.registerQuery ?? (() => {}),
-      registerEventHandler: provided.registerEventHandler ?? (() => {}),
-      registerFSM: provided.registerFSM ?? (() => {}),
-      registerEntity: provided.registerEntity ?? (() => {}),
-    };
-  }
-
-  /**
-   * Sorts modules by dependencies using topological sort.
-   *
-   * @returns Modules in boot order (dependencies first)
-   *
-   * @throws Error if circular dependency detected
-   *
-   * @internal
-   */
-  function topologicalSort(): AppModule[] {
+  // Topological sort helper. If `subset` is given, only include those ids
+  // plus their transitive dependencies.
+  function topologicalSort(subset?: string[]): AppModule[] {
     const sorted: AppModule[] = [];
     const visited = new Set<string>();
     const visiting = new Set<string>();
@@ -378,16 +351,19 @@ export function createModuleRegistry(
       visiting.add(id);
       const module = modules.get(id);
       if (module) {
-        for (const dep of module.manifest.dependsOn) {
+        for (const dep of module.manifest.dependsOn ?? []) {
           visit(dep);
         }
         visited.add(id);
+        visiting.delete(id);
         sorted.push(module);
+      } else {
+        visiting.delete(id);
       }
-      visiting.delete(id);
     }
 
-    for (const id of modules.keys()) {
+    const roots = subset ?? Array.from(modules.keys());
+    for (const id of roots) {
       visit(id);
     }
 
@@ -399,43 +375,80 @@ export function createModuleRegistry(
       modules.set(module.manifest.id, module);
     },
 
+    resolve(id: string): AppModule {
+      const module = modules.get(id);
+      if (!module) {
+        throw new NotFoundError(`Module "${id}" is not registered`);
+      }
+      return module;
+    },
+
+    async boot(ids?: string[]): Promise<void> {
+      if (!services) {
+        throw new Error(
+          "ModuleRegistry.boot: services (BootRegistry) not provided — wire them at bootstrap",
+        );
+      }
+
+      const sorted = topologicalSort(ids);
+      for (const module of sorted) {
+        await module.boot(services);
+        bootedOrder.push(module.manifest.id);
+      }
+    },
+
+    async shutdown(): Promise<void> {
+      // Shutdown in reverse boot order
+      const order = [...bootedOrder].reverse();
+      for (const id of order) {
+        const module = modules.get(id);
+        if (module) {
+          await module.shutdown();
+        }
+      }
+      bootedOrder.length = 0;
+    },
+
+    // -----------------------------------------------------------------------
+    // Deprecated aliases — kept for Wave 1 backward compat
+    // -----------------------------------------------------------------------
+
+    /** @deprecated Use register() instead. Will be removed in Wave 2. */
     registerMany(entries: AppModule[]): void {
       for (const module of entries) {
         modules.set(module.manifest.id, module);
       }
     },
 
+    /** @deprecated Use resolve() instead. Will be removed in Wave 2. */
     getModule(id: string): AppModule | undefined {
       return modules.get(id);
     },
 
+    /** @deprecated Use resolve() or boot() for ordering. Will be removed in Wave 2. */
     getAllModules(): AppModule[] {
       return Array.from(modules.values());
     },
 
+    /** @deprecated Use resolve().manifest instead. Will be removed in Wave 2. */
     getManifests(): ModuleManifest[] {
-      return modules.values().next().value
-        ? topologicalSort().map((m) => m.manifest)
-        : [];
+      if (modules.size === 0) return [];
+      return topologicalSort().map((m) => m.manifest);
     },
 
+    /** @deprecated Use boot() instead. Will be removed in Wave 2. */
     async bootRegistered(): Promise<void> {
-      const sorted = topologicalSort();
-      for (const module of sorted) {
-        const registry = createBootRegistry();
-        await module.boot(registry);
-      }
+      await this.boot();
     },
 
+    /** @deprecated Use boot() instead. Will be removed in Wave 2. */
     async bootAll(): Promise<void> {
-      await this.bootRegistered();
+      await this.boot();
     },
 
+    /** @deprecated Use shutdown() instead. Will be removed in Wave 2. */
     async shutdownAll(): Promise<void> {
-      const sorted = topologicalSort().reverse();
-      for (const module of sorted) {
-        await module.shutdown();
-      }
+      await this.shutdown();
     },
   };
 }

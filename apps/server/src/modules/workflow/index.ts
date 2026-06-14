@@ -1,6 +1,6 @@
 // Workflow Module
 
-import type { AppModule, BootRegistry } from "../../core/module";
+import type { AppModule, BootRegistry } from "@core";
 
 export const WorkflowModule: AppModule = {
   manifest: {
@@ -8,6 +8,7 @@ export const WorkflowModule: AppModule = {
     version: "0.1.0",
     dependsOn: ["identity"],
     entities: [],
+    idPrefixes: {},
     events: [],
     commands: [],
     queries: [],

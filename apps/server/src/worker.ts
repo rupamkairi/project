@@ -6,7 +6,7 @@ import {
   createWorker,
   closeQueueConnections,
 } from "./infra/queue/client";
-import { createModuleRegistry } from "./core/module";
+import { createModuleRegistry } from "@core";
 import { IdentityModule } from "./modules/identity";
 import { CatalogModule } from "./modules/catalog";
 import { InventoryModule } from "./modules/inventory";

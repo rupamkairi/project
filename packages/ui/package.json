@@ -9,6 +9,7 @@
     "./index.css": "./src/index.css"
   },
   "scripts": {
+    "test": "bun test",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist node_modules"
   },
