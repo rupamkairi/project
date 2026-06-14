@@ -7,7 +7,7 @@
 ## 1. Compose Overview
 
 ```
-Compose ID:   medical
+Compose ID:   healthcare
 Version:      1.0.0
 Purpose:      Manage clinical and administrative operations across hospitals,
               clinics, and diagnostic labs — from patient registration through
@@ -634,75 +634,75 @@ INSURANCE_CLAIM_PROCESSING
 
 ```
 ── Patients ──────────────────────────────────────────────────
-GET    /medical/patients                   patient:read
-POST   /medical/patients                   patient:register
-GET    /medical/patients/:id               patient:read
-PATCH  /medical/patients/:id               patient:update
-GET    /medical/patients/:id/visits        patient:read
-GET    /medical/patients/:id/bills         billing:read (own or billing-officer)
-GET    /medical/patients/:id/emr           emr:read
+GET    /healthcare/patients                   patient:read
+POST   /healthcare/patients                   patient:register
+GET    /healthcare/patients/:id               patient:read
+PATCH  /healthcare/patients/:id               patient:update
+GET    /healthcare/patients/:id/visits        patient:read
+GET    /healthcare/patients/:id/bills         billing:read (own or billing-officer)
+GET    /healthcare/patients/:id/emr           emr:read
 
 ── Visits ────────────────────────────────────────────────────
-GET    /medical/visits                     patient:read (filter by status/date/doctor)
-POST   /medical/visits                     patient:register  ← new walk-in registration
-GET    /medical/visits/:id                 patient:read
-POST   /medical/visits/:id/admit           bed:assign
-POST   /medical/visits/:id/discharge       bed:discharge
-GET    /medical/visits/:id/timeline        emr:read  ← merged clinical timeline
+GET    /healthcare/visits                     patient:read (filter by status/date/doctor)
+POST   /healthcare/visits                     patient:register  ← new walk-in registration
+GET    /healthcare/visits/:id                 patient:read
+POST   /healthcare/visits/:id/admit           bed:assign
+POST   /healthcare/visits/:id/discharge       bed:discharge
+GET    /healthcare/visits/:id/timeline        emr:read  ← merged clinical timeline
 
 ── EMR ───────────────────────────────────────────────────────
-GET    /medical/visits/:visitId/emr        emr:read
-POST   /medical/visits/:visitId/emr        emr:create
-PATCH  /medical/emr/:id                    emr:update  (guard: not locked)
+GET    /healthcare/visits/:visitId/emr        emr:read
+POST   /healthcare/visits/:visitId/emr        emr:create
+PATCH  /healthcare/emr/:id                    emr:update  (guard: not locked)
 
 ── Appointments ──────────────────────────────────────────────
-GET    /medical/appointments               appointment:read
-POST   /medical/appointments               appointment:create
-GET    /medical/appointments/:id           appointment:read
-POST   /medical/appointments/:id/cancel    appointment:cancel
-GET    /medical/doctors/:id/slots          public  ← available booking slots
+GET    /healthcare/appointments               appointment:read
+POST   /healthcare/appointments               appointment:create
+GET    /healthcare/appointments/:id           appointment:read
+POST   /healthcare/appointments/:id/cancel    appointment:cancel
+GET    /healthcare/doctors/:id/slots          public  ← available booking slots
 
 ── Prescriptions ─────────────────────────────────────────────
-GET    /medical/visits/:visitId/prescriptions  emr:read
-POST   /medical/visits/:visitId/prescriptions  prescription:create
-GET    /medical/prescriptions/:id              emr:read
-POST   /medical/prescriptions/:id/dispense     prescription:dispense
+GET    /healthcare/visits/:visitId/prescriptions  emr:read
+POST   /healthcare/visits/:visitId/prescriptions  prescription:create
+GET    /healthcare/prescriptions/:id              emr:read
+POST   /healthcare/prescriptions/:id/dispense     prescription:dispense
 
 ── Lab Orders ────────────────────────────────────────────────
-GET    /medical/visits/:visitId/lab-orders     lab-order:create (own) or emr:read
-POST   /medical/visits/:visitId/lab-orders     lab-order:create
-GET    /medical/lab-orders/:id                 lab-order:read
-POST   /medical/lab-orders/:id/collect         lab-order:process
-POST   /medical/lab-orders/:id/result          lab-order:upload-result
+GET    /healthcare/visits/:visitId/lab-orders     lab-order:create (own) or emr:read
+POST   /healthcare/visits/:visitId/lab-orders     lab-order:create
+GET    /healthcare/lab-orders/:id                 lab-order:read
+POST   /healthcare/lab-orders/:id/collect         lab-order:process
+POST   /healthcare/lab-orders/:id/result          lab-order:upload-result
 
 ── Beds ──────────────────────────────────────────────────────
-GET    /medical/beds                       bed:read
-GET    /medical/beds/availability          bed:read
-PATCH  /medical/beds/:id                   bed:assign (status change)
+GET    /healthcare/beds                       bed:read
+GET    /healthcare/beds/availability          bed:read
+PATCH  /healthcare/beds/:id                   bed:assign (status change)
 
 ── Billing ───────────────────────────────────────────────────
-GET    /medical/bills                      billing:read
-GET    /medical/bills/:id                  billing:read
-POST   /medical/bills/:id/collect          billing:collect
-POST   /medical/bills/:id/insurance-claim  insurance:claim
-GET    /medical/bills/:id/receipt          billing:read (own)
+GET    /healthcare/bills                      billing:read
+GET    /healthcare/bills/:id                  billing:read
+POST   /healthcare/bills/:id/collect          billing:collect
+POST   /healthcare/bills/:id/insurance-claim  insurance:claim
+GET    /healthcare/bills/:id/receipt          billing:read (own)
 
 ── Analytics ─────────────────────────────────────────────────
-GET    /medical/analytics/census           analytics:read  ← OPD/IPD daily census
-GET    /medical/analytics/bed-occupancy    analytics:read
-GET    /medical/analytics/revenue-cycle    analytics:read
-GET    /medical/analytics/doctor-workload  analytics:read
-GET    /medical/analytics/lab-turnaround   analytics:read
+GET    /healthcare/analytics/census           analytics:read  ← OPD/IPD daily census
+GET    /healthcare/analytics/bed-occupancy    analytics:read
+GET    /healthcare/analytics/revenue-cycle    analytics:read
+GET    /healthcare/analytics/doctor-workload  analytics:read
+GET    /healthcare/analytics/lab-turnaround   analytics:read
 ```
 
-**Patient Portal (`/medical/patient/*`):**
+**Patient Portal (`/healthcare/patient/*`):**
 
 ```
-GET    /medical/patient/appointments       own
-POST   /medical/patient/appointments       own
-GET    /medical/patient/reports            own  ← lab reports, discharge summaries
-GET    /medical/patient/bills              own
-GET    /medical/patient/prescriptions      own
+GET    /healthcare/patient/appointments       own
+POST   /healthcare/patient/appointments       own
+GET    /healthcare/patient/reports            own  ← lab reports, discharge summaries
+GET    /healthcare/patient/bills              own
+GET    /healthcare/patient/prescriptions      own
 ```
 
 ---

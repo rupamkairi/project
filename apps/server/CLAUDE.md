@@ -4,6 +4,8 @@ globs: "*.ts, *.tsx, *.html, *.css, *.js, *.jsx, package.json"
 alwaysApply: false
 ---
 
+Full tooling reference: [docs/instructions/tooling.md](../../docs/instructions/tooling.md)
+
 Default to using Bun instead of Node.js.
 
 - Use `bun <file>` instead of `node <file>` or `ts-node <file>`

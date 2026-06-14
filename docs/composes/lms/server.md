@@ -1374,7 +1374,7 @@ export function registerRealtime(
 
 ```json
 {
-  "name": "@projectx/compose-{name}",
+  "name": "@projectx/{name}-server",
   "version": "1.0.0",
   "description": "Standalone {Name} plugin - self-contained with zero core dependencies",
   "type": "module",
@@ -1495,7 +1495,7 @@ export function registerRealtime(
 ```typescript
 // Host application main file
 
-import { createPlugin, type PluginContext } from '@projectx/compose-{name}';
+import { createPlugin, type PluginContext } from '@projectx/{name}-server';
 
 // 1. Create plugin instance
 const plugin = createPlugin({
@@ -1561,7 +1561,7 @@ process.on('SIGTERM', async () => {
 ```typescript
 // Test setup with mocks
 
-import { createPlugin, type PluginContext } from "@projectx/compose-{name}";
+import { createPlugin, type PluginContext } from "@projectx/{name}-server";
 
 function createMockContext(): PluginContext {
   return {

@@ -23,7 +23,7 @@
 | Base            | Vite + React + TypeScript                                  |
 | Routing         | TanStack Router (file-based, typed params + search params) |
 | Server State    | TanStack Query                                             |
-| API Client      | Eden Treaty → `import type { App } from '@repo/api'`       |
+| API Client      | Eden Treaty → `import type { App } from '@projectx/server'`       |
 | UI              | shadcn/ui + Radix + Tailwind                               |
 | Forms           | react-hook-form + Zod                                      |
 | Tables          | TanStack Table (headless, server-side pagination)          |
@@ -51,7 +51,7 @@ Before any app is built, extract shared primitives into a Turborepo internal pac
 - `<EmptyState>`, `<ErrorBoundary>`, `<Spinner>`, `<PageHeader>`
 - `<DataTable>` — TanStack Table wrapper with server-side pagination shell
 - Zod schemas: `courseSchema`, `enrollmentSchema`, `assignmentSchema`, `submissionSchema`, `cohortSchema`
-- Type re-exports from `@repo/api`
+- Type re-exports from `@projectx/server`
 - `useAuth()` hook — reads JWT, exposes `user`, `role`, `hasRole()`
 - `useWs(channel)` hook — manages WS subscription lifecycle per channel
 

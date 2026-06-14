@@ -95,5 +95,9 @@ packages/
 | [setup/server.md](./setup/server.md) | Elysia server setup, infra, DB, middleware |
 | [setup/web.md](./setup/web.md) | React + TanStack setup, routing, auth |
 | [composes/index.md](./composes/index.md) | Choosing modules, new compose planning |
+| [plugins/README.md](./plugins/README.md) | Plugin system — storage, notification, new plugin |
+| [skills/README.md](./skills/README.md) | Agent skills — when to use each |
+| [instructions/README.md](./instructions/README.md) | AI agent reading order and orientation |
 
-→ Agent reading order: [AGENTS.md](../AGENTS.md)
+→ Full documentation index: [README.md](./README.md)  
+→ AI agent start: [instructions/README.md](./instructions/README.md)

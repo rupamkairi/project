@@ -7,12 +7,12 @@
 ## 1. Compose Overview
 
 ```
-Compose ID:   project
+Compose ID:   pm
 Version:      1.0.0
 Purpose:      Manage the full project delivery lifecycle — from project scoping
               and sprint planning through task execution, time tracking, and
               client reporting — for teams of any size.
-Apps Served:  ProjectApp     → project board, backlog, sprint management
+Apps Served:  PmApp          → project board, backlog, sprint management
               TimeTrackerApp → time entry, billable hours, approvals
               ClientPortal   → read-only progress, milestone, document sharing
               ReportsApp     → burn-down, velocity, budget health, invoicing
@@ -878,98 +878,98 @@ Auth:     Bearer JWT — all routes require authentication unless marked public
 Scope:    All routes org-scoped via JWT.orgId
 
 ── Projects ──────────────────────────────────────────────────────────
-GET    /project/projects                      project:read
-POST   /project/projects                      project:create
-GET    /project/projects/:id                  project:read
-PATCH  /project/projects/:id                  project:update
-DELETE /project/projects/:id                  project:delete       [project-admin only]
-POST   /project/projects/:id/activate         project:update
-POST   /project/projects/:id/complete         project:update       [pm only]
-POST   /project/projects/:id/archive          project:archive
-POST   /project/projects/:id/hold             project:update
-GET    /project/projects/:id/health           project:read
-GET    /project/projects/:id/timeline         project:read         ← milestones + sprints
-GET    /project/projects/:id/budget           budget:read
-GET    /project/projects/:id/members          project:read
-POST   /project/projects/:id/members          project:update
-DELETE /project/projects/:id/members/:actorId project:update
+GET    /pm/projects                      project:read
+POST   /pm/projects                      project:create
+GET    /pm/projects/:id                  project:read
+PATCH  /pm/projects/:id                  project:update
+DELETE /pm/projects/:id                  project:delete       [project-admin only]
+POST   /pm/projects/:id/activate         project:update
+POST   /pm/projects/:id/complete         project:update       [pm only]
+POST   /pm/projects/:id/archive          project:archive
+POST   /pm/projects/:id/hold             project:update
+GET    /pm/projects/:id/health           project:read
+GET    /pm/projects/:id/timeline         project:read         ← milestones + sprints
+GET    /pm/projects/:id/budget           budget:read
+GET    /pm/projects/:id/members          project:read
+POST   /pm/projects/:id/members          project:update
+DELETE /pm/projects/:id/members/:actorId project:update
 
 ── Milestones ────────────────────────────────────────────────────────
-GET    /project/projects/:id/milestones           milestone:read
-POST   /project/projects/:id/milestones           milestone:create
-GET    /project/milestones/:id                    milestone:read
-PATCH  /project/milestones/:id                    milestone:update
-DELETE /project/milestones/:id                    milestone:update  [pm only]
-POST   /project/milestones/:id/complete           milestone:update
-POST   /project/milestones/:id/cancel             milestone:update
+GET    /pm/projects/:id/milestones           milestone:read
+POST   /pm/projects/:id/milestones           milestone:create
+GET    /pm/milestones/:id                    milestone:read
+PATCH  /pm/milestones/:id                    milestone:update
+DELETE /pm/milestones/:id                    milestone:update  [pm only]
+POST   /pm/milestones/:id/complete           milestone:update
+POST   /pm/milestones/:id/cancel             milestone:update
 
 ── Sprints ───────────────────────────────────────────────────────────
-GET    /project/projects/:id/sprints              sprint:read
-POST   /project/projects/:id/sprints              sprint:create
-GET    /project/sprints/:id                       sprint:read
-PATCH  /project/sprints/:id                       sprint:update
-POST   /project/sprints/:id/start                 sprint:update
-POST   /project/sprints/:id/complete              sprint:complete
-GET    /project/sprints/:id/burndown              sprint:read      ← burn-down chart data
+GET    /pm/projects/:id/sprints              sprint:read
+POST   /pm/projects/:id/sprints              sprint:create
+GET    /pm/sprints/:id                       sprint:read
+PATCH  /pm/sprints/:id                       sprint:update
+POST   /pm/sprints/:id/start                 sprint:update
+POST   /pm/sprints/:id/complete              sprint:complete
+GET    /pm/sprints/:id/burndown              sprint:read      ← burn-down chart data
 
 ── Tasks ─────────────────────────────────────────────────────────────
-GET    /project/projects/:id/tasks                task:read
-POST   /project/projects/:id/tasks                task:create
-GET    /project/projects/:id/backlog              task:read        ← backlog only
-GET    /project/tasks/:id                         task:read
-PATCH  /project/tasks/:id                         task:update
-DELETE /project/tasks/:id                         task:delete
-POST   /project/tasks/:id/assign                  task:assign
-POST   /project/tasks/:id/move                    task:move-status ← { status, sprintId? }
-POST   /project/tasks/:id/block                   task:update
-POST   /project/tasks/:id/unblock                 task:update
-GET    /project/tasks/:id/subtasks                task:read
-POST   /project/tasks/:id/subtasks                task:create
-GET    /project/tasks/:id/timeline                task:read        ← event history
-POST   /project/tasks/:id/attachments             document:upload
-GET    /project/tasks/:id/attachments             document:read
+GET    /pm/projects/:id/tasks                task:read
+POST   /pm/projects/:id/tasks                task:create
+GET    /pm/projects/:id/backlog              task:read        ← backlog only
+GET    /pm/tasks/:id                         task:read
+PATCH  /pm/tasks/:id                         task:update
+DELETE /pm/tasks/:id                         task:delete
+POST   /pm/tasks/:id/assign                  task:assign
+POST   /pm/tasks/:id/move                    task:move-status ← { status, sprintId? }
+POST   /pm/tasks/:id/block                   task:update
+POST   /pm/tasks/:id/unblock                 task:update
+GET    /pm/tasks/:id/subtasks                task:read
+POST   /pm/tasks/:id/subtasks                task:create
+GET    /pm/tasks/:id/timeline                task:read        ← event history
+POST   /pm/tasks/:id/attachments             document:upload
+GET    /pm/tasks/:id/attachments             document:read
 
 ── Time Entries ──────────────────────────────────────────────────────
-GET    /project/projects/:id/time-entries         time-entry:read
-POST   /project/time-entries                      time-entry:create
-GET    /project/time-entries/:id                  time-entry:read
-PATCH  /project/time-entries/:id                  time-entry:update
-DELETE /project/time-entries/:id                  time-entry:delete
-POST   /project/time-entries/:id/approve          time-entry:approve
-POST   /project/time-entries/:id/reject           time-entry:approve
-GET    /project/projects/:id/time-entries/summary time-entry:read  ← grouped by actor/date
+GET    /pm/projects/:id/time-entries         time-entry:read
+POST   /pm/time-entries                      time-entry:create
+GET    /pm/time-entries/:id                  time-entry:read
+PATCH  /pm/time-entries/:id                  time-entry:update
+DELETE /pm/time-entries/:id                  time-entry:delete
+POST   /pm/time-entries/:id/approve          time-entry:approve
+POST   /pm/time-entries/:id/reject           time-entry:approve
+GET    /pm/projects/:id/time-entries/summary time-entry:read  ← grouped by actor/date
 
 ── Invoices ──────────────────────────────────────────────────────────
-GET    /project/projects/:id/invoices             invoice:read
-POST   /project/projects/:id/invoices             invoice:create
-GET    /project/invoices/:id                      invoice:read
-PATCH  /project/invoices/:id                      invoice:create   [draft only]
-POST   /project/invoices/:id/send                 invoice:send
-POST   /project/invoices/:id/record-payment       invoice:send
-POST   /project/invoices/:id/void                 invoice:send     [billing-manager only]
-GET    /project/invoices/:id/pdf                  invoice:read     ← generates PDF
+GET    /pm/projects/:id/invoices             invoice:read
+POST   /pm/projects/:id/invoices             invoice:create
+GET    /pm/invoices/:id                      invoice:read
+PATCH  /pm/invoices/:id                      invoice:create   [draft only]
+POST   /pm/invoices/:id/send                 invoice:send
+POST   /pm/invoices/:id/record-payment       invoice:send
+POST   /pm/invoices/:id/void                 invoice:send     [billing-manager only]
+GET    /pm/invoices/:id/pdf                  invoice:read     ← generates PDF
 
 ── Documents ─────────────────────────────────────────────────────────
-GET    /project/projects/:id/documents            document:read
-POST   /project/projects/:id/documents            document:upload
-GET    /project/documents/:id                     document:read
-DELETE /project/documents/:id                     document:delete
-GET    /project/documents/:id/versions            document:read
+GET    /pm/projects/:id/documents            document:read
+POST   /pm/projects/:id/documents            document:upload
+GET    /pm/documents/:id                     document:read
+DELETE /pm/documents/:id                     document:delete
+GET    /pm/documents/:id/versions            document:read
 
 ── Analytics ─────────────────────────────────────────────────────────
-GET    /project/projects/:id/analytics/overview   analytics:read
-GET    /project/projects/:id/analytics/velocity   analytics:read
-GET    /project/projects/:id/analytics/burndown   analytics:read
-GET    /project/projects/:id/analytics/time       analytics:read  ← by member/label
-GET    /project/analytics/utilization             analytics:read  ← across all projects
-POST   /project/analytics/reports                 analytics:read
+GET    /pm/projects/:id/analytics/overview   analytics:read
+GET    /pm/projects/:id/analytics/velocity   analytics:read
+GET    /pm/projects/:id/analytics/burndown   analytics:read
+GET    /pm/projects/:id/analytics/time       analytics:read  ← by member/label
+GET    /pm/analytics/utilization             analytics:read  ← across all projects
+POST   /pm/analytics/reports                 analytics:read
 
 ── Client Portal (scoped, read-only) ─────────────────────────────────
-GET    /project/client/projects                   project:read     [client role only]
-GET    /project/client/projects/:id               project:read
-GET    /project/client/projects/:id/milestones    milestone:read
-GET    /project/client/projects/:id/documents     document:read    [shared only]
-GET    /project/client/invoices                   invoice:read     [own only]
+GET    /pm/client/projects                   project:read     [client role only]
+GET    /pm/client/projects/:id               project:read
+GET    /pm/client/projects/:id/milestones    milestone:read
+GET    /pm/client/projects/:id/documents     document:read    [shared only]
+GET    /pm/client/invoices                   invoice:read     [own only]
 ```
 
 ---

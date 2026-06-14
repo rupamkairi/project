@@ -191,6 +191,71 @@ module.exports = { presets: [require("@projectx/config/tailwind.config")] }
 
 ---
 
+## Internal structure of `apps/server`
+
+```
+apps/server/src/
+├── core/
+│   ├── context/     ← SystemContext, mediator
+│   ├── cqrs/        ← Mediator, command/query dispatch
+│   ├── entity/      ← EntitySchema, ID gen (ULID)
+│   ├── errors/      ← AppError, typed error hierarchy
+│   ├── event/       ← EventBus, EventStore, Outbox
+│   ├── module/      ← ModuleRegistry, module loading
+│   ├── primitives/  ← Money, Result, PaginatedResult
+│   ├── queue/       ← Queue primitives
+│   ├── realtime/    ← WebSocket/pub-sub primitives
+│   ├── repository/  ← BaseRepository, query options
+│   ├── rule/        ← RuleEngine, RuleExpr
+│   └── state/       ← StateMachine, FSMEngine
+├── infra/
+│   ├── db/          ← Drizzle client, schema, migrations
+│   ├── cache/       ← Redis client
+│   ├── queue/       ← BullMQ worker
+│   ├── realtime/    ← WebSocket server
+│   └── env.ts       ← Validated env vars
+├── modules/
+│   ├── identity/
+│   ├── catalog/
+│   ├── inventory/
+│   ├── ledger/
+│   ├── workflow/
+│   ├── scheduling/
+│   ├── document/
+│   ├── notification/
+│   ├── geo/
+│   └── analytics/
+├── index.ts         ← HTTP server entry
+└── worker.ts        ← Background queue worker entry
+```
+
+**Boundary rule (never violate):**
+```
+core/      → imports nothing else in this tree
+infra/     → imports from core/ only (implements core interfaces)
+modules/   → imports from core/ and infra/ only; never cross-module
+```
+
+---
+
+## Internal structure of `apps/web`
+
+```
+apps/web/src/
+├── components/    ← Shell UI only (nav, sidebar, layout wrappers)
+├── hooks/         ← Shell hooks (auth session, theme)
+├── lib/           ← API client setup, utils
+├── routes/
+│   ├── __root.tsx ← Root layout
+│   └── index.tsx  ← Entry redirect
+├── main.tsx
+└── router.ts      ← Registers all compose route trees
+```
+
+`apps/web` is a pure shell — it owns no feature logic.
+
+---
+
 ## Dev commands
 
 | Command | What |

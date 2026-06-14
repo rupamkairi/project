@@ -11,7 +11,7 @@
 | Base            | Vite + React + TypeScript                            |
 | Routing         | TanStack Router (file-based, typed params)           |
 | Server State    | TanStack Query                                       |
-| API Client      | Eden Treaty → `import type { App } from '@repo/api'` |
+| API Client      | Eden Treaty → `import type { App } from '@projectx/server'` |
 | UI              | shadcn/ui + Radix + Tailwind                         |
 | Forms           | react-hook-form + Zod                                |
 | Tables          | TanStack Table (headless, server-side)               |
@@ -86,7 +86,7 @@ All tracks are independently executable after Track 0 is complete.
 
 - Turborepo `apps/admin` scaffold (`bun create vite admin --template react-ts`)
 - Install full stack deps (all packages listed above)
-- `src/lib/api.ts` — Eden Treaty client setup with `import type { App } from '@repo/api'`
+- `src/lib/api.ts` — Eden Treaty client setup with `import type { App } from '@projectx/server'`
 - `src/lib/query.ts` — TanStack Query `QueryClient` with sensible defaults (staleTime: 30s, retry: 1)
 - `src/lib/ws.ts` — WebSocket singleton + Zustand slice for connection state
 - `src/lib/auth.ts` — JWT decode, role check helpers (`hasRole`, `isStoreAdmin`)

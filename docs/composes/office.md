@@ -7,7 +7,7 @@
 ## 1. Compose Overview
 
 ```
-Compose ID:   hr
+Compose ID:   office
 Version:      1.0.0
 Purpose:      Manage the full employee lifecycle — hiring through exit —
               alongside attendance, payroll, field operations, and office management.
@@ -617,65 +617,65 @@ ANNUAL_APPRAISAL
 
 ```
 ── Employees ─────────────────────────────────────────────────
-GET    /hr/employees                      employee:read
-POST   /hr/employees                      employee:create
-GET    /hr/employees/:id                  employee:read
-PATCH  /hr/employees/:id                  employee:update
-POST   /hr/employees/:id/terminate        employee:terminate
-POST   /hr/employees/:id/resign           employee:update
-GET    /hr/employees/:id/payslips         payroll:read-own   (own) or payroll:read-all
-GET    /hr/employees/:id/attendance       attendance:read
-GET    /hr/employees/:id/leaves           leave:apply (own) or hr-admin
-GET    /hr/employees/:id/documents        document:read-own
+GET    /office/employees                      employee:read
+POST   /office/employees                      employee:create
+GET    /office/employees/:id                  employee:read
+PATCH  /office/employees/:id                  employee:update
+POST   /office/employees/:id/terminate        employee:terminate
+POST   /office/employees/:id/resign           employee:update
+GET    /office/employees/:id/payslips         payroll:read-own   (own) or payroll:read-all
+GET    /office/employees/:id/attendance       attendance:read
+GET    /office/employees/:id/leaves           leave:apply (own) or hr-admin
+GET    /office/employees/:id/documents        document:read-own
 
 ── Attendance ────────────────────────────────────────────────
-GET    /hr/attendance                     attendance:read
-POST   /hr/attendance/check-in            attendance:mark
-POST   /hr/attendance/check-out           attendance:mark
-PATCH  /hr/attendance/:id/override        attendance:override
-GET    /hr/attendance/summary             attendance:read   ← monthly summary
+GET    /office/attendance                     attendance:read
+POST   /office/attendance/check-in            attendance:mark
+POST   /office/attendance/check-out           attendance:mark
+PATCH  /office/attendance/:id/override        attendance:override
+GET    /office/attendance/summary             attendance:read   ← monthly summary
 
 ── Leaves ────────────────────────────────────────────────────
-GET    /hr/leaves                         leave:approve (team/dept)
-POST   /hr/leaves                         leave:apply
-GET    /hr/leaves/:id                     leave:apply (own) or leave:approve
-POST   /hr/leaves/:id/approve             leave:approve
-POST   /hr/leaves/:id/reject              leave:approve
-POST   /hr/leaves/:id/cancel              leave:apply (own)
-GET    /hr/leave-balances/:employeeId     employee:read (own or manager)
-GET    /hr/leave-policies                 leave:policy-manage or read
+GET    /office/leaves                         leave:approve (team/dept)
+POST   /office/leaves                         leave:apply
+GET    /office/leaves/:id                     leave:apply (own) or leave:approve
+POST   /office/leaves/:id/approve             leave:approve
+POST   /office/leaves/:id/reject              leave:approve
+POST   /office/leaves/:id/cancel              leave:apply (own)
+GET    /office/leave-balances/:employeeId     employee:read (own or manager)
+GET    /office/leave-policies                 leave:policy-manage or read
 
 ── Payroll ───────────────────────────────────────────────────
-GET    /hr/payroll-runs                   payroll:read-all
-POST   /hr/payroll-runs                   payroll:run
-GET    /hr/payroll-runs/:id               payroll:read-all
-POST   /hr/payroll-runs/:id/approve       payroll:approve
-GET    /hr/payroll-runs/:id/payslips      payroll:read-all
-GET    /hr/payslips/:id                   payroll:read-own (own) or payroll:read-all
+GET    /office/payroll-runs                   payroll:read-all
+POST   /office/payroll-runs                   payroll:run
+GET    /office/payroll-runs/:id               payroll:read-all
+POST   /office/payroll-runs/:id/approve       payroll:approve
+GET    /office/payroll-runs/:id/payslips      payroll:read-all
+GET    /office/payslips/:id                   payroll:read-own (own) or payroll:read-all
 
 ── Expense Claims ────────────────────────────────────────────
-GET    /hr/claims                         claim:approve (team) or own
-POST   /hr/claims                         claim:submit
-GET    /hr/claims/:id                     claim:submit (own) or claim:approve
-POST   /hr/claims/:id/submit              claim:submit
-POST   /hr/claims/:id/approve             claim:approve
-POST   /hr/claims/:id/reject              claim:approve
-POST   /hr/claims/:id/pay                 claim:pay
+GET    /office/claims                         claim:approve (team) or own
+POST   /office/claims                         claim:submit
+GET    /office/claims/:id                     claim:submit (own) or claim:approve
+POST   /office/claims/:id/submit              claim:submit
+POST   /office/claims/:id/approve             claim:approve
+POST   /office/claims/:id/reject              claim:approve
+POST   /office/claims/:id/pay                 claim:pay
 
 ── Field Tasks ───────────────────────────────────────────────
-GET    /hr/field-tasks                    field-task:review
-POST   /hr/field-tasks                    field-task:review  ← assign
-GET    /hr/field-tasks/:id                field-task:submit (own) or field-task:review
-POST   /hr/field-tasks/:id/submit         field-task:submit
-POST   /hr/field-tasks/:id/approve        field-task:review
-POST   /hr/field-tasks/:id/reject         field-task:review
+GET    /office/field-tasks                    field-task:review
+POST   /office/field-tasks                    field-task:review  ← assign
+GET    /office/field-tasks/:id                field-task:submit (own) or field-task:review
+POST   /office/field-tasks/:id/submit         field-task:submit
+POST   /office/field-tasks/:id/approve        field-task:review
+POST   /office/field-tasks/:id/reject         field-task:review
 
 ── Analytics ─────────────────────────────────────────────────
-GET    /hr/analytics/headcount            analytics:read
-GET    /hr/analytics/attrition            analytics:read
-GET    /hr/analytics/attendance-summary   analytics:read
-GET    /hr/analytics/payroll-cost         analytics:read
-GET    /hr/analytics/leave-utilization    analytics:read
+GET    /office/analytics/headcount            analytics:read
+GET    /office/analytics/attrition            analytics:read
+GET    /office/analytics/attendance-summary   analytics:read
+GET    /office/analytics/payroll-cost         analytics:read
+GET    /office/analytics/leave-utilization    analytics:read
 ```
 
 ---

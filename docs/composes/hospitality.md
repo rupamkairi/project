@@ -7,7 +7,7 @@
 ## 1. Compose Overview
 
 ```
-Compose ID:   hotel
+Compose ID:   hospitality
 Version:      1.0.0
 Purpose:      Manage full property operations — reservations, front desk,
               housekeeping, F&B, revenue management, and guest experience
@@ -657,72 +657,72 @@ CORPORATE_ACCOUNT_ONBOARDING
 
 ```
 ── Reservations ──────────────────────────────────────────────
-GET    /hotel/reservations                 reservation:read
-POST   /hotel/reservations                 reservation:create
-GET    /hotel/reservations/:id             reservation:read
-PATCH  /hotel/reservations/:id             reservation:modify
-POST   /hotel/reservations/:id/confirm     reservation:modify
-POST   /hotel/reservations/:id/cancel      reservation:cancel
-POST   /hotel/reservations/:id/no-show     front-desk only
-GET    /hotel/reservations/arrivals        reservation:read  ← today's arrivals
-GET    /hotel/reservations/departures      reservation:read  ← today's departures
+GET    /hospitality/reservations                 reservation:read
+POST   /hospitality/reservations                 reservation:create
+GET    /hospitality/reservations/:id             reservation:read
+PATCH  /hospitality/reservations/:id             reservation:modify
+POST   /hospitality/reservations/:id/confirm     reservation:modify
+POST   /hospitality/reservations/:id/cancel      reservation:cancel
+POST   /hospitality/reservations/:id/no-show     front-desk only
+GET    /hospitality/reservations/arrivals        reservation:read  ← today's arrivals
+GET    /hospitality/reservations/departures      reservation:read  ← today's departures
 
 ── Front Desk ────────────────────────────────────────────────
-POST   /hotel/checkin                      checkin:process
-POST   /hotel/checkout                     checkout:process
-GET    /hotel/rooms/availability           reservation:read  ← room grid view
+POST   /hospitality/checkin                      checkin:process
+POST   /hospitality/checkout                     checkout:process
+GET    /hospitality/rooms/availability           reservation:read  ← room grid view
 
 ── Rooms ─────────────────────────────────────────────────────
-GET    /hotel/rooms                        room:read-status
-GET    /hotel/rooms/:id                    room:read-status
-PATCH  /hotel/rooms/:id/status             room:update-status
-POST   /hotel/rooms/:id/block              room:block
-POST   /hotel/rooms/:id/unblock            room:block
+GET    /hospitality/rooms                        room:read-status
+GET    /hospitality/rooms/:id                    room:read-status
+PATCH  /hospitality/rooms/:id/status             room:update-status
+POST   /hospitality/rooms/:id/block              room:block
+POST   /hospitality/rooms/:id/unblock            room:block
 
 ── Folios ────────────────────────────────────────────────────
-GET    /hotel/folios/:id                   folio:read
-POST   /hotel/folios/:id/charges           folio:post-charge
-POST   /hotel/folios/:id/payment           folio:settle
-POST   /hotel/folios/:id/settle            folio:settle
-GET    /hotel/folios/:id/invoice           folio:read
+GET    /hospitality/folios/:id                   folio:read
+POST   /hospitality/folios/:id/charges           folio:post-charge
+POST   /hospitality/folios/:id/payment           folio:settle
+POST   /hospitality/folios/:id/settle            folio:settle
+GET    /hospitality/folios/:id/invoice           folio:read
 
 ── Housekeeping ──────────────────────────────────────────────
-GET    /hotel/housekeeping/tasks           housekeeping:read-tasks
-PATCH  /hotel/housekeeping/tasks/:id       housekeeping:update-task
-POST   /hotel/housekeeping/tasks/:id/start housekeeping:update-task
-POST   /hotel/housekeeping/tasks/:id/complete housekeeping:update-task
-POST   /hotel/housekeeping/tasks/:id/inspect  housekeeping:assign
-GET    /hotel/housekeeping/room-status     housekeeping:read-tasks  ← floor view
+GET    /hospitality/housekeeping/tasks           housekeeping:read-tasks
+PATCH  /hospitality/housekeeping/tasks/:id       housekeeping:update-task
+POST   /hospitality/housekeeping/tasks/:id/start housekeeping:update-task
+POST   /hospitality/housekeeping/tasks/:id/complete housekeeping:update-task
+POST   /hospitality/housekeeping/tasks/:id/inspect  housekeeping:assign
+GET    /hospitality/housekeeping/room-status     housekeeping:read-tasks  ← floor view
 
 ── Rate Plans ────────────────────────────────────────────────
-GET    /hotel/rate-plans                   rate-plan:manage
-POST   /hotel/rate-plans                   rate-plan:manage
-PATCH  /hotel/rate-plans/:id               rate-plan:manage
-POST   /hotel/rate-plans/:id/activate      rate-plan:manage
+GET    /hospitality/rate-plans                   rate-plan:manage
+POST   /hospitality/rate-plans                   rate-plan:manage
+PATCH  /hospitality/rate-plans/:id               rate-plan:manage
+POST   /hospitality/rate-plans/:id/activate      rate-plan:manage
 
 ── Maintenance ───────────────────────────────────────────────
-GET    /hotel/maintenance                  maintenance:create
-POST   /hotel/maintenance                  maintenance:create
-PATCH  /hotel/maintenance/:id              maintenance:update
-POST   /hotel/maintenance/:id/resolve      maintenance:update
+GET    /hospitality/maintenance                  maintenance:create
+POST   /hospitality/maintenance                  maintenance:create
+PATCH  /hospitality/maintenance/:id              maintenance:update
+POST   /hospitality/maintenance/:id/resolve      maintenance:update
 
 ── Analytics ─────────────────────────────────────────────────
-GET    /hotel/analytics/occupancy          analytics:read
-GET    /hotel/analytics/revpar             analytics:read
-GET    /hotel/analytics/adr               analytics:read
-GET    /hotel/analytics/channel-mix        analytics:read
-GET    /hotel/analytics/housekeeping       analytics:read
-GET    /hotel/analytics/forecast           analytics:read
+GET    /hospitality/analytics/occupancy          analytics:read
+GET    /hospitality/analytics/revpar             analytics:read
+GET    /hospitality/analytics/adr               analytics:read
+GET    /hospitality/analytics/channel-mix        analytics:read
+GET    /hospitality/analytics/housekeeping       analytics:read
+GET    /hospitality/analytics/forecast           analytics:read
 ```
 
-**Guest Portal (`/hotel/guest/*`):**
+**Guest Portal (`/hospitality/guest/*`):**
 
 ```
-POST   /hotel/guest/reservations           guest own
-GET    /hotel/guest/reservations/:id       guest own
-POST   /hotel/guest/reservations/:id/cancel guest own
-GET    /hotel/guest/folio                  guest own
-POST   /hotel/guest/requests               guest own  ← service requests
+POST   /hospitality/guest/reservations           guest own
+GET    /hospitality/guest/reservations/:id       guest own
+POST   /hospitality/guest/reservations/:id/cancel guest own
+GET    /hospitality/guest/folio                  guest own
+POST   /hospitality/guest/requests               guest own  ← service requests
 ```
 
 ---

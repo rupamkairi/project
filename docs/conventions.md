@@ -39,7 +39,7 @@ When in doubt, refer here. No exceptions without updating this doc.
 | Architecture reference | `lowercase-kebab.md` | `core.md` `module.md` `compose.md` |
 | Compose catalog entries | `{name}.md` inside `docs/composes/` | `crm.md` `erp.md` `lms.md` |
 | Setup guides | `{subject}.md` inside `docs/setup/` | `server.md` `web.md` |
-| AI agent plans | `{task-slug}.{agent}.plan.md` inside `plans/` | `add-crm-compose.claude.plan.md` |
+| AI agent plans | `{task-slug}.<agent>.plan.md` inside `plans/` | `add-crm-compose.claude.plan.md` |
 
 ---
 

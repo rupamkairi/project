@@ -1,5 +1,8 @@
 # Storage Plugin
 
+> **Canonical documentation:** [docs/plugins/storage.md](../../docs/plugins/storage.md)  
+> This README is a quick-start guide. Full API reference, types, and architecture are in the canonical doc above.
+
 A reusable fullstack plugin for file uploads and management using S3-compatible object storage.
 
 ## Features

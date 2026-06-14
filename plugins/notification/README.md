@@ -1,5 +1,8 @@
 # Notification Plugin
 
+> **Canonical documentation:** [docs/plugins/notification.md](../../docs/plugins/notification.md)  
+> This README is a quick-start guide. Full API reference, types, and architecture are in the canonical doc above.
+
 A reusable fullstack plugin for sending email notifications using templates. Supports direct emails, template-based rendering with Handlebars, and scheduled notifications.
 
 ## Features

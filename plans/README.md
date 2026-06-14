@@ -4,23 +4,23 @@ AI agents store planning documents here before implementing tasks.
 
 ---
 
-## File Naming
+## File naming
 
 ```
-{task-slug}.{agent-name}.plan.md
+plans/{task-slug}.<agent-name>.plan.md
 ```
 
 | Part | Rule | Examples |
-|------|------|---------|
+|---|---|---|
 | `task-slug` | kebab-case, describes the task | `add-crm-compose` `fix-worker-routing` `migrate-identity-schema` |
-| `agent-name` | your agent identifier, lowercase | `claude` `codex` `opencode` `gemini` |
+| `agent-name` | your agent identifier, lowercase | `claude` `codex` `gemini` `cursor` |
 
 **Full examples:**
 ```
-add-crm-compose.claude.plan.md
-migrate-auth-module.codex.plan.md
-refactor-core-entity.opencode.plan.md
-fix-worker-job-routing.claude.plan.md
+plans/add-crm-compose.claude.plan.md
+plans/migrate-auth-module.codex.plan.md
+plans/refactor-core-entity.cursor.plan.md
+plans/fix-worker-job-routing.claude.plan.md
 ```
 
 ---
@@ -31,7 +31,7 @@ fix-worker-job-routing.claude.plan.md
 - Task involves architectural decisions
 - Task was interrupted and needs resuming
 - Task has risks or multiple valid approaches
-- You want to confirm approach with the user before coding
+- You want to confirm approach before coding
 
 ---
 
@@ -67,4 +67,18 @@ Anything else.
 2. **One plan per task** — don't combine unrelated tasks in one file
 3. **Update status** — change `Status:` as work progresses
 4. **Delete when done** — remove completed or abandoned plans; don't let them go stale
-5. **No code in plans** — pseudocode OK, full implementations belong in source files
+5. **No code in plans** — pseudocode OK; full implementations belong in source files
+6. **Never create plans outside this directory**
+
+---
+
+## Subdirectories
+
+### `baseline/`
+
+Wave-by-wave implementation roadmap. Read before starting any Wave work:
+
+- `baseline/01-core.md` — Wave 1: Core layer (complete)
+- `baseline/02-infra-shell.md` — Wave 2: Worker dispatch, `/ws`, graceful shutdown
+- `baseline/03-modules.md` — Wave 3: `identity` module end-to-end
+- `baseline/04-compose.md` — Wave 4: `ComposeManifest`, `interfaces/` layer, module routing

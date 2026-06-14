@@ -469,8 +469,8 @@ export { Component, componentVariants };
 
 ## Related Documents
 
-- [Web Architecture](../docs/web-architecture.md)
-- [Monorepo Architecture](../docs/monorepo-architecture.md)
+- [Setup: Web](./setup/web.md)
+- [Monorepo Reference](./monorepo.md)
 - [TailwindCSS v4 Documentation](https://tailwindcss.com/docs)
 - [Radix UI Primitives](https://www.radix-ui.com/primitives)
 - [Shadcn/UI](https://ui.shadcn.com)
