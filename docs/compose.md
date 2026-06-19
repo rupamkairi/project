@@ -327,4 +327,8 @@ WEB
   15. Add to apps/web/src/router.tsx
   16. Add to apps/web/src/lib/compose-registry.ts
   17. Add @projectx/{name}-web to apps/web/package.json
+  18. Add @source line to apps/web/src/globals.css:
+        @source "../../../composes/{name}/web/src";
+      Missing this → all Tailwind classes in the compose produce no CSS.
+      See: docs/gotchas/package-ui-gotchas.md
 ```

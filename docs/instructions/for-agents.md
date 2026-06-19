@@ -4,6 +4,15 @@
 
 ---
 
+## Non-negotiable behavior rules
+
+**No tests. No app verification.**
+NEVER write tests unless the user explicitly asks ("write a test", "add test coverage").
+NEVER run or verify the app unless explicitly asked ("run it", "verify this").
+App is assumed running. Focus on implementation only.
+
+---
+
 ## Full reading order
 
 Read in sequence. Do not skip.

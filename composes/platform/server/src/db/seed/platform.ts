@@ -244,8 +244,7 @@ export async function seedPlatform() {
   );
 
   // Create bootstrap admin actor (password: admin123)
-  // Note: Using simple base64 encoding to match auth route verification
-  const passwordHash = Buffer.from("admin123").toString("base64");
+  const passwordHash = await Bun.password.hash("admin123");
   const adminActorResult = await db
     .insert(actors)
     .values({

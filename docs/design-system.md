@@ -467,9 +467,20 @@ export { Component, componentVariants };
 
 ---
 
+## CSS Entry Point
+
+`@projectx/ui` does **not** auto-import CSS from its JS entry (`index.ts`). The consuming app owns CSS initialization.
+
+`apps/web/src/globals.css` is the single Tailwind entry for the web shell. It imports design tokens from `@projectx/ui/tokens.css` and declares `@source` paths for every directory that uses Tailwind classes. When a new compose is added, its source path must be registered there.
+
+See [gotchas/package-ui-gotchas.md](./gotchas/package-ui-gotchas.md) for full details, symptoms, and the quick reference table.
+
+---
+
 ## Related Documents
 
 - [Setup: Web](./setup/web.md)
+- [Gotchas: @projectx/ui](./gotchas/package-ui-gotchas.md)
 - [Monorepo Reference](./monorepo.md)
 - [TailwindCSS v4 Documentation](https://tailwindcss.com/docs)
 - [Radix UI Primitives](https://www.radix-ui.com/primitives)

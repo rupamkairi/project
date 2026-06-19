@@ -1,63 +1,50 @@
-import { useState } from "react";
-import { createRoute } from "@tanstack/react-router";
-import { Route as dashboardLayoutRoute } from "./dashboard.layout";
-import { NotificationTemplatesRoute } from "@projectx/plugin-notification-web/routes/templates";
-import { templatesApi, sendApi } from "@projectx/plugin-notification-web/api";
-import { SendEmailRoute } from "@projectx/plugin-notification-web/routes/send-email";
-import { Mail, Send } from "lucide-react";
+import { useState } from "react"
+import { createRoute } from "@tanstack/react-router"
+import { Route as dashboardLayoutRoute } from "./dashboard.layout"
+import { NotificationTemplatesRoute } from "@projectx/plugin-notification-web/routes/templates"
+import { templatesApi, sendApi } from "@projectx/plugin-notification-web/api"
+import { SendEmailRoute } from "@projectx/plugin-notification-web/routes/send-email"
+import { PageHeader, Tabs, TabsList, TabsTrigger, TabsContent } from "@projectx/ui"
+import { Mail, Send } from "lucide-react"
 
 export const Route = createRoute({
   getParentRoute: () => dashboardLayoutRoute,
   path: "/notifications",
   component: NotificationsPage,
-});
+})
 
 function NotificationsPage() {
-  const [activeTab, setActiveTab] = useState<"templates" | "send">("templates");
+  const [activeTab, setActiveTab] = useState<"templates" | "send">("templates")
 
   return (
-    <div className="h-full p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold">Notifications</h1>
-        <p className="text-muted-foreground mt-1">
-          Manage notification templates and send emails
-        </p>
-      </div>
-      
-      {/* Tabs */}
-      <div className="flex gap-2 mb-6 border-b">
-        <button
-          onClick={() => setActiveTab("templates")}
-          className={`flex items-center gap-2 px-4 py-2 border-b-2 transition-colors ${
-            activeTab === "templates"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <Mail className="w-4 h-4" />
-          Templates
-        </button>
-        <button
-          onClick={() => setActiveTab("send")}
-          className={`flex items-center gap-2 px-4 py-2 border-b-2 transition-colors ${
-            activeTab === "send"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <Send className="w-4 h-4" />
-          Send Email
-        </button>
-      </div>
-      
-      {/* Content */}
-      <div className="mt-6">
-        {activeTab === "templates" ? (
+    <div className="p-4 space-y-4">
+      <PageHeader
+        title="Notifications"
+        description="Manage notification templates and send emails"
+      />
+
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => setActiveTab(v as "templates" | "send")}
+      >
+        <TabsList variant="line">
+          <TabsTrigger value="templates">
+            <Mail className="h-4 w-4" strokeWidth={1.75} />
+            Templates
+          </TabsTrigger>
+          <TabsTrigger value="send">
+            <Send className="h-4 w-4" strokeWidth={1.75} />
+            Send Email
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="templates" className="mt-4">
           <NotificationTemplatesRoute templatesApi={templatesApi} />
-        ) : (
+        </TabsContent>
+        <TabsContent value="send" className="mt-4">
           <SendEmailRoute sendApi={sendApi} />
-        )}
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
-  );
+  )
 }

@@ -28,6 +28,7 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "db:seed": "bun run src/infra/db/seed.ts",
+    "db:seed:admin": "bun run src/infra/db/seed-dev-admin.ts",
     "build": "bun build src/index.ts --outdir dist --target bun",
     "clean": "rm -rf dist node_modules",
     "docs:generate": "bun run scripts/generate-docs.ts",

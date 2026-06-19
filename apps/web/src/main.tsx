@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { RouterProvider } from "@tanstack/react-router";
 import { router } from "@/router";
 import { useAuthStore } from "@projectx/platform-web";
-import "@projectx/ui/index.css";
+import "./globals.css";
 
 // Initialize auth on app startup
 function initializeAuth() {

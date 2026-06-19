@@ -1,730 +1,611 @@
-import { createRoute } from "@tanstack/react-router";
-import { Route as dashboardLayoutRoute } from "./dashboard.layout";
-import { useState, useEffect } from "react";
-import { platformApi } from "../lib/api/platform";
-import { Shield, Pencil, Trash2, Plus, Users, Check, X } from "lucide-react";
+import { createRoute } from "@tanstack/react-router"
+import { Route as dashboardLayoutRoute } from "./dashboard.layout"
+import { useState, useEffect } from "react"
+import { platformApi } from "../lib/api/platform"
+import {
+  PageHeader,
+  Button,
+  Input,
+  Label,
+  Textarea,
+  Checkbox,
+  Badge,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  ConfirmDialog,
+  Skeleton,
+  Alert,
+  AlertDescription,
+} from "@projectx/ui"
+import { Shield, Plus, Users, Pencil, Trash2 } from "lucide-react"
 
 export const Route = createRoute({
   getParentRoute: () => dashboardLayoutRoute,
   path: "/roles",
   component: RolesPage,
-});
+})
 
-// Available permissions for the platform
 const AVAILABLE_PERMISSIONS = [
-  {
-    id: "users:read",
-    name: "View Users",
-    description: "Can view user list and details",
-  },
-  {
-    id: "users:write",
-    name: "Manage Users",
-    description: "Can create, update, and delete users",
-  },
-  {
-    id: "roles:read",
-    name: "View Roles",
-    description: "Can view role list and details",
-  },
-  {
-    id: "roles:write",
-    name: "Manage Roles",
-    description: "Can create, update, and delete roles",
-  },
-  {
-    id: "invites:read",
-    name: "View Invites",
-    description: "Can view invite list",
-  },
-  {
-    id: "invites:write",
-    name: "Manage Invites",
-    description: "Can create and manage invites",
-  },
-  {
-    id: "notifications:read",
-    name: "View Notifications",
-    description: "Can view notification settings",
-  },
-  {
-    id: "notifications:write",
-    name: "Manage Notifications",
-    description: "Can manage notification templates",
-  },
-  {
-    id: "settings:read",
-    name: "View Settings",
-    description: "Can view platform settings",
-  },
-  {
-    id: "settings:write",
-    name: "Manage Settings",
-    description: "Can update platform settings",
-  },
-];
+  { id: "users:read", name: "View Users", description: "Can view user list and details" },
+  { id: "users:write", name: "Manage Users", description: "Can create, update, and delete users" },
+  { id: "roles:read", name: "View Roles", description: "Can view role list and details" },
+  { id: "roles:write", name: "Manage Roles", description: "Can create, update, and delete roles" },
+  { id: "invites:read", name: "View Invites", description: "Can view invite list" },
+  { id: "invites:write", name: "Manage Invites", description: "Can create and manage invites" },
+  { id: "notifications:read", name: "View Notifications", description: "Can view notification settings" },
+  { id: "notifications:write", name: "Manage Notifications", description: "Can manage notification templates" },
+  { id: "settings:read", name: "View Settings", description: "Can view platform settings" },
+  { id: "settings:write", name: "Manage Settings", description: "Can update platform settings" },
+]
 
 function RolesPage() {
-  const [roles, setRoles] = useState<any[]>([]);
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 20,
-    total: 0,
-    totalPages: 1,
-  });
-  const [isLoading, setIsLoading] = useState(true);
+  const [roles, setRoles] = useState<any[]>([])
+  const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 1 })
+  const [isLoading, setIsLoading] = useState(true)
 
-  // Modal states
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showMembersModal, setShowMembersModal] = useState(false);
-  const [showAssignModal, setShowAssignModal] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<any>(null);
-  const [roleMembers, setRoleMembers] = useState<any[]>([]);
-  const [availableUsers, setAvailableUsers] = useState<any[]>([]);
-  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [showMembersModal, setShowMembersModal] = useState(false)
+  const [showAssignModal, setShowAssignModal] = useState(false)
+  const [selectedRole, setSelectedRole] = useState<any>(null)
+  const [roleMembers, setRoleMembers] = useState<any[]>([])
+  const [availableUsers, setAvailableUsers] = useState<any[]>([])
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([])
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<{ open: boolean; role: any | null }>({
+    open: false,
+    role: null,
+  })
+  const [confirmRevoke, setConfirmRevoke] = useState<{ open: boolean; actorId: string | null }>({
+    open: false,
+    actorId: null,
+  })
 
-  // Form state
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     permissions: [] as string[],
-    isDefault: false,
-  });
+  })
 
   const loadRoles = async (page = 1) => {
-    setIsLoading(true);
-    const { data } = await platformApi.getRoles({ page, limit: 20 });
+    setIsLoading(true)
+    const { data } = await platformApi.getRoles({ page, limit: 20 })
     if (data) {
-      setRoles(data.data);
-      setPagination(data.pagination);
+      setRoles(data.data)
+      setPagination(data.pagination)
     }
-    setIsLoading(false);
-  };
+    setIsLoading(false)
+  }
 
   useEffect(() => {
-    loadRoles();
-  }, []);
+    loadRoles()
+  }, [])
 
   const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-
+    e.preventDefault()
+    setIsSubmitting(true)
     const { data, error } = await platformApi.createRole({
       name: formData.name,
       description: formData.description,
       permissions: formData.permissions,
-    });
-
+    })
     if (!error && data) {
-      setShowCreateModal(false);
-      setFormData({
-        name: "",
-        description: "",
-        permissions: [],
-        isDefault: false,
-      });
-      loadRoles(pagination.page);
+      setShowCreateModal(false)
+      setFormData({ name: "", description: "", permissions: [] })
+      loadRoles(pagination.page)
     }
-
-    setIsSubmitting(false);
-  };
+    setIsSubmitting(false)
+  }
 
   const handleEdit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedRole) return;
-
-    setIsSubmitting(true);
-
+    e.preventDefault()
+    if (!selectedRole) return
+    setIsSubmitting(true)
     const { data, error } = await platformApi.updateRole(selectedRole.id, {
       name: formData.name,
       description: formData.description,
       permissions: formData.permissions,
-    });
-
+    })
     if (!error && data) {
-      setShowEditModal(false);
-      setSelectedRole(null);
-      setFormData({
-        name: "",
-        description: "",
-        permissions: [],
-        isDefault: false,
-      });
-      loadRoles(pagination.page);
+      setShowEditModal(false)
+      setSelectedRole(null)
+      setFormData({ name: "", description: "", permissions: [] })
+      loadRoles(pagination.page)
     }
-
-    setIsSubmitting(false);
-  };
-
-  const handleDelete = async (id: string) => {
-    const role = roles.find((r) => r.id === id);
-    if (!role) return;
-
-    if (role.isSystem) {
-      alert("Cannot delete system roles");
-      return;
-    }
-    if (role.isDefault) {
-      alert("Cannot delete default roles");
-      return;
-    }
-    if (role.memberCount > 0) {
-      alert("Cannot delete roles with assigned members");
-      return;
-    }
-
-    if (confirm("Are you sure you want to delete this role?")) {
-      await platformApi.deleteRole(id);
-      loadRoles(pagination.page);
-    }
-  };
+    setIsSubmitting(false)
+  }
 
   const openEditModal = (role: any) => {
-    setSelectedRole(role);
+    setSelectedRole(role)
     setFormData({
       name: role.name,
       description: role.description || "",
       permissions: role.permissions || [],
-      isDefault: role.isDefault,
-    });
-    setShowEditModal(true);
-  };
+    })
+    setShowEditModal(true)
+  }
+
+  const openDeleteConfirm = (role: any) => {
+    if (role.isSystem) {
+      setDeleteError("Cannot delete system roles")
+      return
+    }
+    if (role.isDefault) {
+      setDeleteError("Cannot delete default roles")
+      return
+    }
+    if (role.memberCount > 0) {
+      setDeleteError("Cannot delete roles with assigned members")
+      return
+    }
+    setDeleteError(null)
+    setConfirmDelete({ open: true, role })
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!confirmDelete.role) return
+    setIsSubmitting(true)
+    await platformApi.deleteRole(confirmDelete.role.id)
+    setIsSubmitting(false)
+    setConfirmDelete({ open: false, role: null })
+    loadRoles(pagination.page)
+  }
 
   const openMembersModal = async (role: any) => {
-    setSelectedRole(role);
-    const { data } = await platformApi.getRole(role.id);
-    if (data) {
-      setRoleMembers(data.members || []);
-    }
-    setShowMembersModal(true);
-  };
+    setSelectedRole(role)
+    const { data } = await platformApi.getRole(role.id)
+    if (data) setRoleMembers(data.members || [])
+    setShowMembersModal(true)
+  }
 
   const openAssignModal = async () => {
-    setSelectedUsers([]);
-    const { data: usersData } = await platformApi.getUsers({ limit: 100 });
-    if (usersData) {
-      setAvailableUsers(usersData.data || []);
-    }
-    setShowAssignModal(true);
-  };
+    setSelectedUsers([])
+    const { data: usersData } = await platformApi.getUsers({ limit: 100 })
+    if (usersData) setAvailableUsers(usersData.data || [])
+    setShowAssignModal(true)
+  }
 
   const handleAssign = async () => {
-    if (!selectedRole || selectedUsers.length === 0) return;
-
-    setIsSubmitting(true);
-    const { error } = await platformApi.assignRole(
-      selectedRole.id,
-      selectedUsers,
-    );
-
+    if (!selectedRole || selectedUsers.length === 0) return
+    setIsSubmitting(true)
+    const { error } = await platformApi.assignRole(selectedRole.id, selectedUsers)
     if (!error) {
-      setShowAssignModal(false);
-      setSelectedUsers([]);
-      loadRoles(pagination.page);
-      // Refresh members
-      const { data } = await platformApi.getRole(selectedRole.id);
-      if (data) {
-        setRoleMembers(data.members || []);
-      }
+      setShowAssignModal(false)
+      setSelectedUsers([])
+      loadRoles(pagination.page)
+      const { data } = await platformApi.getRole(selectedRole.id)
+      if (data) setRoleMembers(data.members || [])
     }
+    setIsSubmitting(false)
+  }
 
-    setIsSubmitting(false);
-  };
+  const handleRevokeConfirm = async () => {
+    if (!selectedRole || !confirmRevoke.actorId) return
+    setIsSubmitting(true)
+    await platformApi.revokeRole(selectedRole.id, [confirmRevoke.actorId])
+    const { data } = await platformApi.getRole(selectedRole.id)
+    if (data) setRoleMembers(data.members || [])
+    loadRoles(pagination.page)
+    setIsSubmitting(false)
+    setConfirmRevoke({ open: false, actorId: null })
+  }
 
-  const handleRevoke = async (actorId: string) => {
-    if (!selectedRole) return;
-
-    if (confirm("Are you sure you want to revoke this role from this user?")) {
-      await platformApi.revokeRole(selectedRole.id, [actorId]);
-      const { data } = await platformApi.getRole(selectedRole.id);
-      if (data) {
-        setRoleMembers(data.members || []);
-      }
-      loadRoles(pagination.page);
-    }
-  };
+  const togglePermission = (id: string, checked: boolean) => {
+    setFormData({
+      ...formData,
+      permissions: checked
+        ? [...formData.permissions, id]
+        : formData.permissions.filter((p) => p !== id),
+    })
+  }
 
   return (
-    <div>
-      <div className="sm:flex sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Roles</h1>
-          <p className="mt-2 text-sm text-gray-700">
-            Manage roles and permissions for the platform
-          </p>
-        </div>
-        <div className="mt-4 sm:mt-0">
-          <button
+    <div className="p-6 space-y-4">
+      <PageHeader
+        title="Roles"
+        description="Manage roles and permissions for the platform"
+        actions={
+          <Button
+            size="sm"
             onClick={() => {
-              setFormData({
-                name: "",
-                description: "",
-                permissions: [],
-                isDefault: false,
-              });
-              setShowCreateModal(true);
+              setFormData({ name: "", description: "", permissions: [] })
+              setShowCreateModal(true)
             }}
-            className="inline-flex items-center justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
           >
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="h-4 w-4 mr-1.5" />
             Create Role
-          </button>
-        </div>
-      </div>
+          </Button>
+        }
+      />
 
-      {/* Table */}
-      <div className="mt-6">
-        <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg">
-          {isLoading ? (
-            <div className="p-8 text-center text-gray-500">Loading...</div>
-          ) : roles.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">No roles found</div>
-          ) : (
-            <table className="min-w-full divide-y divide-gray-300">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">
-                    Name
-                  </th>
-                  <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                    Description
-                  </th>
-                  <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                    Members
-                  </th>
-                  <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                    Permissions
-                  </th>
-                  <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                    Type
-                  </th>
-                  <th className="relative py-3.5 pl-3 pr-4 sm:pr-6">
-                    <span className="sr-only">Actions</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 bg-white">
-                {roles.map((role) => (
-                  <tr key={role.id}>
-                    <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900">
-                      <div className="flex items-center gap-2">
-                        <Shield className="h-4 w-4 text-gray-500" />
-                        {role.name}
-                      </div>
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                      {role.description || "-"}
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-4 text-sm">
-                      <button
-                        onClick={() => openMembersModal(role)}
-                        className="text-blue-600 hover:text-blue-900 flex items-center gap-1"
-                      >
-                        <Users className="h-4 w-4" />
-                        {role.memberCount || 0}
-                      </button>
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                      <span className="text-xs">
-                        {(role.permissions || []).length} permissions
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-4 text-sm">
-                      <div className="flex gap-1">
-                        {role.isSystem && (
-                          <span className="inline-flex rounded-full px-2 text-xs font-semibold leading-5 bg-purple-100 text-purple-800">
-                            System
-                          </span>
-                        )}
-                        {role.isDefault && (
-                          <span className="inline-flex rounded-full px-2 text-xs font-semibold leading-5 bg-gray-100 text-gray-800">
-                            Default
-                          </span>
-                        )}
-                        {!role.isSystem && !role.isDefault && (
-                          <span className="inline-flex rounded-full px-2 text-xs font-semibold leading-5 bg-blue-100 text-blue-800">
-                            Custom
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                      <div className="flex justify-end gap-2">
-                        {!role.isSystem && (
-                          <>
-                            <button
-                              onClick={() => openEditModal(role)}
-                              className="p-1 hover:bg-gray-100 rounded"
-                              title="Edit"
-                            >
-                              <Pencil className="h-4 w-4 text-blue-600" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(role.id)}
-                              className="p-1 hover:bg-gray-100 rounded"
-                              title="Delete"
-                            >
-                              <Trash2 className="h-4 w-4 text-red-600" />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
-
-      {/* Pagination */}
-      {pagination.totalPages > 1 && (
-        <div className="mt-4 flex justify-center gap-2">
-          {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map(
-            (page) => (
-              <button
-                key={page}
-                onClick={() => loadRoles(page)}
-                className={`px-3 py-1 rounded ${
-                  page === pagination.page
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                }`}
-              >
-                {page}
-              </button>
-            ),
-          )}
-        </div>
+      {deleteError && (
+        <Alert variant="destructive">
+          <AlertDescription>{deleteError}</AlertDescription>
+        </Alert>
       )}
 
-      {/* Create Role Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex min-h-screen items-center justify-center p-4">
-            <div
-              className="fixed inset-0 bg-black bg-opacity-25"
-              onClick={() => setShowCreateModal(false)}
-            />
-            <div className="relative bg-white rounded-lg shadow-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
-              <h2 className="text-lg font-semibold mb-4">Create Role</h2>
-              <form onSubmit={handleCreate}>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Role Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="e.g., Content Manager"
-                  />
-                </div>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Description
-                  </label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) =>
-                      setFormData({ ...formData, description: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                    rows={2}
-                    placeholder="Brief description of the role"
-                  />
-                </div>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Permissions
-                  </label>
-                  <div className="space-y-2 max-h-60 overflow-y-auto border border-gray-200 rounded-md p-3">
-                    {AVAILABLE_PERMISSIONS.map((perm) => (
-                      <label key={perm.id} className="flex items-start">
-                        <input
-                          type="checkbox"
-                          checked={formData.permissions.includes(perm.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setFormData({
-                                ...formData,
-                                permissions: [...formData.permissions, perm.id],
-                              });
-                            } else {
-                              setFormData({
-                                ...formData,
-                                permissions: formData.permissions.filter(
-                                  (id) => id !== perm.id,
-                                ),
-                              });
-                            }
-                          }}
-                          className="mt-1 mr-2"
-                        />
-                        <div>
-                          <span className="text-sm font-medium text-gray-900">
-                            {perm.name}
-                          </span>
-                          <p className="text-xs text-gray-500">
-                            {perm.description}
-                          </p>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowCreateModal(false)}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
-                  >
-                    {isSubmitting ? "Creating..." : "Create Role"}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Edit Role Modal */}
-      {showEditModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex min-h-screen items-center justify-center p-4">
-            <div
-              className="fixed inset-0 bg-black bg-opacity-25"
-              onClick={() => setShowEditModal(false)}
-            />
-            <div className="relative bg-white rounded-lg shadow-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
-              <h2 className="text-lg font-semibold mb-4">Edit Role</h2>
-              <form onSubmit={handleEdit}>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Role Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Description
-                  </label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) =>
-                      setFormData({ ...formData, description: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                    rows={2}
-                  />
-                </div>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Permissions
-                  </label>
-                  <div className="space-y-2 max-h-60 overflow-y-auto border border-gray-200 rounded-md p-3">
-                    {AVAILABLE_PERMISSIONS.map((perm) => (
-                      <label key={perm.id} className="flex items-start">
-                        <input
-                          type="checkbox"
-                          checked={formData.permissions.includes(perm.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setFormData({
-                                ...formData,
-                                permissions: [...formData.permissions, perm.id],
-                              });
-                            } else {
-                              setFormData({
-                                ...formData,
-                                permissions: formData.permissions.filter(
-                                  (id) => id !== perm.id,
-                                ),
-                              });
-                            }
-                          }}
-                          className="mt-1 mr-2"
-                        />
-                        <div>
-                          <span className="text-sm font-medium text-gray-900">
-                            {perm.name}
-                          </span>
-                          <p className="text-xs text-gray-500">
-                            {perm.description}
-                          </p>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowEditModal(false)}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
-                  >
-                    {isSubmitting ? "Saving..." : "Save Changes"}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Members Modal */}
-      {showMembersModal && selectedRole && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex min-h-screen items-center justify-center p-4">
-            <div
-              className="fixed inset-0 bg-black bg-opacity-25"
-              onClick={() => setShowMembersModal(false)}
-            />
-            <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold">
-                  Members - {selectedRole.name}
-                </h2>
-                <button
-                  onClick={() => setShowMembersModal(false)}
-                  className="p-1 hover:bg-gray-100 rounded"
-                >
-                  <X className="h-4 w-4 text-gray-500" />
-                </button>
-              </div>
-
-              {roleMembers.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">
-                  No members in this role
-                </p>
-              ) : (
-                <ul className="divide-y divide-gray-200">
-                  {roleMembers.map((member) => (
-                    <li
-                      key={member.id}
-                      className="py-3 flex justify-between items-center"
-                    >
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">
-                          {member.firstName} {member.lastName}
-                        </p>
-                        <p className="text-sm text-gray-500">{member.email}</p>
-                      </div>
-                      <button
-                        onClick={() => handleRevoke(member.id)}
-                        className="text-red-600 hover:text-red-900 text-sm"
-                      >
-                        Remove
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              <div className="mt-4 flex justify-end">
-                <button
-                  onClick={openAssignModal}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
-                >
-                  Assign Members
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Assign Members Modal */}
-      {showAssignModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex min-h-screen items-center justify-center p-4">
-            <div
-              className="fixed inset-0 bg-black bg-opacity-25"
-              onClick={() => setShowAssignModal(false)}
-            />
-            <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6 max-h-[80vh] overflow-y-auto">
-              <h2 className="text-lg font-semibold mb-4">Assign Members</h2>
-
-              <div className="space-y-2 mb-4">
-                {availableUsers.map((user) => (
-                  <label
-                    key={user.id}
-                    className="flex items-center p-2 border rounded-md hover:bg-gray-50"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedUsers.includes(user.id)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedUsers([...selectedUsers, user.id]);
-                        } else {
-                          setSelectedUsers(
-                            selectedUsers.filter((id) => id !== user.id),
-                          );
-                        }
-                      }}
-                      className="mr-3"
-                    />
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">
-                        {user.firstName} {user.lastName}
-                      </p>
-                      <p className="text-xs text-gray-500">{user.email}</p>
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Description</TableHead>
+              <TableHead>Members</TableHead>
+              <TableHead>Permissions</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead className="w-[80px]" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-40" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-8" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                  <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                  <TableCell />
+                </TableRow>
+              ))
+            ) : roles.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                  No roles found
+                </TableCell>
+              </TableRow>
+            ) : (
+              roles.map((role) => (
+                <TableRow key={role.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Shield className="h-4 w-4 text-muted-foreground" strokeWidth={1.75} />
+                      <span className="font-medium text-sm">{role.name}</span>
                     </div>
-                  </label>
-                ))}
-              </div>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-sm">
+                    {role.description || "-"}
+                  </TableCell>
+                  <TableCell>
+                    <button
+                      onClick={() => openMembersModal(role)}
+                      className="flex items-center gap-1 text-primary hover:text-primary/80 text-sm"
+                    >
+                      <Users className="h-3.5 w-3.5" strokeWidth={1.75} />
+                      {role.memberCount || 0}
+                    </button>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-xs">
+                    {(role.permissions || []).length} permissions
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-1">
+                      {role.isSystem && (
+                        <Badge
+                          variant="secondary"
+                          className="bg-secondary text-secondary-foreground"
+                        >
+                          System
+                        </Badge>
+                      )}
+                      {role.isDefault && <Badge variant="secondary">Default</Badge>}
+                      {!role.isSystem && !role.isDefault && (
+                        <Badge variant="outline">Custom</Badge>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {!role.isSystem && (
+                      <div className="flex justify-end items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => openEditModal(role)}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive hover:text-destructive"
+                          onClick={() => openDeleteConfirm(role)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
-              <div className="flex justify-end gap-3">
-                <button
-                  onClick={() => setShowAssignModal(false)}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleAssign}
-                  disabled={isSubmitting || selectedUsers.length === 0}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {isSubmitting
-                    ? "Assigning..."
-                    : `Assign (${selectedUsers.length})`}
-                </button>
-              </div>
-            </div>
-          </div>
+      {pagination.totalPages > 1 && (
+        <div className="flex items-center justify-end gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={pagination.page <= 1}
+            onClick={() => loadRoles(pagination.page - 1)}
+          >
+            Previous
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            {pagination.page} / {pagination.totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={pagination.page >= pagination.totalPages}
+            onClick={() => loadRoles(pagination.page + 1)}
+          >
+            Next
+          </Button>
         </div>
       )}
+
+      {/* Create Role Dialog */}
+      <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create Role</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCreate} className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="create-name">Role Name *</Label>
+              <Input
+                id="create-name"
+                required
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="e.g., Content Manager"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="create-desc">Description</Label>
+              <Textarea
+                id="create-desc"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                rows={2}
+                placeholder="Brief description of the role"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Permissions</Label>
+              <div className="space-y-2 max-h-52 overflow-y-auto rounded-md border p-3">
+                {AVAILABLE_PERMISSIONS.map((perm) => (
+                  <div key={perm.id} className="flex items-start gap-2">
+                    <Checkbox
+                      id={`create-${perm.id}`}
+                      checked={formData.permissions.includes(perm.id)}
+                      onCheckedChange={(checked) => togglePermission(perm.id, !!checked)}
+                      className="mt-0.5"
+                    />
+                    <Label
+                      htmlFor={`create-${perm.id}`}
+                      className="cursor-pointer font-normal leading-none"
+                    >
+                      <span className="font-medium text-sm">{perm.name}</span>
+                      <span className="text-xs text-muted-foreground block mt-0.5">
+                        {perm.description}
+                      </span>
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <DialogFooter className="pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowCreateModal(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" size="sm" disabled={isSubmitting}>
+                {isSubmitting ? "Creating..." : "Create Role"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Role Dialog */}
+      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Role</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEdit} className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-name">Role Name *</Label>
+              <Input
+                id="edit-name"
+                required
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-desc">Description</Label>
+              <Textarea
+                id="edit-desc"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                rows={2}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Permissions</Label>
+              <div className="space-y-2 max-h-52 overflow-y-auto rounded-md border p-3">
+                {AVAILABLE_PERMISSIONS.map((perm) => (
+                  <div key={perm.id} className="flex items-start gap-2">
+                    <Checkbox
+                      id={`edit-${perm.id}`}
+                      checked={formData.permissions.includes(perm.id)}
+                      onCheckedChange={(checked) => togglePermission(perm.id, !!checked)}
+                      className="mt-0.5"
+                    />
+                    <Label
+                      htmlFor={`edit-${perm.id}`}
+                      className="cursor-pointer font-normal leading-none"
+                    >
+                      <span className="font-medium text-sm">{perm.name}</span>
+                      <span className="text-xs text-muted-foreground block mt-0.5">
+                        {perm.description}
+                      </span>
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <DialogFooter className="pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowEditModal(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" size="sm" disabled={isSubmitting}>
+                {isSubmitting ? "Saving..." : "Save Changes"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Members Dialog */}
+      <Dialog open={showMembersModal} onOpenChange={setShowMembersModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Members — {selectedRole?.name}</DialogTitle>
+          </DialogHeader>
+          {roleMembers.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              No members in this role
+            </p>
+          ) : (
+            <ul className="divide-y">
+              {roleMembers.map((member) => (
+                <li key={member.id} className="flex justify-between items-center py-2.5">
+                  <div>
+                    <p className="text-sm font-medium">
+                      {member.firstName} {member.lastName}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{member.email}</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
+                    onClick={() => setConfirmRevoke({ open: true, actorId: member.id })}
+                  >
+                    Remove
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <DialogFooter>
+            <Button size="sm" onClick={openAssignModal}>
+              Assign Members
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign Members Dialog */}
+      <Dialog open={showAssignModal} onOpenChange={setShowAssignModal}>
+        <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Assign Members</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            {availableUsers.map((user) => (
+              <label
+                key={user.id}
+                className="flex items-center gap-3 p-2 rounded-md border cursor-pointer hover:bg-muted/50"
+              >
+                <Checkbox
+                  checked={selectedUsers.includes(user.id)}
+                  onCheckedChange={(checked) => {
+                    setSelectedUsers(
+                      checked
+                        ? [...selectedUsers, user.id]
+                        : selectedUsers.filter((id) => id !== user.id),
+                    )
+                  }}
+                />
+                <div>
+                  <p className="text-sm font-medium">
+                    {user.firstName} {user.lastName}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{user.email}</p>
+                </div>
+              </label>
+            ))}
+          </div>
+          <DialogFooter className="pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowAssignModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleAssign}
+              disabled={isSubmitting || selectedUsers.length === 0}
+            >
+              {isSubmitting ? "Assigning..." : `Assign (${selectedUsers.length})`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm Delete */}
+      <ConfirmDialog
+        open={confirmDelete.open}
+        onOpenChange={(open) => {
+          if (!open) setConfirmDelete({ open: false, role: null })
+        }}
+        title="Delete Role"
+        description={`Delete "${confirmDelete.role?.name}"? This cannot be undone.`}
+        confirmLabel="Delete"
+        onConfirm={handleDeleteConfirm}
+        loading={isSubmitting}
+      />
+
+      {/* Confirm Revoke */}
+      <ConfirmDialog
+        open={confirmRevoke.open}
+        onOpenChange={(open) => {
+          if (!open) setConfirmRevoke({ open: false, actorId: null })
+        }}
+        title="Remove Member"
+        description="Remove this user from the role?"
+        confirmLabel="Remove"
+        onConfirm={handleRevokeConfirm}
+        loading={isSubmitting}
+      />
     </div>
-  );
+  )
 }

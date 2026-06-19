@@ -1,444 +1,387 @@
-import { createRoute } from "@tanstack/react-router";
-import { Route as dashboardLayoutRoute } from "./dashboard.layout";
-import { useState, useEffect } from "react";
-import { platformApi } from "../lib/api/platform";
-import { Mail, Copy, RefreshCcw, Trash2, Plus, Search } from "lucide-react";
+import { createRoute } from "@tanstack/react-router"
+import { Route as dashboardLayoutRoute } from "./dashboard.layout"
+import { useState, useEffect } from "react"
+import { platformApi } from "../lib/api/platform"
+import {
+  PageHeader,
+  Button,
+  Input,
+  Label,
+  Checkbox,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  StatusBadge,
+  ConfirmDialog,
+  Skeleton,
+} from "@projectx/ui"
+import { Plus, Search, RefreshCcw, Trash2, Copy, Check } from "lucide-react"
 
 export const Route = createRoute({
   getParentRoute: () => dashboardLayoutRoute,
   path: "/invites",
   component: InvitesPage,
-});
+})
+
+const STATUS_FILTERS = [
+  { label: "All", value: "" },
+  { label: "Pending", value: "pending" },
+  { label: "Accepted", value: "accepted" },
+  { label: "Expired", value: "expired" },
+]
 
 function InvitesPage() {
-  const [invites, setInvites] = useState<any[]>([]);
-  const [roles, setRoles] = useState<any[]>([]);
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 20,
-    total: 0,
-    totalPages: 1,
-  });
-  const [isLoading, setIsLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [invites, setInvites] = useState<any[]>([])
+  const [roles, setRoles] = useState<any[]>([])
+  const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 1 })
+  const [isLoading, setIsLoading] = useState(true)
+  const [search, setSearch] = useState("")
+  const [statusFilter, setStatusFilter] = useState("")
 
-  const [showModal, setShowModal] = useState(false);
-  const [showLinkModal, setShowLinkModal] = useState(false);
-  const [inviteLink, setInviteLink] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showModal, setShowModal] = useState(false)
+  const [showLinkModal, setShowLinkModal] = useState(false)
+  const [inviteLink, setInviteLink] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const [confirmRevoke, setConfirmRevoke] = useState<{ open: boolean; inviteId: string | null }>({
+    open: false,
+    inviteId: null,
+  })
 
-  const [formData, setFormData] = useState({
-    email: "",
-    roleIds: [] as string[],
-  });
+  const [formData, setFormData] = useState({ email: "", roleIds: [] as string[] })
 
   const loadInvites = async (page = 1) => {
-    setIsLoading(true);
+    setIsLoading(true)
     const { data } = await platformApi.getInvites({
       page,
       limit: 20,
       search,
       status: statusFilter || undefined,
-    });
+    })
     if (data) {
-      setInvites(data.data);
-      setPagination(data.pagination);
+      setInvites(data.data)
+      setPagination(data.pagination)
     }
-    setIsLoading(false);
-  };
+    setIsLoading(false)
+  }
 
   const loadRoles = async () => {
-    const { data } = await platformApi.getRoles({ limit: 100 });
-    if (data) {
-      setRoles(data.data);
-    }
-  };
+    const { data } = await platformApi.getRoles({ limit: 100 })
+    if (data) setRoles(data.data)
+  }
 
   useEffect(() => {
-    loadInvites();
-    loadRoles();
-  }, []);
+    loadInvites()
+    loadRoles()
+  }, [])
 
   const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    loadInvites(1);
-  };
+    e.preventDefault()
+    loadInvites(1)
+  }
 
   const handleStatusFilter = (status: string) => {
-    setStatusFilter(status);
-    loadInvites(1);
-  };
+    setStatusFilter(status)
+    loadInvites(1)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-
+    e.preventDefault()
+    setIsSubmitting(true)
     const { data, error } = await platformApi.createInvite({
       email: formData.email,
       roleIds: formData.roleIds,
-    });
-
+    })
     if (data && !error) {
       setInviteLink(
-        data.inviteLink ||
-          `${window.location.origin}/register?token=${data.token}`,
-      );
-      setShowLinkModal(true);
-      setShowModal(false);
-      setFormData({ email: "", roleIds: [] });
-      loadInvites(pagination.page);
+        data.inviteLink || `${window.location.origin}/register?token=${data.token}`,
+      )
+      setShowLinkModal(true)
+      setShowModal(false)
+      setFormData({ email: "", roleIds: [] })
+      loadInvites(pagination.page)
     }
-
-    setIsSubmitting(false);
-  };
+    setIsSubmitting(false)
+  }
 
   const handleResend = async (id: string) => {
-    const { data } = await platformApi.resendInvite(id);
+    const { data } = await platformApi.resendInvite(id)
     if (data) {
       setInviteLink(
-        data.inviteLink ||
-          `${window.location.origin}/register?token=${data.token}`,
-      );
-      setShowLinkModal(true);
+        data.inviteLink || `${window.location.origin}/register?token=${data.token}`,
+      )
+      setShowLinkModal(true)
     }
-  };
+  }
 
-  const handleRevoke = async (id: string) => {
-    if (confirm("Are you sure you want to revoke this invite?")) {
-      await platformApi.deleteInvite(id);
-      loadInvites(pagination.page);
-    }
-  };
+  const handleRevokeConfirm = async () => {
+    if (!confirmRevoke.inviteId) return
+    await platformApi.deleteInvite(confirmRevoke.inviteId)
+    setConfirmRevoke({ open: false, inviteId: null })
+    loadInvites(pagination.page)
+  }
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    alert("Copied to clipboard!");
-  };
-
-  const getStatusBadgeClass = (status: string) => {
-    switch (status) {
-      case "pending":
-        return "bg-blue-100 text-blue-800";
-      case "accepted":
-        return "bg-green-100 text-green-800";
-      case "expired":
-        return "bg-gray-100 text-gray-800";
-      case "revoked":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
+  const copyToClipboard = async (text: string) => {
+    await navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   return (
-    <div>
-      <div className="sm:flex sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Invites</h1>
-          <p className="mt-2 text-sm text-gray-700">
-            Manage user invitations to the platform
-          </p>
-        </div>
-        <div className="mt-4 sm:mt-0">
-          <button
-            onClick={() => setShowModal(true)}
-            className="inline-flex items-center justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
-          >
-            <Plus className="h-4 w-4 mr-2" />
+    <div className="p-6 space-y-4">
+      <PageHeader
+        title="Invites"
+        description="Manage user invitations to the platform"
+        actions={
+          <Button size="sm" onClick={() => setShowModal(true)}>
+            <Plus className="h-4 w-4 mr-1.5" />
             Invite User
-          </button>
-        </div>
-      </div>
+          </Button>
+        }
+      />
 
-      <div className="mt-4 flex flex-col sm:flex-row gap-4">
-        <form onSubmit={handleSearch} className="flex-1 flex gap-2">
-          <input
-            type="text"
+      <div className="flex flex-col sm:flex-row gap-3">
+        <form onSubmit={handleSearch} className="flex gap-2">
+          <Input
             placeholder="Search by email..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+            className="h-8 w-56"
           />
-          <button
-            type="submit"
-            className="px-3 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-900 flex items-center justify-center"
-          >
+          <Button type="submit" variant="outline" size="sm">
             <Search className="h-4 w-4" />
-          </button>
+          </Button>
         </form>
 
-        <div className="flex gap-2">
-          <button
-            onClick={() => handleStatusFilter("")}
-            className={`px-3 py-2 text-sm rounded-md ${
-              statusFilter === ""
-                ? "bg-blue-600 text-white"
-                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-            }`}
-          >
-            All
-          </button>
-          <button
-            onClick={() => handleStatusFilter("pending")}
-            className={`px-3 py-2 text-sm rounded-md ${
-              statusFilter === "pending"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-            }`}
-          >
-            Pending
-          </button>
-          <button
-            onClick={() => handleStatusFilter("accepted")}
-            className={`px-3 py-2 text-sm rounded-md ${
-              statusFilter === "accepted"
-                ? "bg-green-600 text-white"
-                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-            }`}
-          >
-            Accepted
-          </button>
-          <button
-            onClick={() => handleStatusFilter("expired")}
-            className={`px-3 py-2 text-sm rounded-md ${
-              statusFilter === "expired"
-                ? "bg-gray-600 text-white"
-                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-            }`}
-          >
-            Expired
-          </button>
+        <div className="flex gap-1.5">
+          {STATUS_FILTERS.map((f) => (
+            <Button
+              key={f.value}
+              variant={statusFilter === f.value ? "default" : "outline"}
+              size="sm"
+              onClick={() => handleStatusFilter(f.value)}
+            >
+              {f.label}
+            </Button>
+          ))}
         </div>
       </div>
 
-      <div className="mt-6">
-        <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg">
-          {isLoading ? (
-            <div className="p-8 text-center text-gray-500">Loading...</div>
-          ) : invites.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
-              No invites found
-            </div>
-          ) : (
-            <table className="min-w-full divide-y divide-gray-300">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">
-                    Email
-                  </th>
-                  <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                    Status
-                  </th>
-                  <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                    Roles
-                  </th>
-                  <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                    Invited By
-                  </th>
-                  <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                    Expires
-                  </th>
-                  <th className="relative py-3.5 pl-3 pr-4 sm:pr-6">
-                    <span className="sr-only">Actions</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 bg-white">
-                {invites.map((invite) => (
-                  <tr key={invite.id}>
-                    <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900">
-                      {invite.email}
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-4 text-sm">
-                      <span
-                        className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${getStatusBadgeClass(invite.status)}`}
-                      >
-                        {invite.status}
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                      {invite.roleIds?.length > 0
-                        ? roles
-                            .filter((r) => invite.roleIds.includes(r.id))
-                            .map((r) => r.name)
-                            .join(", ")
-                        : "No roles"}
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                      {invite.invitedBy}
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                      {new Date(invite.expiresAt).toLocaleDateString()}
-                    </td>
-                    <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                      <div className="flex justify-end gap-2">
-                        {invite.status === "pending" && (
-                          <>
-                            <button
-                              onClick={() => handleResend(invite.id)}
-                              className="p-1 hover:bg-gray-100 rounded"
-                              title="Resend"
-                            >
-                              <RefreshCcw className="h-4 w-4 text-blue-600" />
-                            </button>
-                            <button
-                              onClick={() => handleRevoke(invite.id)}
-                              className="p-1 hover:bg-gray-100 rounded"
-                              title="Revoke"
-                            >
-                              <Trash2 className="h-4 w-4 text-red-600" />
-                            </button>
-                          </>
-                        )}
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Email</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Roles</TableHead>
+              <TableHead>Invited By</TableHead>
+              <TableHead>Expires</TableHead>
+              <TableHead className="w-[80px]" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell><Skeleton className="h-4 w-40" /></TableCell>
+                  <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                  <TableCell />
+                </TableRow>
+              ))
+            ) : invites.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                  No invites found
+                </TableCell>
+              </TableRow>
+            ) : (
+              invites.map((invite) => (
+                <TableRow key={invite.id}>
+                  <TableCell className="font-medium text-sm">{invite.email}</TableCell>
+                  <TableCell>
+                    <StatusBadge status={invite.status} />
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-sm">
+                    {invite.roleIds?.length > 0
+                      ? roles
+                          .filter((r) => invite.roleIds.includes(r.id))
+                          .map((r) => r.name)
+                          .join(", ")
+                      : "No roles"}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-sm">
+                    {invite.invitedBy}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-sm">
+                    {new Date(invite.expiresAt).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell>
+                    {invite.status === "pending" && (
+                      <div className="flex justify-end items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => handleResend(invite.id)}
+                          title="Resend"
+                        >
+                          <RefreshCcw className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive hover:text-destructive"
+                          onClick={() =>
+                            setConfirmRevoke({ open: true, inviteId: invite.id })
+                          }
+                          title="Revoke"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
       </div>
 
       {pagination.totalPages > 1 && (
-        <div className="mt-4 flex justify-center gap-2">
-          {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map(
-            (page) => (
-              <button
-                key={page}
-                onClick={() => loadInvites(page)}
-                className={`px-3 py-1 rounded ${
-                  page === pagination.page
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                }`}
+        <div className="flex items-center justify-end gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={pagination.page <= 1}
+            onClick={() => loadInvites(pagination.page - 1)}
+          >
+            Previous
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            {pagination.page} / {pagination.totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={pagination.page >= pagination.totalPages}
+            onClick={() => loadInvites(pagination.page + 1)}
+          >
+            Next
+          </Button>
+        </div>
+      )}
+
+      {/* Invite User Dialog */}
+      <Dialog open={showModal} onOpenChange={setShowModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Invite User</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="invite-email">Email Address</Label>
+              <Input
+                id="invite-email"
+                type="email"
+                required
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder="user@example.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Assign Roles (optional)</Label>
+              <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                {roles.map((role) => (
+                  <label key={role.id} className="flex items-center gap-2 cursor-pointer">
+                    <Checkbox
+                      checked={formData.roleIds.includes(role.id)}
+                      onCheckedChange={(checked) => {
+                        setFormData({
+                          ...formData,
+                          roleIds: checked
+                            ? [...formData.roleIds, role.id]
+                            : formData.roleIds.filter((id) => id !== role.id),
+                        })
+                      }}
+                    />
+                    <span className="text-sm">{role.name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <DialogFooter className="pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowModal(false)}
               >
-                {page}
-              </button>
-            ),
-          )}
-        </div>
-      )}
+                Cancel
+              </Button>
+              <Button type="submit" size="sm" disabled={isSubmitting}>
+                {isSubmitting ? "Sending..." : "Send Invite"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
-      {showModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex min-h-screen items-center justify-center p-4">
-            <div
-              className="fixed inset-0 bg-black bg-opacity-25"
-              onClick={() => setShowModal(false)}
-            />
-            <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-              <h2 className="text-lg font-semibold mb-4">Invite User</h2>
-              <form onSubmit={handleSubmit}>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Email Address
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    value={formData.email}
-                    onChange={(e) =>
-                      setFormData({ ...formData, email: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="user@example.com"
-                  />
-                </div>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Assign Roles (optional)
-                  </label>
-                  <div className="space-y-2 max-h-40 overflow-y-auto">
-                    {roles.map((role) => (
-                      <label key={role.id} className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={formData.roleIds.includes(role.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setFormData({
-                                ...formData,
-                                roleIds: [...formData.roleIds, role.id],
-                              });
-                            } else {
-                              setFormData({
-                                ...formData,
-                                roleIds: formData.roleIds.filter(
-                                  (id) => id !== role.id,
-                                ),
-                              });
-                            }
-                          }}
-                          className="mr-2"
-                        />
-                        <span className="text-sm">{role.name}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowModal(false)}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
-                  >
-                    {isSubmitting ? "Sending..." : "Send Invite"}
-                  </button>
-                </div>
-              </form>
-            </div>
+      {/* Invite Link Dialog */}
+      <Dialog open={showLinkModal} onOpenChange={setShowLinkModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Invite Created</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Share this link with the user. Expires in 7 days.
+          </p>
+          <div className="flex gap-2">
+            <Input readOnly value={inviteLink} className="text-xs" />
+            <Button
+              variant="outline"
+              size="icon"
+              className="shrink-0"
+              onClick={() => copyToClipboard(inviteLink)}
+            >
+              {copied ? (
+                <Check className="h-4 w-4 text-foreground" />
+              ) : (
+                <Copy className="h-4 w-4" />
+              )}
+            </Button>
           </div>
-        </div>
-      )}
+          <DialogFooter>
+            <Button size="sm" onClick={() => setShowLinkModal(false)}>
+              Done
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      {showLinkModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex min-h-screen items-center justify-center p-4">
-            <div
-              className="fixed inset-0 bg-black bg-opacity-25"
-              onClick={() => setShowLinkModal(false)}
-            />
-            <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-              <h2 className="text-lg font-semibold mb-4">Invite Created</h2>
-              <p className="text-sm text-gray-600 mb-4">
-                Share this link with the user. The link will expire in 7 days.
-              </p>
-              <div className="flex gap-2 mb-4">
-                <input
-                  type="text"
-                  readOnly
-                  value={inviteLink}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm"
-                />
-                <button
-                  onClick={() => copyToClipboard(inviteLink)}
-                  className="p-2 bg-gray-200 rounded-md hover:bg-gray-300"
-                  title="Copy"
-                >
-                  <Copy className="h-4 w-4 text-gray-600" />
-                </button>
-              </div>
-              <div className="flex justify-end">
-                <button
-                  onClick={() => setShowLinkModal(false)}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
-                >
-                  Done
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Confirm Revoke */}
+      <ConfirmDialog
+        open={confirmRevoke.open}
+        onOpenChange={(open) => {
+          if (!open) setConfirmRevoke({ open: false, inviteId: null })
+        }}
+        title="Revoke Invite"
+        description="Revoke this invite? The user will no longer be able to use the link."
+        confirmLabel="Revoke"
+        onConfirm={handleRevokeConfirm}
+      />
     </div>
-  );
+  )
 }

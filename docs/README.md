@@ -73,6 +73,12 @@ Architecture: `Core → Module → Compose → Host Shell`
 | [plugins/notification.md](./plugins/notification.md) | Notification plugin: email, templates, scheduling |
 | [plugins/development.md](./plugins/development.md) | How to build a new plugin |
 
+### Gotchas
+
+| File | Covers |
+|---|---|
+| [gotchas/package-ui-gotchas.md](./gotchas/package-ui-gotchas.md) | `@projectx/ui` CSS setup, Tailwind v4 source scanning in monorepo, `@source` pattern |
+
 ### Agent Skills
 
 | File | Covers |

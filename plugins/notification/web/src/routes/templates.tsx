@@ -1,7 +1,6 @@
-// Templates Route - Template management UI
-
-import { useState } from "react";
-import { Plus, Trash2, Edit2, Mail } from "lucide-react";
+import React, { useState } from "react";
+import { Plus, Trash2, Edit2, Mail, Loader2 } from "lucide-react";
+import { Button, Input, Textarea, Label, Badge } from "@projectx/ui";
 
 interface Template {
   key: string;
@@ -21,15 +20,6 @@ interface NotificationTemplatesRouteProps {
   };
 }
 
-const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = (
-  props,
-) => (
-  <button
-    {...props}
-    className={`px-4 py-2 rounded-md font-medium ${props.className || ""}`}
-  />
-);
-
 export function NotificationTemplatesRoute({
   templatesApi,
 }: NotificationTemplatesRouteProps) {
@@ -37,23 +27,14 @@ export function NotificationTemplatesRoute({
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
-  const [formData, setFormData] = useState({
-    key: "",
-    subject: "",
-    body: "",
-  });
+  const [formData, setFormData] = useState({ key: "", subject: "", body: "" });
 
   const loadTemplates = async () => {
-    if (!templatesApi) {
-      setLoading(false);
-      return;
-    }
+    if (!templatesApi) { setLoading(false); return; }
     setLoading(true);
     try {
       const response = await templatesApi.list();
-      if (response.data?.templates) {
-        setTemplates(response.data.templates);
-      }
+      if (response.data?.templates) setTemplates(response.data.templates);
     } catch (e) {
       console.error("Failed to load templates:", e);
     } finally {
@@ -100,98 +81,73 @@ export function NotificationTemplatesRoute({
 
   const openEdit = (template: Template) => {
     setEditingTemplate(template);
-    setFormData({
-      key: template.key,
-      subject: template.subject || "",
-      body: template.body,
-    });
+    setFormData({ key: template.key, subject: template.subject || "", body: template.body });
     setShowForm(true);
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Notification Templates</h1>
-          <p className="text-muted-foreground mt-1">
-            Manage email templates for notifications
-          </p>
-        </div>
+    <div className="space-y-4">
+      <div className="flex items-center justify-end">
         <Button
+          size="sm"
           onClick={() => {
             setShowForm(true);
             setEditingTemplate(null);
             setFormData({ key: "", subject: "", body: "" });
           }}
         >
-          <Plus className="w-4 h-4 mr-2" />
+          <Plus className="h-4 w-4 mr-1.5" />
           Add Template
         </Button>
       </div>
 
       {showForm && (
-        <div className="border rounded-lg p-6">
-          <h2 className="text-lg font-medium mb-4">
-            {editingTemplate ? "Edit Template" : "Create Template"}
-          </h2>
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="border rounded-md p-4 space-y-4">
+          <p className="text-sm font-medium">
+            {editingTemplate ? "Edit Template" : "New Template"}
+          </p>
+          <form onSubmit={handleSubmit} className="space-y-3">
             {!editingTemplate && (
-              <div>
-                <label htmlFor="template-key" className="text-sm font-medium">
-                  Template Key
-                </label>
-                <input
+              <div className="space-y-1.5">
+                <Label htmlFor="template-key">Template Key</Label>
+                <Input
                   id="template-key"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   value={formData.key}
-                  onChange={(e) =>
-                    setFormData({ ...formData, key: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, key: e.target.value })}
                   placeholder="e.g., user.invite"
                   required
                 />
               </div>
             )}
-            <div>
-              <label htmlFor="template-subject" className="text-sm font-medium">
-                Subject
-              </label>
-              <input
+            <div className="space-y-1.5">
+              <Label htmlFor="template-subject">Subject</Label>
+              <Input
                 id="template-subject"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={formData.subject}
-                onChange={(e) =>
-                  setFormData({ ...formData, subject: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
                 placeholder="Email subject"
               />
             </div>
-            <div>
-              <label htmlFor="template-body" className="text-sm font-medium">
-                Body
-              </label>
-              <textarea
+            <div className="space-y-1.5">
+              <Label htmlFor="template-body">Body</Label>
+              <Textarea
                 id="template-body"
-                className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={formData.body}
-                onChange={(e) =>
-                  setFormData({ ...formData, body: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, body: e.target.value })}
+                className="min-h-[120px]"
                 placeholder="Use {{variable}} for dynamic content"
                 required
               />
             </div>
             <div className="flex gap-2">
-              <Button type="submit">
+              <Button type="submit" size="sm">
                 {editingTemplate ? "Update" : "Create"}
               </Button>
               <Button
-                className="border border-input bg-background"
+                variant="outline"
+                size="sm"
                 type="button"
-                onClick={() => {
-                  setShowForm(false);
-                  setEditingTemplate(null);
-                }}
+                onClick={() => { setShowForm(false); setEditingTemplate(null); }}
               >
                 Cancel
               </Button>
@@ -200,57 +156,59 @@ export function NotificationTemplatesRoute({
         </div>
       )}
 
-      <div className="grid gap-4">
+      <div className="space-y-2">
         {loading ? (
-          <div className="text-center py-8 text-muted-foreground">
-            Loading...
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
           </div>
         ) : templates.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            No templates found. Create one to get started.
-          </div>
+          <p className="text-center py-8 text-sm text-muted-foreground">
+            No templates yet. Create one to get started.
+          </p>
         ) : (
           templates.map((template) => (
-            <div key={template.key} className="border rounded-lg p-4">
+            <div key={template.key} className="border rounded-md p-3">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-primary/10 rounded-lg">
-                    <Mail className="w-5 h-5 text-primary" />
+                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted shrink-0">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">{template.key}</span>
+                      <span className="text-sm font-medium">{template.key}</span>
                       {template.isSystem && (
-                        <span className="text-xs bg-secondary text-secondary-foreground px-2 py-0.5 rounded">
-                          System
-                        </span>
+                        <Badge variant="secondary" className="text-xs">System</Badge>
                       )}
                     </div>
                     {template.subject && (
-                      <p className="text-sm text-muted-foreground mt-1">
+                      <p className="text-xs text-muted-foreground mt-0.5">
                         {template.subject}
                       </p>
                     )}
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-1 shrink-0">
                   <Button
-                    className="hover:bg-accent"
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
                     onClick={() => openEdit(template)}
                   >
-                    <Edit2 className="w-4 h-4" />
+                    <Edit2 className="h-3.5 w-3.5" />
                   </Button>
                   {!template.isSystem && (
                     <Button
-                      className="hover:bg-accent"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-destructive hover:text-destructive"
                       onClick={() => handleDelete(template.key)}
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   )}
                 </div>
               </div>
-              <div className="mt-3 text-sm text-muted-foreground font-mono bg-muted/50 p-2 rounded">
+              <div className="mt-3 text-xs text-muted-foreground font-mono bg-muted/50 p-2 rounded-md">
                 {template.body.substring(0, 100)}...
               </div>
             </div>

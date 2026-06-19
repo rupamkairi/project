@@ -58,6 +58,13 @@ All naming (dirs, files, routes, exports, DB tables): **[docs/conventions.md](./
 
 ---
 
+## No Tests. No App Verification.
+NEVER write tests unless explicitly asked ("write a test", "add test coverage").
+NEVER run or verify the app unless explicitly asked ("run it", "verify this").
+App is assumed running. Implement only.
+
+---
+
 ## Core principle
 
 **Docs win over code.** If code and docs conflict, docs are the target. Code is transitional.

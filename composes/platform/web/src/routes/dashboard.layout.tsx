@@ -1,93 +1,111 @@
-import { createRoute } from "@tanstack/react-router";
-import { Outlet, Link, useNavigate } from "@tanstack/react-router";
-import { useAuthStore } from "../stores/auth";
-import { AuthGuard } from "../components/auth-guard";
-import { sharedRootRoute } from "@projectx/shared-router";
+import { createRoute } from "@tanstack/react-router"
+import { Outlet, useNavigate } from "@tanstack/react-router"
+import { useAuthStore } from "../stores/auth"
+import { AuthGuard } from "../components/auth-guard"
+import { sharedRootRoute } from "@projectx/shared-router"
+import {
+  NavBar,
+  Avatar,
+  AvatarFallback,
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@projectx/ui"
+import {
+  LayoutDashboard,
+  Users,
+  Shield,
+  Mail,
+  Bell,
+  FolderOpen,
+  LogOut,
+} from "lucide-react"
 
 export const Route = createRoute({
   getParentRoute: () => sharedRootRoute,
   path: "/dashboard",
   beforeLoad: () => {
-    // Server-side auth check - redirects if not authenticated
-    const { isAuthenticated, isLoading } = useAuthStore.getState();
-
-    // Only redirect if we're done loading and not authenticated
+    const { isAuthenticated, isLoading } = useAuthStore.getState()
     if (!isLoading && !isAuthenticated) {
-      throw new Error("UNAUTHENTICATED");
+      throw new Error("UNAUTHENTICATED")
     }
   },
   component: DashboardLayout,
-});
+})
 
-const navigation = [
-  { name: "Dashboard", href: "/dashboard", icon: "home" },
-  { name: "Users", href: "/dashboard/users", icon: "users" },
-  { name: "Roles", href: "/dashboard/roles", icon: "shield" },
-  { name: "Invites", href: "/dashboard/invites", icon: "mail" },
-  { name: "Notifications", href: "/dashboard/notifications", icon: "bell" },
-  { name: "Settings", href: "/dashboard/settings", icon: "settings" },
-];
+const NAV_ITEMS = [
+  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, exact: true },
+  { label: "Users", href: "/dashboard/users", icon: Users },
+  { label: "Roles", href: "/dashboard/roles", icon: Shield },
+  { label: "Invites", href: "/dashboard/invites", icon: Mail },
+  { label: "Notifications", href: "/dashboard/notifications", icon: Bell },
+  { label: "Files", href: "/dashboard/files", icon: FolderOpen },
+]
 
-function DashboardLayout() {
-  const { actor, logout } = useAuthStore();
-  const navigate = useNavigate();
+function UserMenu() {
+  const { actor, logout } = useAuthStore()
+  const navigate = useNavigate()
 
   const handleLogout = async () => {
-    await logout();
-    navigate({ to: "/login" });
-  };
+    await logout()
+    navigate({ to: "/login" })
+  }
+
+  const initials =
+    [actor?.firstName?.[0], actor?.lastName?.[0]]
+      .filter(Boolean)
+      .join("")
+      .toUpperCase() || "?"
+
+  const fullName =
+    [actor?.firstName, actor?.lastName].filter(Boolean).join(" ") || "User"
 
   return (
-    <AuthGuard>
-      <div className=" min-h-screen bg-gray-100">
-        <nav className="bg-white shadow-sm">
-          <div className="container mx-auto py-4 px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between h-16">
-              <div className="flex">
-                <div className="flex-shrink-0 flex items-center">
-                  <Link
-                    to="/dashboard"
-                    className="text-xl font-bold text-blue-600"
-                  >
-                    Platform
-                  </Link>
-                </div>
-                <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
-                  {navigation.map((item) => (
-                    <Link
-                      key={item.name}
-                      to={item.href}
-                      className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900 hover:text-blue-600"
-                      activeProps={{
-                        className: "text-blue-600 border-b-2 border-blue-600",
-                      }}
-                    >
-                      {item.name}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-              <div className="flex items-center">
-                <div className="flex items-center space-x-4">
-                  <span className="text-sm text-gray-700">
-                    {actor?.firstName} {actor?.lastName}
-                  </span>
-                  <button
-                    onClick={handleLogout}
-                    className="text-sm text-gray-500 hover:text-gray-700"
-                  >
-                    Sign out
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </nav>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-accent outline-none">
+          <Avatar className="h-7 w-7 shrink-0">
+            <AvatarFallback className="text-xs">
+              {initials}
+            </AvatarFallback>
+          </Avatar>
+          <span className="hidden sm:block text-sm font-medium text-foreground">
+            {fullName}
+          </span>
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48">
+        <div className="px-2 py-1.5">
+          <p className="text-xs font-medium text-foreground">{fullName}</p>
+          <p className="text-xs text-muted-foreground truncate">{actor?.email}</p>
+        </div>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={handleLogout}
+          className="text-destructive focus:text-destructive"
+        >
+          <LogOut className="h-4 w-4 mr-2" />
+          Sign out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
 
-        <main className="container mx-auto p-4">
+function DashboardLayout() {
+  return (
+    <AuthGuard>
+      <div className="flex flex-col min-h-screen bg-background">
+        <NavBar
+          items={NAV_ITEMS}
+          actions={<UserMenu />}
+        />
+        <main className="flex-1">
           <Outlet />
         </main>
       </div>
     </AuthGuard>
-  );
+  )
 }

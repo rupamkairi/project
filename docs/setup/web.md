@@ -165,13 +165,23 @@ if (error?.message === "UNAUTHENTICATED") {
 
 ## Styling
 
-All Tailwind config is in `packages/config`. Import in `apps/web/src/index.css`:
+`apps/web/src/globals.css` is the single Tailwind entry point. It imports design tokens from `@projectx/ui/tokens.css` and declares `@source` for every directory Tailwind must scan:
 
 ```css
-@import "@projectx/config/src/index.css";
+/* apps/web/src/globals.css */
+@import "tailwindcss";
+@import "@projectx/ui/tokens.css";
+
+@source "../../../packages/ui/src";
+@source "../../../composes/platform/web/src";
+@source ".";
 ```
 
-CSS variables (design tokens) are set in `packages/config/src/index.css`. Never define custom tokens in an app or compose — add them to `packages/config` instead.
+`apps/web/src/main.tsx` imports `./globals.css`. Do not import `@projectx/ui/index.css` from the shell — that is a standalone entry for Storybook only.
+
+CSS variables (design tokens) live in `packages/ui/src/tokens.css`. Never define custom tokens in an app or compose — add them to `packages/ui` instead.
+
+When adding a new compose, register its source path in `globals.css`. Missing this causes silent CSS loss. See [gotchas/package-ui-gotchas.md](../gotchas/package-ui-gotchas.md).
 
 ---
 

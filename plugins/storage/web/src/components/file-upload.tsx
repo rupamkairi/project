@@ -260,10 +260,10 @@ export function FileUpload({
             className={cn(
               "relative flex min-h-[160px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors",
               isDragActive && !isDragReject
-                ? "border-primary bg-primary/5"
+                ? "border-foreground/30 bg-accent/50"
                 : isDragReject
                   ? "border-destructive bg-destructive/5"
-                  : "border-border hover:border-primary/50 hover:bg-accent/50",
+                  : "border-border hover:border-muted-foreground/40 hover:bg-accent/50",
               uploading && "pointer-events-none opacity-50",
             )}
           >
@@ -271,8 +271,8 @@ export function FileUpload({
             <div className="flex flex-col items-center gap-3 text-center">
               {isDragActive && !isDragReject ? (
                 <>
-                  <div className="rounded-full bg-primary/10 p-3">
-                    <Upload className="h-6 w-6 text-primary" />
+                  <div className="rounded-full bg-muted p-3">
+                    <Upload className="h-6 w-6 text-muted-foreground" />
                   </div>
                   <div className="space-y-1">
                     <p className="text-sm font-medium">Drop your files here</p>

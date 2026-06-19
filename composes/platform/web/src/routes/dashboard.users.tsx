@@ -1,566 +1,482 @@
-import { createRoute } from "@tanstack/react-router";
-import { Route as dashboardLayoutRoute } from "./dashboard.layout";
-import { useState, useEffect } from "react";
-import { platformApi } from "../lib/api/platform";
-import { User, Pencil, Trash2, Plus, X, Search } from "lucide-react";
+import { createRoute } from "@tanstack/react-router"
+import { Route as dashboardLayoutRoute } from "./dashboard.layout"
+import { useState, useEffect } from "react"
+import { platformApi } from "../lib/api/platform"
+import {
+  PageHeader,
+  Button,
+  Input,
+  Label,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  Avatar,
+  AvatarFallback,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  StatusBadge,
+  ConfirmDialog,
+  Skeleton,
+} from "@projectx/ui"
+import { Plus, Search, Pencil, UserX, UserCheck, Trash2 } from "lucide-react"
 
 export const Route = createRoute({
   getParentRoute: () => dashboardLayoutRoute,
   path: "/users",
   component: UsersPage,
-});
+})
+
+const STATUS_FILTERS = [
+  { label: "All", value: "" },
+  { label: "Active", value: "active" },
+  { label: "Pending", value: "pending" },
+  { label: "Suspended", value: "suspended" },
+]
 
 function UsersPage() {
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([])
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 20,
     total: 0,
     totalPages: 1,
-  });
-  const [isLoading, setIsLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  })
+  const [isLoading, setIsLoading] = useState(true)
+  const [search, setSearch] = useState("")
+  const [statusFilter, setStatusFilter] = useState("")
 
-  // Modal states
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<any>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [selectedUser, setSelectedUser] = useState<any>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Form state
   const [formData, setFormData] = useState({
     email: "",
     firstName: "",
     lastName: "",
     password: "",
-  });
+  })
+
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean
+    type: "suspend" | "delete"
+    userId: string
+  } | null>(null)
 
   const loadUsers = async (page = 1) => {
-    setIsLoading(true);
+    setIsLoading(true)
     const { data } = await platformApi.getUsers({
       page,
       limit: 20,
       search,
       status: statusFilter || undefined,
-    });
+    })
     if (data) {
-      setUsers(data.data);
-      setPagination(data.pagination);
+      setUsers(data.data)
+      setPagination(data.pagination)
     }
-    setIsLoading(false);
-  };
+    setIsLoading(false)
+  }
 
   useEffect(() => {
-    loadUsers();
-  }, []);
+    loadUsers()
+  }, [])
 
   const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    loadUsers(1);
-  };
+    e.preventDefault()
+    loadUsers(1)
+  }
 
   const handleStatusFilter = (status: string) => {
-    setStatusFilter(status);
-    loadUsers(1);
-  };
+    setStatusFilter(status)
+    loadUsers(1)
+  }
 
   const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-
+    e.preventDefault()
+    setIsSubmitting(true)
     const { data, error } = await platformApi.createUser({
       email: formData.email,
       firstName: formData.firstName,
       lastName: formData.lastName,
       password: formData.password,
-    });
-
+    })
     if (!error && data) {
-      setShowCreateModal(false);
-      setFormData({ email: "", firstName: "", lastName: "", password: "" });
-      loadUsers(pagination.page);
+      setShowCreateModal(false)
+      setFormData({ email: "", firstName: "", lastName: "", password: "" })
+      loadUsers(pagination.page)
     }
-
-    setIsSubmitting(false);
-  };
+    setIsSubmitting(false)
+  }
 
   const handleEdit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedUser) return;
-
-    setIsSubmitting(true);
-
+    e.preventDefault()
+    if (!selectedUser) return
+    setIsSubmitting(true)
     const { data, error } = await platformApi.updateUser(selectedUser.id, {
       firstName: formData.firstName,
       lastName: formData.lastName,
-    });
-
+    })
     if (!error && data) {
-      setShowEditModal(false);
-      setSelectedUser(null);
-      setFormData({ email: "", firstName: "", lastName: "", password: "" });
-      loadUsers(pagination.page);
+      setShowEditModal(false)
+      setSelectedUser(null)
+      setFormData({ email: "", firstName: "", lastName: "", password: "" })
+      loadUsers(pagination.page)
     }
-
-    setIsSubmitting(false);
-  };
+    setIsSubmitting(false)
+  }
 
   const openEditModal = (user: any) => {
-    setSelectedUser(user);
+    setSelectedUser(user)
     setFormData({
       email: user.email,
       firstName: user.firstName || "",
       lastName: user.lastName || "",
       password: "",
-    });
-    setShowEditModal(true);
-  };
-
-  const handleSuspend = async (id: string) => {
-    if (
-      confirm(
-        "Are you sure you want to suspend this user? They will be logged out immediately.",
-      )
-    ) {
-      await platformApi.suspendUser(id);
-      loadUsers(pagination.page);
-    }
-  };
+    })
+    setShowEditModal(true)
+  }
 
   const handleActivate = async (id: string) => {
-    await platformApi.activateUser(id);
-    loadUsers(pagination.page);
-  };
+    await platformApi.activateUser(id)
+    loadUsers(pagination.page)
+  }
 
-  const handleDelete = async (id: string) => {
-    if (
-      confirm(
-        "Are you sure you want to delete this user? This action cannot be undone.",
-      )
-    ) {
-      await platformApi.deleteUser(id);
-      loadUsers(pagination.page);
+  const handleConfirmAction = async () => {
+    if (!confirmDialog) return
+    setIsSubmitting(true)
+    if (confirmDialog.type === "suspend") {
+      await platformApi.suspendUser(confirmDialog.userId)
+    } else {
+      await platformApi.deleteUser(confirmDialog.userId)
     }
-  };
+    setIsSubmitting(false)
+    setConfirmDialog(null)
+    loadUsers(pagination.page)
+  }
 
-  const getStatusBadgeClass = (status: string) => {
-    switch (status) {
-      case "active":
-        return "bg-green-100 text-green-800";
-      case "pending":
-        return "bg-yellow-100 text-yellow-800";
-      case "suspended":
-        return "bg-red-100 text-red-800";
-      case "deleted":
-        return "bg-gray-100 text-gray-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
+  const initials = (user: any) =>
+    [user.firstName?.[0], user.lastName?.[0]].filter(Boolean).join("").toUpperCase() || "?"
 
   return (
-    <div>
-      <div className="sm:flex sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Users</h1>
-          <p className="mt-2 text-sm text-gray-700">
-            Manage platform users and their access
-          </p>
-        </div>
-        <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
-          <button
+    <div className="p-6 space-y-4">
+      <PageHeader
+        title="Users"
+        description="Manage platform users and their access"
+        actions={
+          <Button
+            size="sm"
             onClick={() => {
-              setFormData({
-                email: "",
-                firstName: "",
-                lastName: "",
-                password: "",
-              });
-              setShowCreateModal(true);
+              setFormData({ email: "", firstName: "", lastName: "", password: "" })
+              setShowCreateModal(true)
             }}
-            className="inline-flex items-center justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
           >
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="h-4 w-4 mr-1.5" />
             Add User
-          </button>
-        </div>
-      </div>
+          </Button>
+        }
+      />
 
-      {/* Filters */}
-      <div className="mt-4 flex flex-col sm:flex-row gap-4">
-        <form onSubmit={handleSearch} className="flex-1 flex gap-2">
-          <input
-            type="text"
+      <div className="flex flex-col sm:flex-row gap-3">
+        <form onSubmit={handleSearch} className="flex gap-2">
+          <Input
             placeholder="Search by email or name..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+            className="h-8 w-64"
           />
-          <button
-            type="submit"
-            className="px-3 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-900 flex items-center justify-center"
-          >
+          <Button type="submit" variant="outline" size="sm">
             <Search className="h-4 w-4" />
-          </button>
+          </Button>
         </form>
 
-        <div className="flex gap-2">
-          <button
-            onClick={() => handleStatusFilter("")}
-            className={`px-3 py-2 text-sm rounded-md ${
-              statusFilter === ""
-                ? "bg-blue-600 text-white"
-                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-            }`}
-          >
-            All
-          </button>
-          <button
-            onClick={() => handleStatusFilter("active")}
-            className={`px-3 py-2 text-sm rounded-md ${
-              statusFilter === "active"
-                ? "bg-green-600 text-white"
-                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-            }`}
-          >
-            Active
-          </button>
-          <button
-            onClick={() => handleStatusFilter("pending")}
-            className={`px-3 py-2 text-sm rounded-md ${
-              statusFilter === "pending"
-                ? "bg-yellow-600 text-white"
-                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-            }`}
-          >
-            Pending
-          </button>
-          <button
-            onClick={() => handleStatusFilter("suspended")}
-            className={`px-3 py-2 text-sm rounded-md ${
-              statusFilter === "suspended"
-                ? "bg-red-600 text-white"
-                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-            }`}
-          >
-            Suspended
-          </button>
+        <div className="flex gap-1.5">
+          {STATUS_FILTERS.map((f) => (
+            <Button
+              key={f.value}
+              variant={statusFilter === f.value ? "default" : "outline"}
+              size="sm"
+              onClick={() => handleStatusFilter(f.value)}
+            >
+              {f.label}
+            </Button>
+          ))}
         </div>
       </div>
 
-      {/* Table */}
-      <div className="mt-6">
-        <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg">
-          {isLoading ? (
-            <div className="p-8 text-center text-gray-500">Loading...</div>
-          ) : users.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">No users found</div>
-          ) : (
-            <table className="min-w-full divide-y divide-gray-300">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">
-                    User
-                  </th>
-                  <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                    Status
-                  </th>
-                  <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                    Type
-                  </th>
-                  <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                    Last Login
-                  </th>
-                  <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                    Created
-                  </th>
-                  <th className="relative py-3.5 pl-3 pr-4 sm:pr-6">
-                    <span className="sr-only">Actions</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 bg-white">
-                {users.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50">
-                    <td className="whitespace-nowrap py-4 pl-4 pr-3">
-                      <div className="flex items-center">
-                        <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                          <User className="h-5 w-5 text-gray-500" />
-                        </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">
-                            {user.firstName} {user.lastName}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {user.email}
-                          </div>
-                        </div>
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>User</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Last Login</TableHead>
+              <TableHead>Created</TableHead>
+              <TableHead className="w-[100px]" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-8 w-8 rounded-full" />
+                      <div className="space-y-1">
+                        <Skeleton className="h-3.5 w-28" />
+                        <Skeleton className="h-3 w-36" />
                       </div>
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-4 text-sm">
-                      <span
-                        className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${getStatusBadgeClass(user.status)}`}
+                    </div>
+                  </TableCell>
+                  <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                  <TableCell><Skeleton className="h-3.5 w-16" /></TableCell>
+                  <TableCell><Skeleton className="h-3.5 w-20" /></TableCell>
+                  <TableCell><Skeleton className="h-3.5 w-20" /></TableCell>
+                  <TableCell />
+                </TableRow>
+              ))
+            ) : users.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                  No users found
+                </TableCell>
+              </TableRow>
+            ) : (
+              users.map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback className="text-xs">{initials(user)}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="text-sm font-medium">
+                          {user.firstName} {user.lastName}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{user.email}</p>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <StatusBadge status={user.status} />
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{user.type}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {user.lastLoginAt
+                      ? new Date(user.lastLoginAt).toLocaleDateString()
+                      : "Never"}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {new Date(user.createdAt).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex justify-end items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => openEditModal(user)}
                       >
-                        {user.status}
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                      {user.type}
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                      {user.lastLoginAt
-                        ? new Date(user.lastLoginAt).toLocaleDateString()
-                        : "Never"}
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                      {new Date(user.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                      <div className="flex justify-end gap-3">
-                        <button
-                          onClick={() => openEditModal(user)}
-                          className="p-1 hover:bg-gray-100 rounded"
-                          title="Edit"
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      {user.status === "active" && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive hover:text-destructive"
+                          onClick={() =>
+                            setConfirmDialog({ open: true, type: "suspend", userId: user.id })
+                          }
                         >
-                          <Pencil className="h-4 w-4 text-blue-600" />
-                        </button>
-                        {user.status === "active" && (
-                          <button
-                            onClick={() => handleSuspend(user.id)}
-                            className="text-red-600 hover:text-red-900"
-                            title="Suspend"
-                          >
-                            Suspend
-                          </button>
-                        )}
-                        {user.status === "suspended" && (
-                          <button
-                            onClick={() => handleActivate(user.id)}
-                            className="text-green-600 hover:text-green-900"
-                            title="Activate"
-                          >
-                            Activate
-                          </button>
-                        )}
-                        {user.status !== "deleted" && (
-                          <button
-                            onClick={() => handleDelete(user.id)}
-                            className="p-1 hover:bg-gray-100 rounded"
-                            title="Delete"
-                          >
-                            <Trash2 className="h-4 w-4 text-red-600" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
+                          <UserX className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                      {user.status === "suspended" && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-primary hover:text-primary/80"
+                          onClick={() => handleActivate(user.id)}
+                        >
+                          <UserCheck className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                      {user.status !== "deleted" && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive hover:text-destructive"
+                          onClick={() =>
+                            setConfirmDialog({ open: true, type: "delete", userId: user.id })
+                          }
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
       </div>
 
-      {/* Pagination */}
       {pagination.totalPages > 1 && (
-        <div className="mt-4 flex justify-center gap-2">
-          {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map(
-            (page) => (
-              <button
-                key={page}
-                onClick={() => loadUsers(page)}
-                className={`px-3 py-1 rounded ${
-                  page === pagination.page
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                }`}
+        <div className="flex items-center justify-end gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={pagination.page <= 1}
+            onClick={() => loadUsers(pagination.page - 1)}
+          >
+            Previous
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            {pagination.page} / {pagination.totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={pagination.page >= pagination.totalPages}
+            onClick={() => loadUsers(pagination.page + 1)}
+          >
+            Next
+          </Button>
+        </div>
+      )}
+
+      {/* Create User Dialog */}
+      <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add User</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCreate} className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="create-email">Email Address *</Label>
+              <Input
+                id="create-email"
+                type="email"
+                required
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder="user@example.com"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="create-firstName">First Name</Label>
+              <Input
+                id="create-firstName"
+                value={formData.firstName}
+                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="create-lastName">Last Name</Label>
+              <Input
+                id="create-lastName"
+                value={formData.lastName}
+                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="create-password">Password *</Label>
+              <Input
+                id="create-password"
+                type="password"
+                required
+                minLength={8}
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                placeholder="Minimum 8 characters"
+              />
+            </div>
+            <DialogFooter className="pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowCreateModal(false)}
               >
-                {page}
-              </button>
-            ),
-          )}
-        </div>
-      )}
+                Cancel
+              </Button>
+              <Button type="submit" size="sm" disabled={isSubmitting}>
+                {isSubmitting ? "Creating..." : "Create User"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
-      {/* Create User Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex min-h-screen items-center justify-center p-4">
-            <div
-              className="fixed inset-0 bg-black bg-opacity-25"
-              onClick={() => setShowCreateModal(false)}
-            />
-            <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold">Add User</h2>
-                <button
-                  onClick={() => setShowCreateModal(false)}
-                  className="p-1 hover:bg-gray-100 rounded"
-                >
-                  <X className="h-4 w-4 text-gray-500" />
-                </button>
-              </div>
-              <form onSubmit={handleCreate}>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Email Address *
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    value={formData.email}
-                    onChange={(e) =>
-                      setFormData({ ...formData, email: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="user@example.com"
-                  />
-                </div>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    First Name
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.firstName}
-                    onChange={(e) =>
-                      setFormData({ ...formData, firstName: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Last Name
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.lastName}
-                    onChange={(e) =>
-                      setFormData({ ...formData, lastName: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Password *
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    minLength={8}
-                    value={formData.password}
-                    onChange={(e) =>
-                      setFormData({ ...formData, password: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Minimum 8 characters"
-                  />
-                </div>
-                <div className="flex justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowCreateModal(false)}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
-                  >
-                    {isSubmitting ? "Creating..." : "Create User"}
-                  </button>
-                </div>
-              </form>
+      {/* Edit User Dialog */}
+      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEdit} className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>Email Address</Label>
+              <Input value={formData.email} disabled className="text-muted-foreground" />
+              <p className="text-xs text-muted-foreground">Email cannot be changed</p>
             </div>
-          </div>
-        </div>
-      )}
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-firstName">First Name</Label>
+              <Input
+                id="edit-firstName"
+                value={formData.firstName}
+                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-lastName">Last Name</Label>
+              <Input
+                id="edit-lastName"
+                value={formData.lastName}
+                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+              />
+            </div>
+            <DialogFooter className="pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowEditModal(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" size="sm" disabled={isSubmitting}>
+                {isSubmitting ? "Saving..." : "Save Changes"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
-      {/* Edit User Modal */}
-      {showEditModal && selectedUser && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex min-h-screen items-center justify-center p-4">
-            <div
-              className="fixed inset-0 bg-black bg-opacity-25"
-              onClick={() => setShowEditModal(false)}
-            />
-            <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold">Edit User</h2>
-                <button
-                  onClick={() => setShowEditModal(false)}
-                  className="p-1 hover:bg-gray-100 rounded"
-                >
-                  <X className="h-4 w-4 text-gray-500" />
-                </button>
-              </div>
-              <form onSubmit={handleEdit}>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Email Address
-                  </label>
-                  <input
-                    type="email"
-                    value={formData.email}
-                    disabled
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-500"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Email cannot be changed
-                  </p>
-                </div>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    First Name
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.firstName}
-                    onChange={(e) =>
-                      setFormData({ ...formData, firstName: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Last Name
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.lastName}
-                    onChange={(e) =>
-                      setFormData({ ...formData, lastName: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-                <div className="flex justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowEditModal(false)}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
-                  >
-                    {isSubmitting ? "Saving..." : "Save Changes"}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Confirm: Suspend / Delete */}
+      <ConfirmDialog
+        open={!!confirmDialog?.open}
+        onOpenChange={(open) => {
+          if (!open) setConfirmDialog(null)
+        }}
+        title={confirmDialog?.type === "suspend" ? "Suspend User" : "Delete User"}
+        description={
+          confirmDialog?.type === "suspend"
+            ? "This user will be suspended and logged out immediately."
+            : "This action cannot be undone."
+        }
+        confirmLabel={confirmDialog?.type === "suspend" ? "Suspend" : "Delete"}
+        onConfirm={handleConfirmAction}
+        loading={isSubmitting}
+      />
     </div>
-  );
+  )
 }
