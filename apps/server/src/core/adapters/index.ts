@@ -43,7 +43,12 @@ export type AdapterType =
   | "search"
   | "fx-rates"
   | "ocr"
-  | "translate";
+  | "translate"
+  | "tax"
+  | "fulfillment"
+  | "email-sync"
+  | "calendar-sync"
+  | "telephony";
 
 // ---------------------------------------------------------------------------
 // AdapterRegistry interface — verbatim from core.md §13
@@ -437,4 +442,146 @@ export interface SearchAdapter {
   delete(collection: string, ids: string[]): Promise<void>;
   /** Event-driven index update */
   sync(collection: string, event: DomainEvent): Promise<void>;
+}
+
+// ---------------------------------------------------------------------------
+// Tax — master-architecture §4.4
+// ---------------------------------------------------------------------------
+
+export interface TaxLineItem {
+  variantId: string;
+  qty: number;
+  unitPrice: Money;
+}
+
+export interface TaxLine {
+  variantId: string;
+  taxAmount: Money;
+  taxRate: number;
+}
+
+/**
+ * Adapter for tax calculation engines (TaxJar, Avalara, manual rates, …).
+ *
+ * @category Core
+ */
+export interface TaxAdapter {
+  calculateTax(
+    items: TaxLineItem[],
+    shippingAddress: Address,
+    taxProfileId?: string,
+  ): Promise<TaxLine[]>;
+  getRate(jurisdiction: string, productType?: string): Promise<number>;
+}
+
+// ---------------------------------------------------------------------------
+// Fulfillment — master-architecture §4.4
+// ---------------------------------------------------------------------------
+
+export interface FulfillmentPackage {
+  orderId: string;
+  items: Array<{ variantId: string; qty: number }>;
+}
+
+export interface FulfillmentResult {
+  fulfillmentId: string;
+  trackingNumber?: string;
+  label?: string;
+  estimatedDelivery?: number;
+}
+
+export interface TrackingEvent {
+  at: number;
+  location: string;
+  status: string;
+}
+
+/**
+ * Adapter for carrier/3PL fulfillment (ShipStation, EasyPost, Shiprocket, …).
+ *
+ * @category Core
+ */
+export interface FulfillmentAdapter {
+  createFulfillment(pkg: FulfillmentPackage, address: Address): Promise<FulfillmentResult>;
+  cancelFulfillment(fulfillmentId: string): Promise<void>;
+  getTracking(fulfillmentId: string): Promise<{ status: string; events: TrackingEvent[] }>;
+}
+
+// ---------------------------------------------------------------------------
+// EmailSync — master-architecture §4.4
+// ---------------------------------------------------------------------------
+
+export interface EmailMessage {
+  id: string;
+  threadId: string;
+  subject: string;
+  from: string;
+  to: string[];
+  bodyText?: string;
+  receivedAt: number;
+}
+
+/**
+ * Adapter for inbound email sync (Gmail, Outlook/Graph, IMAP, …).
+ * Used by CRM compose to link emails to contacts and deals.
+ *
+ * @category Core
+ */
+export interface EmailSyncAdapter {
+  connect(credentials: Record<string, unknown>): Promise<void>;
+  syncMessages(since?: number): AsyncIterable<EmailMessage>;
+  disconnect(): Promise<void>;
+}
+
+// ---------------------------------------------------------------------------
+// CalendarSync — master-architecture §4.4
+// ---------------------------------------------------------------------------
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  startAt: number;
+  endAt: number;
+  attendees: string[];
+  location?: string;
+}
+
+/**
+ * Adapter for external calendar sync (Google Calendar, Outlook Calendar, …).
+ * Used by CRM compose to attach meetings to contacts and deals.
+ *
+ * @category Core
+ */
+export interface CalendarSyncAdapter {
+  connect(credentials: Record<string, unknown>): Promise<void>;
+  syncEvents(since?: number): AsyncIterable<CalendarEvent>;
+  createEvent(event: Omit<CalendarEvent, "id">): Promise<CalendarEvent>;
+  disconnect(): Promise<void>;
+}
+
+// ---------------------------------------------------------------------------
+// Telephony — master-architecture §4.4
+// ---------------------------------------------------------------------------
+
+export interface CallRecord {
+  id: string;
+  from: string;
+  to: string;
+  direction: "inbound" | "outbound";
+  status: string;
+  durationSeconds: number;
+  recordingUrl?: string;
+  startedAt: number;
+}
+
+/**
+ * Adapter for VoIP/telephony providers (Twilio, Vonage, Exotel, …).
+ * Used by CRM compose for click-to-call and call log features.
+ *
+ * @category Core
+ */
+export interface TelephonyAdapter {
+  initiateCall(to: string, from: string, callbackUrl: string): Promise<{ callId: string }>;
+  getCallRecord(callId: string): Promise<CallRecord>;
+  handleWebhook(payload: unknown, signature: string): Promise<CallRecord>;
 }

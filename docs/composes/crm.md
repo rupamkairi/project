@@ -577,3 +577,144 @@ CRMCompose.integrations = {
 POST /webhooks/email-events    → track open/click/bounce → update campaign stats
 POST /webhooks/telephony       → log inbound/outbound calls as activities
 ```
+
+---
+
+## 12. Gap Analysis — Twenty CRM vs. ProjectX CRM
+
+**Reference platform:** [Twenty CRM](https://github.com/twentyhq/twenty) — open-source, developer-first CRM.
+**Scope:** Backend only. Frontend/UI gaps excluded.
+
+---
+
+### Feature Comparison Table
+
+Status key: ✅ Ready | ⚠️ Partial | ❌ Missing
+
+| Feature | Twenty | ProjectX Mapping | Status | Gap |
+|---------|--------|-----------------|--------|-----|
+| Contact management | People object | `Contact` entity in CRM compose | ✅ | — |
+| Company / Account object | Separate `Company` object with many-to-many to People | `Contact` with `type: "company"` only | ⚠️ | No dedicated Company entity; can't model org hierarchy or multiple contacts-per-company cleanly |
+| Lead / opportunity tracking | `Opportunity` object with pipeline stages | `Lead` + `Deal` + `Pipeline` + `PipelineStage` | ✅ | — |
+| Activity logging (calls, emails, meetings, notes, tasks) | Activities on any object | `Activity` entity with all six types | ✅ | — |
+| Pipeline & stage management | Custom pipelines, Kanban | `Pipeline` + `PipelineStage` with default probability + rot period | ✅ | — |
+| Lead FSM | Stage field + manual transitions | Full FSM (`new → contacted → qualified → converted`) | ✅ | — |
+| Deal FSM | Status field | Full FSM (`open → won/lost/abandoned`) | ✅ | — |
+| Deal approval (high-value) | Manual task in workflow | Rule engine: `high-value-deal-approval` requires sales-manager approval | ✅ | — |
+| Follow-up scheduling | Tasks with due dates | Activity with `dueAt` + follow-up queue job | ✅ | — |
+| Campaign / email marketing | Via workflow HTTP action + external provider | `Campaign` entity + ntf_templates + Resend/SMTP adapter | ⚠️ | No segmentation engine (filter contacts by field), no built-in campaign stats pipeline |
+| Email sync (inbound) — Gmail/Outlook | Core feature: two-way sync, auto-link to contacts | `notification.email` (outbound only) | ❌ | No `email-sync` AdapterType in Core; no inbound email entity; no email thread model |
+| Calendar sync (two-way) | Google Calendar / Outlook / CalDAV | `scheduling` module (internal slots/bookings only) | ❌ | No `calendar-sync` AdapterType; scheduling module is internal, not external calendar sync |
+| Auto-create contact from email thread | Parses sender/recipient → creates/links contact | — | ❌ | Depends on email-sync adapter (missing) |
+| Custom objects (user-defined entities) | Unlimited custom objects via SDK `defineObject()` | EntitySchema system supports it; no compose API to create objects at runtime | ⚠️ | EntitySchemaRegistry exists; needs a compose-level "object management" API |
+| Custom fields per object | All field types (text, number, select, relation, etc.) | EntitySchema `FieldSchema` with same types | ✅ | Already architected; needs expose via API |
+| Workflow automation (event-triggered) | Visual workflow builder with record events, schedules, webhooks | `workflow` module with code-defined ProcessTemplates + EventBus hooks | ⚠️ | No event-driven workflow trigger API; no HTTP action step type; no UI-configurable workflow |
+| Workflow: HTTP action step | Call external URL as step | — | ❌ | Needs new workflow step type: `ExternalHTTPAction` |
+| Workflow: delay / scheduling | Delay step before next action | Queue with `delay` option exists | ✅ | Infrastructure ready; needs workflow step type |
+| Lead scoring (automated) | No native scoring engine | `lead.score` field + `crm.lead-score-decay` job | ⚠️ | Decay job exists; no event-driven score-increase pipeline (e.g. email open → +5 pts) |
+| Row-level permissions | Record-level ACL (Org plan) | Role-based own-record filtering (◑ own) | ❌ | Per-record ACL not in system; identity module roles are coarse-grained |
+| Field-level permissions | Show/hide specific fields per role | `sensitive: boolean` on FieldSchema (redacted in logs/API) | ⚠️ | `sensitive` flag exists; needs per-role field visibility enforcement in API layer |
+| Multi-workspace / multi-org | Workspace isolation, user in multiple workspaces | `organizationId` on every entity; full multi-tenancy | ✅ | — |
+| SSO / SAML | Enterprise SSO (Org plan) | Auth plugin has provider interface; no SAML provider implemented | ⚠️ | Needs SAMLProvider adapter in auth plugin |
+| Audit logging | Workflow execution audit trail | EventStore (append-only, all events) | ✅ | Infrastructure ready; no CRM-specific audit API endpoint |
+| Import contacts (CSV) | CSV import up to 10k records | No import endpoint in CRM API | ❌ | Needs `POST /crm/import/contacts` endpoint + CSV parser |
+| Export contacts (CSV) | CSV export up to 20k records | analytics module has `exportData` (generic) | ⚠️ | Needs CRM-specific export endpoint |
+| Full-text search (contacts, deals) | Global workspace search, field-level indexing | Search plugin: **Planned** | ⚠️ | Search plugin not implemented; TypesenseAdapter not wired |
+| Telephony (click-to-call, call log) | No native; via workflow HTTP to Twilio | TwilioVoiceAdapter in integrations list; no `telephony` AdapterType in Core | ⚠️ | No Core adapter contract for telephony; webhook-to-activity pipeline needs wiring |
+| In-app notifications | Notification center | `notification` module + `org:{orgId}:actor:{actorId}:inbox` RT channel | ✅ | — |
+| Email notifications (transactional) | Via connected email or SMTP | `notification.email` adapter (Resend/SMTP) | ✅ | — |
+| Deal rotation alerts | Rotation detection via scheduled job | `crm.check-deal-rotting` daily job + `deal-rotting` hook | ✅ | — |
+| Analytics / pipeline metrics | Dashboards with bar, pie, line, aggregate charts | `analytics` module with Metric, Dashboard, ReportDefinition entities | ⚠️ | Module is generic; no CRM-specific metric definitions shipped |
+| Webhook (inbound) | Webhook triggers for workflows | EventBus + workflow hooks; no generic inbound webhook entity | ⚠️ | No webhook registration API; webhooks are hardcoded per integration |
+| API (REST) | Full REST for all objects | Full REST CRM API documented | ✅ | — |
+| API (GraphQL) | Full GraphQL with subscriptions | Not in architecture (Elysia is HTTP/REST) | ❌ | No GraphQL layer; by design (REST + EventBus is the pattern) |
+| Real-time subscriptions | GraphQL subscriptions for live data | WebSocket real-time bridge (`org:{orgId}:crm:pipeline`, etc.) | ✅ | — |
+| Zapier / n8n integration | Zapier app available | No integration platform connector | ❌ | Needs outbound webhook system + documented event schema for integration platforms |
+
+---
+
+### System Preparedness Assessment
+
+**What's solid:**
+
+- Core entity model (Contact, Lead, Deal, Activity, Pipeline, Campaign) is comprehensive and well-designed.
+- FSM engine covers all CRM entity lifecycles correctly.
+- Rule engine handles all business guard conditions.
+- EventBus + hooks architecture maps cleanly to CRM event-driven automation.
+- Multi-tenancy is baked into every layer.
+- Notification infrastructure (email, SMS, in-app) is ready.
+- Scheduling module handles meeting bookings.
+
+**What blocks implementation:**
+
+1. **Payment plugin missing** — not relevant to CRM directly, but signals infra maturity.
+2. **Search plugin missing** — contact/deal search won't work without this. Blocks basic CRM usability.
+3. **Email inbound sync missing** — Twenty's most-used feature. No adapter contract, no entity model.
+4. **Calendar sync missing** — required for meeting auto-linking from Google Calendar / Outlook.
+5. **Campaign segmentation missing** — `Campaign.segmentId` references a `Segment` entity that isn't defined anywhere.
+
+---
+
+### What to Build — Ordered by Priority
+
+#### P0 — Required before CRM is usable
+
+| Item | Type | Where | Description |
+|------|------|--------|-------------|
+| Search plugin | Plugin | `plugins/search/` | Implement `createSearchPlugin()` with TypesenseAdapter. Unblocks contact/deal search. |
+| `Segment` entity | Compose entity | CRM compose | Define contact segment (filter-based query saved as entity). `Campaign.segmentId` references this. |
+| Campaign segmentation engine | Compose logic | CRM compose | `crm.resolveSegment(segmentId)` → returns filtered contact list for campaign dispatch. |
+| Account / Company entity | Compose entity | CRM compose | Separate `Account` entity (`name, domain, industry, employeeCount, ownerId, contacts[]`). Contact gets `accountId?: ID`. |
+
+#### P1 — Required for feature parity with basic Twenty
+
+| Item | Type | Where | Description |
+|------|------|--------|-------------|
+| `email-sync` AdapterType | Core | `core/src/entity/types.ts` → `AdapterType` | Add `"email-sync"` to AdapterType enum. Define `EmailSyncAdapter` interface (connect, sync, disconnect). |
+| Inbound email entity | Module/Compose | New `email-sync` module or CRM compose | `EmailThread`, `EmailMessage` entities. Link to Contact/Deal. Auto-create contact on first email. |
+| Email sync plugin | Plugin | `plugins/email-sync/` | Gmail OAuth + Outlook OAuth + IMAP adapters. Syncs inbox → EventBus. |
+| `calendar-sync` AdapterType | Core | Same as above | Add `"calendar-sync"` to AdapterType. Define `CalendarSyncAdapter` interface. |
+| Calendar sync plugin | Plugin | `plugins/calendar-sync/` | Google Calendar + Outlook Calendar + CalDAV adapters. |
+| CSV import/export | Compose API | CRM compose | `POST /crm/import/contacts`, `GET /crm/export/contacts`. Bulk queue-based processing. |
+| Lead scoring pipeline | Compose hook | CRM compose | Hook on `activity.created`, `campaign.email-opened` → dispatch `crm.updateLeadScore`. Define scoring rules in compose config. |
+
+#### P2 — Enhances CRM maturity
+
+| Item | Type | Where | Description |
+|------|------|--------|-------------|
+| `telephony` AdapterType | Core | `AdapterType` | `TelephonyAdapter` interface: `initiateCall`, `getCallLog`. |
+| Telephony plugin | Plugin | `plugins/telephony/` | TwilioVoice adapter. Webhook → `Activity` auto-creation. |
+| Workflow event trigger | Module extension | `workflow` module | New trigger type: `EventTrigger` (fires ProcessTemplate on EventBus event). Enables no-code automation. |
+| Workflow HTTP action step | Module extension | `workflow` module | New task type: `ExternalHTTPAction` (calls URL with payload). |
+| Dynamic webhook registration | Compose API | CRM compose | `POST /crm/webhooks` — register outbound webhooks for CRM events. Enables Zapier/n8n. |
+| CRM analytics seed | Compose boot | CRM compose | Register standard CRM metrics on boot: pipeline-value, win-rate, avg-deal-cycle, rep-performance. |
+| SAML auth provider | Auth plugin | `plugins/auth/` | SAMLProvider adapter for enterprise SSO. |
+| Custom object API | Compose API | CRM compose | `POST /crm/objects` (admin only) → creates new EntitySchema + migrates DB + exposes CRUD endpoints. |
+
+---
+
+### Missing Core Adapter Types (both composes affected)
+
+These need to be added to `core/src/entity/types.ts` `AdapterType` union:
+
+```typescript
+type AdapterType =
+  | "storage"
+  | "notification.email"
+  | "notification.sms"
+  | "notification.push"
+  | "notification.whatsapp"
+  | "notification.webhook"
+  | "payment"            // Planned plugin
+  | "geo"
+  | "search"             // Planned plugin
+  | "fx-rates"
+  | "ocr"
+  | "translate"
+  // ↓ Not yet in Core — need to add:
+  | "email-sync"         // inbound email (CRM)
+  | "calendar-sync"      // calendar sync (CRM)
+  | "telephony"          // click-to-call (CRM)
+  | "tax"               // tax calculation at checkout (ecommerce)
+  | "fulfillment"        // carrier / 3PL (ecommerce)
+```

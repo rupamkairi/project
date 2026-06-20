@@ -58,9 +58,9 @@ plugins/
 | Auth | `@projectx/plugin-auth-server` | `@projectx/plugin-auth-web` | `createAuthPlugin()` | Documented |
 | Logging | `@projectx/plugin-logging-server` | — | `createLoggingPlugin()` | Documented |
 | Security | `@projectx/plugin-security-server` | — | `createSecurityPlugin()` | Documented |
-| Payment | `@projectx/plugin-payment-server` | `@projectx/plugin-payment-web` | `createPaymentPlugin()` | Planned |
+| Payment | `@projectx/plugin-payment-server` | `@projectx/plugin-payment-web` | `createPaymentPlugin()` | Implemented |
 | Jobs | `@projectx/plugin-jobs-server` | — | `createJobsPlugin()` | Planned |
-| Search | `@projectx/plugin-search-server` | `@projectx/plugin-search-web` | `createSearchPlugin()` | Planned |
+| Search | built-in (PostgreSQL FTS) | — | `createPgSearchAdapter()` | Implemented |
 
 **Status key:** Implemented = code exists · Documented = spec complete, not yet coded · Planned = on roadmap
 
@@ -73,6 +73,7 @@ plugins/
 - [security.md](./security.md) — Security headers, rate limiting, CORS, IP access control
 - [storage.md](./storage.md) — S3-compatible file uploads, metadata, REST API
 - [notification.md](./notification.md) — Email templates, SMTP, scheduled sends
+- [payment.md](./payment.md) — Stripe and Razorpay checkout, webhooks, refunds
 - [development.md](./development.md) — How to build a new plugin
 
 ---

@@ -227,5 +227,18 @@ export type {
   PaymentAdapter,
   GeoAdapter,
   SearchAdapter,
+  TaxLineItem,
+  TaxLine,
+  TaxAdapter,
+  FulfillmentPackage,
+  FulfillmentResult,
+  TrackingEvent,
+  FulfillmentAdapter,
+  EmailMessage,
+  EmailSyncAdapter,
+  CalendarEvent,
+  CalendarSyncAdapter,
+  CallRecord,
+  TelephonyAdapter,
 } from "./adapters";
 export { createAdapterRegistry } from "./adapters";

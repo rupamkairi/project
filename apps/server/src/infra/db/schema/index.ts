@@ -12,6 +12,7 @@ export * from "./notification";
 export * from "./geo";
 export * from "./analytics";
 export * from "./storage";
+export * from "./search";
 
 // Platform schema - re-exported from compose
 import {

@@ -14,21 +14,24 @@ Start here before any task:
 
 ---
 
-## Plans
+## Planning Mode
 
-Before any non-trivial task (spans 3+ files, architectural decision, multi-step work, or resumable after interrupt):
+When running in Plan Mode or when asked to create a plan:
 
-1. Create a plan file at:
-   ```
-   plans/{task-slug}.<agent-name>.plan.md
-   ```
-   Example: `plans/add-crm-compose.claude.plan.md`
+- Always create a new plan file.
+- Save it under the given directory.
+- File name format:
 
-2. Follow the format in **[plans/README.md](./plans/README.md)**
+  `./plans/<task-name>.<agent-name>.plan.md`
 
-3. Never create plan files outside the `plans/` directory.
-
-4. Update plan `Status:` as work progresses. Delete when done.
+- Use lowercase kebab-case for `task-name` and `agent-name`.
+- Keep the plan short, precise, and actionable.
+- Include only:
+  - Goal
+  - Assumptions
+  - Steps
+  - Risks / checks
+- Do not edit, update, or follow up on the plan file after implementation unless explicitly asked.
 
 ---
 
@@ -59,6 +62,7 @@ All naming (dirs, files, routes, exports, DB tables): **[docs/conventions.md](./
 ---
 
 ## No Tests. No App Verification.
+
 NEVER write tests unless explicitly asked ("write a test", "add test coverage").
 NEVER run or verify the app unless explicitly asked ("run it", "verify this").
 App is assumed running. Implement only.

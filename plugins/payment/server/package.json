@@ -1,0 +1,20 @@
+{
+  "name": "@projectx/plugin-payment-server",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts",
+    "./types": "./src/types.ts"
+  },
+  "dependencies": {
+    "elysia": "^1.4.25",
+    "stripe": "^17.0.0",
+    "razorpay": "^2.9.6"
+  },
+  "devDependencies": {
+    "@projectx/config": "workspace:*",
+    "bun-types": "^1.0.0",
+    "typescript": "^5.3.3"
+  }
+}

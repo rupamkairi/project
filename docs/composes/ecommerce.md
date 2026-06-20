@@ -776,3 +776,170 @@ EcommerceCompose.integrations = {
 11. Start API Server (StoreAdmin + Storefront routers)
 12. Emit system.ready event
 ```
+
+---
+
+## 12. Gap Analysis — Medusa eCommerce vs. ProjectX eCommerce
+
+**Reference platform:** [Medusa v2](https://docs.medusajs.com) — open-source headless commerce platform.
+**Scope:** Backend only. Frontend/storefront UI gaps excluded.
+
+---
+
+### Feature Comparison Table
+
+Status key: ✅ Ready | ⚠️ Partial | ❌ Missing
+
+| Feature | Medusa | ProjectX Mapping | Status | Gap |
+|---------|--------|-----------------|--------|-----|
+| Product catalog (items, variants, categories, tags) | `Product` module: products, variants, options, categories, collections, tags | `catalog` module: Item, Variant, Category, AttributeSet, PriceList, PriceRule | ✅ | — |
+| Product images / media | Product images attached to products/variants | StorageAdapter + document module can attach | ✅ | Pattern exists; needs wiring in catalog |
+| Multi-currency pricing | Price lists per currency/region | `catalog.PriceList` with currency + `ledger` multi-currency | ✅ | — |
+| Price tiers (qty-based) | `PriceRule` with min qty | `catalog.PriceRule` with `minQty` | ✅ | — |
+| Inventory (multi-location, reservations) | `Inventory` module: stock levels, reservations, locations, backorders | `inventory` module: StockUnit, Location, StockMovement, reserve/release/fulfill | ✅ | — |
+| Inventory kits / bundles | One SKU → multiple inventory units | No bundle concept in `catalog` or `inventory` | ❌ | Needs `BundleItem` entity in catalog and multi-unit reservation in inventory |
+| Cart (session-based) | `Cart` module: line items, shipping, address, tax, promotions | Compose-level Cart (session-based) with items, coupon, validate | ✅ | — |
+| Order lifecycle (FSM) | Order statuses as enum transitions | Full FSM with 8 states and guarded transitions | ✅ | — |
+| Draft orders (admin creates on behalf of customer) | Admin can create draft orders | No draft order concept | ❌ | Needs `DraftOrder` entity + `POST /admin/orders/draft` endpoint |
+| Order edits (add/remove items after placement) | Order edits with version control | No order edit model | ❌ | Needs `OrderEdit` entity with versioned line items, approval before apply |
+| Returns & RMA | Return entity, return shipping, multi-item partial returns | Basic `refund-requested` hook only | ⚠️ | Needs `Return` entity, return-shipping workflow, partial item return tracking |
+| Refunds | Refund via payment provider + ledger reversal | Hook: `ecommerce.refund-requested` → payment.refund → ledger reversal | ✅ | Hook exists; requires payment plugin (Planned) |
+| Claims (damaged goods, missing items) | `Claim` entity linked to order | No claim concept | ❌ | Needs `Claim` entity with type (missing/damaged/other), replacement or refund resolution |
+| Swaps / exchanges | Return item + replace with different variant | No swap concept | ❌ | Needs `Swap` entity: return items + new items, balances refund vs. charge |
+| Payment sessions | Payment sessions with auth/capture/void | Hooks reference `ctx.payment.createPaymentSession()` | ⚠️ | Payment plugin is **Planned** — not implemented. Critical blocker. |
+| Payment capture (separate from auth) | Auth + capture as separate steps | No two-step payment flow documented | ⚠️ | PaymentAdapter interface needs `authorize()` + `capture()` + `void()` methods |
+| Fulfillment provider abstraction | `FulfillmentProvider` interface (DHL, FedEx, ShipBob, etc.) | No `fulfillment` AdapterType in Core | ❌ | Needs `FulfillmentAdapter` in Core + fulfillment plugin |
+| Multi-fulfillment per order | Split order across multiple warehouse locations | ORDER_FULFILLMENT workflow is single-path | ❌ | Needs `Fulfillment` entity (sub-order), split-fulfillment workflow template |
+| Tracking number / carrier webhook | Carrier webhook → `shipment.delivered` | `geo.attachLocation()` + carrier webhook ingest | ⚠️ | Webhook ingest exists (Shiprocket, Delhivery); carrier tracking polling job exists; needs carrier-specific normalization |
+| Tax regions + rates | `TaxRegion`, `TaxRate`, tax provider (TaxJar) | `ledger.TaxRate` (accounting rate), no checkout tax calculator | ❌ | No `tax` AdapterType; no geo-based tax region entity; no line-item tax calculation at cart |
+| Tax-inclusive pricing | Price includes tax, extracted at display | No tax-inclusive model | ❌ | Needs `PriceList.taxInclusive: boolean` + tax-extraction logic at price resolution |
+| Promotions engine (campaign + rules) | `Promotion` module: campaigns, budget, conditions, discount types | Coupon entity + flash-sale PriceList rule | ⚠️ | No campaign budget tracking; no compound conditions (customer group + cart total); no BOGO/free-shipping types |
+| Gift cards / store credit | Gift card as product + store credit balance | No gift card or store credit entity | ❌ | Needs `GiftCard` entity + `StoreCredit` balance on customer + payment method integration |
+| Coupon (single-use per customer, expiry) | Discount codes with usage limits | `coupon-single-use-per-customer` rule exists | ✅ | — |
+| Flash sale (time-window pricing) | Price rules with validity window | `flash-sale-validity` rule + PriceList `validFrom/validTo` + activation job | ✅ | — |
+| Customer (registered + guest) | Customer module: account, addresses, groups, auth | Identity module: Actor with `type: human/system`; ecommerce compose uses `customer` role | ✅ | — |
+| Customer groups | Groups for B2B pricing and promotions | Identity roles only; no commercial customer groups | ❌ | Needs `CustomerGroup` entity; PriceList audience supports `segment/role`; needs group-based price resolution |
+| Sales channels (web, POS, B2B, mobile) | Multi-channel: products/inventory/pricing scoped per channel | No channel concept; org-scoped only | ❌ | Needs `SalesChannel` entity; product/inventory/pricing filtered by channel |
+| Multi-region | Region entity: currency, tax rules, shipping options per geo | No Region entity; ledger has multi-currency but no geo-region | ❌ | Needs `Region` entity linking currency + tax profile + shipping options |
+| Multi-language / translations | 20+ admin UI languages, per-locale product content | Not in architecture | ❌ | Needs `Translation` entity pattern on catalog items (name, description per locale) |
+| Shipping zones + service zones | Geographic shipping zones with carrier assignment | `geo` module delivery zones; ecommerce compose has delivery zone admin API | ⚠️ | Foundation exists; no `ShippingOption` entity that ties zone + carrier + rate |
+| Shipping options (flat rate, calculated) | Shipping options per zone with pricing rules | No `ShippingOption` entity in compose | ❌ | Needs `ShippingOption` entity (name, type, zoneId, rate); resolves at checkout |
+| Abandoned cart recovery | Scheduler job + recovery email | `ecommerce.abandoned-cart-recovery` daily job | ✅ | — |
+| Product reviews | Review with verified-purchase guard | `review:create` endpoint (customer:own, verified purchase only) | ✅ | — |
+| Low-stock alerts | Notification when variant below threshold | `ecommerce.low-stock-alerts` every 30min | ✅ | — |
+| Pending order expiry | Cancel pending orders after TTL | `ecommerce.expire-pending-orders` every 5min | ✅ | — |
+| Admin API (full CRUD) | REST admin API for all resources | `/admin/*` fully documented | ✅ | — |
+| Storefront API (public + customer) | REST storefront API with publishable key scoping | `/store/*` documented; auth via JWT customer role | ✅ | — |
+| Publishable API keys (channel scoping) | API key scoped to specific sales channel | identity.APIKey exists; no channel-scoping | ⚠️ | APIKey entity exists; needs `scopedChannels: ID[]` field + channel validation middleware |
+| Webhook ingestion (payment, carrier) | Payment + carrier webhooks → EventBus | Stripe, Razorpay, Shiprocket, Delhivery webhooks with HMAC | ✅ | — |
+| Full-text product search | Elasticsearch / Meilisearch / Algolia | Search plugin: **Planned** | ⚠️ | Same as CRM — search plugin not implemented |
+| Notification (email, SMS, push) | SendGrid, Resend, Twilio, FCM | notification module + email/SMS/push adapters | ✅ | — |
+| Real-time (order feed, inventory, tracking) | Via event subscribers | 5 named WebSocket channels | ✅ | — |
+| Durable workflow with rollback | Step-level compensating actions, automatic retry | workflow module: ProcessInstances, no step-level rollback | ⚠️ | If inventory.reserve succeeds but payment fails, inventory must be manually released. Needs compensating action pattern. |
+| Analytics / reporting | PostHog integration, event tracking | `analytics` module: Metric, Snapshot, ReportDefinition | ⚠️ | Module is generic; no ecommerce-specific metrics seeded (GMV, AOV, conversion rate, etc.) |
+| Multi-store (one org, multiple storefronts) | Multi-store in one Medusa instance | Multi-org = multi-store (different orgs) | ⚠️ | Single org cannot have multiple storefronts with different domains/settings |
+| MFA (admin users) | TOTP / authenticator app for admin | Not documented in identity module or auth plugin | ❌ | Needs TOTP support in auth plugin |
+| SAML / SSO | SAML provider support | Auth plugin has provider interface; no SAML documented | ⚠️ | Needs SAMLProvider in auth plugin |
+| Batch import (products, inventory) | Bulk CSV import/export for products and inventory | No import endpoint in ecommerce compose | ❌ | Needs `POST /admin/products/import` + `POST /admin/inventory/import` with queue-based processing |
+| Sales report (daily/weekly) | Analytics dashboard + report export | `ecommerce.sales-report-daily` nightly job | ✅ | — |
+
+---
+
+### System Preparedness Assessment
+
+**What's solid:**
+
+- Catalog module fully covers Medusa's Product module needs (items, variants, categories, price lists, price rules).
+- Inventory module matches Medusa's inventory capabilities (multi-location, reservations, adjustments, reorder rules).
+- Order FSM is more rigorous than Medusa's enum-based status model.
+- Ledger module provides real double-entry accounting — something Medusa completely lacks.
+- Rule engine handles all business guards (out-of-stock prevention, high-value review, return window, coupon single-use, flash sale validity).
+- EventBus + hooks cover all Medusa's event subscriber patterns.
+- Real-time channels cover all Medusa's live update needs.
+- Scheduled jobs cover all Medusa's cron-equivalent needs.
+- Webhook ingestion with HMAC verification matches Medusa's approach.
+
+**What blocks implementation:**
+
+| Blocker | Impact | Priority |
+|---------|--------|----------|
+| Payment plugin not implemented (`Planned`) | Cannot create payment sessions, capture, or refund. Entire checkout is blocked. | P0 Critical |
+| No tax calculation at checkout | Line items have no tax; final order totals will be wrong | P0 Critical |
+| No `ShippingOption` entity | Checkout cannot present shipping choices to customer | P0 Critical |
+| Search plugin not implemented (`Planned`) | Product search (`GET /store/search`) does not work | P0 Critical |
+| No `FulfillmentAdapter` in Core | Cannot integrate carriers (DHL, FedEx, Shiprocket) via abstraction | P1 |
+| No Return/RMA entity | Returns and refunds are manually handled hooks only | P1 |
+| No Region entity | Cannot configure per-geo payment, tax, shipping | P1 |
+
+---
+
+### What to Build — Ordered by Priority
+
+#### P0 — Required before ecommerce compose is launchable
+
+| Item | Type | Where | Description |
+|------|------|--------|-------------|
+| Payment plugin | Plugin | `plugins/payment/` | `createPaymentPlugin()`. Implement `PaymentAdapter` interface: `createSession()`, `authorize()`, `capture()`, `void()`, `refund()`. Adapters: Stripe, Razorpay. |
+| `tax` AdapterType + interface | Core | `core/src/entity/types.ts` | Add `"tax"` to `AdapterType`. `TaxAdapter` interface: `calculateTax(lineItems, taxRegion)` → returns tax amounts per line. |
+| `TaxRegion` + `TaxRate` entities | Compose | ecommerce compose | Geo-based tax regions with applicable rates. Linked at checkout to `shippingAddress.country`. |
+| Tax calculation at checkout | Compose hook | ecommerce compose | On `ecommerce.validateCart`: resolve `TaxRegion` from address → call `TaxAdapter.calculateTax()` → populate `order.tax`. |
+| `ShippingOption` entity | Compose | ecommerce compose | `name, zoneId, providerId, type(flat_rate/calculated), rate: Money, conditions: RuleExpr`. Resolves at checkout. |
+| Shipping option resolver | Compose API | ecommerce compose | `GET /store/cart/:id/shipping-options` — returns available shipping options for cart address. |
+| Search plugin | Plugin | `plugins/search/` | `createSearchPlugin()`. TypesenseAdapter. Syncs catalog items on `item.published`. Powers `GET /store/search`. |
+
+#### P1 — Required for feature parity with Medusa
+
+| Item | Type | Where | Description |
+|------|------|--------|-------------|
+| `Return` entity + workflow | Compose | ecommerce compose | `Return` entity: `orderId, items[], status, reason, returnShippingOption`. FSM: `requested → approved → received → processed`. Links to `inventory.receive` and `ledger.issueRefund`. |
+| `Claim` entity | Compose | ecommerce compose | `Claim` entity: `orderId, type(missing/damaged/other), resolution(refund/replace)`. Triggers inventory or payment action. |
+| `Swap` entity | Compose | ecommerce compose | `Swap` entity: `orderId, returnItems[], newItems[]`. Balances refund vs. charge difference. |
+| `Region` entity | Compose | ecommerce compose | `Region` entity: `name, currency, countries[], taxProfileId, paymentProviders[], fulfillmentProviders[]`. Resolves at checkout from address. |
+| `fulfillment` AdapterType | Core | `core/src/entity/types.ts` | `FulfillmentAdapter` interface: `createFulfillment()`, `cancelFulfillment()`, `getTracking()`. |
+| Fulfillment plugin | Plugin | `plugins/fulfillment/` | Adapters: Shiprocket, Delhivery (already have webhooks), DHL, generic. |
+| Multi-fulfillment | Compose | ecommerce compose | `Fulfillment` entity (sub-order): `orderId, locationId, items[], trackingNumber, carrierId`. ORDER_FULFILLMENT workflow spawns one `Fulfillment` per source location. |
+| `CustomerGroup` entity | Compose / identity | identity module or ecommerce compose | `CustomerGroup` entity: `name, conditions: RuleExpr`. PriceList audience `"segment"` resolves to customer groups. Enables B2B/wholesale pricing. |
+| Draft orders | Compose | ecommerce compose | `DraftOrder` entity + `POST /admin/orders/draft`. Admin creates, edits, then converts to real order (bypasses payment session, for COD/offline payments). |
+| Order edits | Compose | ecommerce compose | `OrderEdit` entity: `orderId, changes[], status`. Admin proposes, customer confirms (or admin force-applies). Recalculates totals. |
+| `GiftCard` entity | Compose | ecommerce compose | `GiftCard` entity: `code, balance: Money, expiresAt`. Applied at checkout as payment method. Balance deducted on capture. |
+| Inventory kits | Catalog module extension | `catalog` module | `BundleItem` entity: `parentItemId, componentItemId, qty`. `inventory.reserve()` fans out to components. |
+| Batch import (products) | Compose API | ecommerce compose | `POST /admin/products/import` — CSV/JSON upload, queue-based, returns `jobId`. |
+| Ecommerce analytics seed | Compose boot | ecommerce compose | Register standard metrics: GMV, AOV, conversion-rate, cart-abandonment-rate, refund-rate, inventory-turn. |
+
+#### P2 — Enhances maturity
+
+| Item | Type | Where | Description |
+|------|------|--------|-------------|
+| Tax-inclusive pricing | Catalog + compose | `catalog` module | `PriceList.taxInclusive: boolean`. At display: extract tax from price. At checkout: do not add tax again. |
+| Promotions engine (advanced) | Compose | ecommerce compose | `Promotion` entity: `type(percentage/fixed/free_shipping/bogo), conditions: RuleExpr[], usageLimit, budget: Money`. Replaces simple coupon model. |
+| Sales channels | Compose | ecommerce compose | `SalesChannel` entity. Products, pricing, inventory filtered by channel. Publishable API keys scoped to channel. |
+| Multi-language / translations | Catalog extension | `catalog` module | `ItemTranslation` entity: `itemId, locale, name, description`. Resolved by `Accept-Language` header. |
+| MFA (admin users) | Auth plugin | `plugins/auth/` | TOTP second factor in auth plugin. `identity.Actor` gets `totpEnabled: boolean, totpSecret: string (sensitive)`. |
+| SAML auth provider | Auth plugin | `plugins/auth/` | SAMLProvider adapter. |
+| Compensating actions in workflow | Workflow module | `workflow` module | Per-task `compensate` handler: if downstream step fails, rollback prior steps. Enables safe multi-step sagas. |
+| Workflow step: ExternalHTTPAction | Workflow module | `workflow` module | Step type that calls external URL. Enables no-code integration with 3rd-party services. |
+| Multi-store (one org, N storefronts) | Compose | ecommerce compose | `Store` entity per org: `name, domain, defaultCurrency, defaultRegionId`. Storefront API resolves store from `X-Store-ID` header or subdomain. Currently implied but not modeled. |
+
+---
+
+### Missing Plugins Summary
+
+| Plugin | Status | Impact |
+|--------|--------|--------|
+| `@projectx/plugin-payment-server` | **Planned** — not implemented | Blocks all checkout and refund flows |
+| `@projectx/plugin-search-server` | **Planned** — not implemented | Blocks product search and contact search |
+| `@projectx/plugin-jobs-server` | **Planned** — not implemented | Background job management UI; not hard blocker |
+| `@projectx/plugin-fulfillment-server` | **Not planned** — needs design | Carrier integrations for shipping |
+
+### Missing Core Adapter Types
+
+Add to `core/src/entity/types.ts`:
+
+```typescript
+// Currently missing — needed for ecommerce + CRM:
+| "tax"          // checkout tax calculation
+| "fulfillment"  // carrier / 3PL (ecommerce)
+| "email-sync"   // inbound email sync (CRM)
+| "calendar-sync" // calendar sync (CRM)
+| "telephony"    // click-to-call (CRM)
+```

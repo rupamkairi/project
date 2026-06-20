@@ -33,6 +33,7 @@ import { NotificationModule } from "./modules/notification";
 import { GeoModule } from "./modules/geo";
 import { AnalyticsModule } from "./modules/analytics";
 import { CoreError, getHttpStatus } from "@core";
+import { createPgSearchAdapter } from "./infra/search";
 
 // Core Layer definitions for introspection
 const coreLayer = [
@@ -360,7 +361,11 @@ async function main() {
     scheduler: new InMemoryScheduler(),
     realtime: realtimeBridge,
     db: dbAdapter,
-    adapters: createAdapterRegistry(),
+    adapters: (() => {
+      const registry = createAdapterRegistry();
+      registry.register("search", createPgSearchAdapter());
+      return registry;
+    })(),
     logger: console as any,
   };
 
