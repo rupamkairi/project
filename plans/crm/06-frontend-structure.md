@@ -1,0 +1,253 @@
+# CRM — Phase 6: Frontend Structure
+
+## Goal
+
+Define the CRM web compose package structure: routing tree, global layout,
+navigation manifest, API client (Eden Treaty), and shared stores.
+Everything lives in `composes/crm/web/`.
+
+---
+
+## 6.1 Package Layout
+
+```
+composes/crm/web/
+  package.json              @projectx/compose-crm-web
+  tsconfig.json
+  src/
+    index.ts                exports crmRoutes, crmManifest
+    routes/
+      index.ts              exports route tree
+      layout.tsx            CRM shell layout (sidebar + topbar)
+      dashboard.tsx         /crm
+      contacts/
+        index.tsx           /crm/contacts (list)
+        $id.tsx             /crm/contacts/:id (detail)
+        new.tsx             /crm/contacts/new
+      accounts/
+        index.tsx
+        $id.tsx
+        new.tsx
+      leads/
+        index.tsx
+        $id.tsx
+        new.tsx
+      deals/
+        index.tsx           /crm/deals (list view)
+        $id.tsx             /crm/deals/:id
+        new.tsx
+        pipeline.tsx        /crm/deals/pipeline (kanban view)
+      activities/
+        index.tsx
+        upcoming.tsx
+      pipelines/
+        index.tsx
+        $id.tsx
+      campaigns/
+        index.tsx
+        $id.tsx
+        new.tsx
+      segments/
+        index.tsx
+        $id.tsx
+        new.tsx
+      analytics/
+        index.tsx
+        pipeline.tsx
+        reps.tsx
+    components/
+      contact-card.tsx
+      deal-card.tsx
+      activity-timeline.tsx
+      kanban-board.tsx
+      kanban-column.tsx
+      lead-score-badge.tsx
+      segment-filter-builder.tsx
+      campaign-stats.tsx
+      import-modal.tsx
+      deal-form.tsx
+      contact-form.tsx
+      activity-form.tsx
+    hooks/
+      use-crm-contacts.ts
+      use-crm-deals.ts
+      use-crm-activities.ts
+      use-crm-search.ts
+      use-pipeline.ts
+    stores/
+      crm.store.ts           Zustand: selected pipeline, active filters, search state
+    lib/
+      api.ts                 Eden Treaty typed client
+```
+
+---
+
+## 6.2 Route Tree
+
+TanStack Router conventions. All CRM routes nested under `/crm` layout.
+
+```typescript
+// composes/crm/web/src/routes/index.ts
+import { createRoute } from "@tanstack/react-router";
+import { rootRoute } from "@projectx/router";
+
+export const crmLayoutRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/crm",
+  component: CrmLayout,
+});
+
+export const crmRoutes = [
+  crmLayoutRoute.addChildren([
+    dashboardRoute,         // /crm
+    contactsRoute,          // /crm/contacts
+    contactDetailRoute,     // /crm/contacts/:id
+    contactNewRoute,        // /crm/contacts/new
+    accountsRoute,
+    accountDetailRoute,
+    leadsRoute,
+    leadDetailRoute,
+    dealsListRoute,         // /crm/deals
+    dealsPipelineRoute,     // /crm/deals/pipeline
+    dealDetailRoute,        // /crm/deals/:id
+    activitiesRoute,
+    activitiesUpcomingRoute,
+    pipelinesRoute,
+    pipelineDetailRoute,
+    campaignsRoute,
+    campaignDetailRoute,
+    segmentsRoute,
+    analyticsRoute,
+    analyticsPipelineRoute,
+    analyticsRepsRoute,
+  ]),
+];
+```
+
+---
+
+## 6.3 CRM Layout Component
+
+File: `composes/crm/web/src/routes/layout.tsx`
+
+```tsx
+export function CrmLayout() {
+  return (
+    <div className="flex h-screen">
+      <CrmSidebar />
+      <main className="flex-1 overflow-auto">
+        <CrmTopbar />
+        <div className="p-6">
+          <Outlet />
+        </div>
+      </main>
+    </div>
+  );
+}
+```
+
+### Sidebar navigation items
+
+```typescript
+const NAV_ITEMS = [
+  { label: "Dashboard",   icon: "LayoutDashboard", to: "/crm" },
+  { label: "Contacts",    icon: "Users",           to: "/crm/contacts" },
+  { label: "Accounts",    icon: "Building2",       to: "/crm/accounts" },
+  { label: "Leads",       icon: "UserPlus",        to: "/crm/leads" },
+  { label: "Deals",       icon: "TrendingUp",      to: "/crm/deals" },
+  { label: "Activities",  icon: "Calendar",        to: "/crm/activities" },
+  { label: "Campaigns",   icon: "Megaphone",       to: "/crm/campaigns" },
+  { label: "Analytics",   icon: "BarChart2",       to: "/crm/analytics", roles: ["crm:admin", "crm:sales-manager"] },
+];
+```
+
+---
+
+## 6.4 API Client
+
+File: `composes/crm/web/src/lib/api.ts`
+
+Uses Elysia Eden Treaty for end-to-end type safety:
+
+```typescript
+import { treaty } from "@elysiajs/eden";
+import type { CrmApp } from "@projectx/compose-crm-server";
+
+export const crmApi = treaty<CrmApp>(window.location.origin);
+
+// Usage:
+const { data: contacts } = await crmApi.crm.contacts.get({ query: { page: 1 } });
+const { data: deal } = await crmApi.crm.deals({ id: "deal-123" }).get();
+```
+
+Combined with TanStack Query for caching:
+
+```typescript
+// hooks/use-crm-contacts.ts
+export function useCrmContacts(filters: ContactFilters) {
+  return useQuery({
+    queryKey: ["crm", "contacts", filters],
+    queryFn: () => crmApi.crm.contacts.get({ query: filters }),
+  });
+}
+```
+
+---
+
+## 6.5 Zustand Store
+
+File: `composes/crm/web/src/stores/crm.store.ts`
+
+```typescript
+interface CrmStore {
+  // Pipeline view
+  activePipelineId: string | null;
+  setActivePipeline: (id: string) => void;
+
+  // Deals view mode
+  dealsViewMode: "list" | "kanban";
+  setDealsViewMode: (mode: "list" | "kanban") => void;
+
+  // Global search
+  searchQuery: string;
+  setSearchQuery: (q: string) => void;
+
+  // Active filters (per-view, persisted in URL search params)
+  contactFilters: ContactFilters;
+  dealFilters: DealFilters;
+  setContactFilters: (f: Partial<ContactFilters>) => void;
+  setDealFilters: (f: Partial<DealFilters>) => void;
+}
+```
+
+---
+
+## 6.6 CRM Manifest
+
+```typescript
+export const crmManifest = {
+  id: "crm",
+  label: "CRM",
+  icon: "Users",
+  baseRoute: "/crm",
+  description: "Customer relationship management",
+  requiredRoles: ["crm:admin", "crm:sales-manager", "crm:sales-rep", "crm:viewer"],
+  navItems: NAV_ITEMS,
+};
+```
+
+---
+
+## 6.7 Design System Usage
+
+Follow `docs/design-system.md` — zinc palette, shadcn/ui.
+
+Key components from `@projectx/ui` used in CRM:
+- `DataTable` — contacts list, deals list, activities feed
+- `Sheet` — slide-in detail panels (contact detail, deal detail)
+- `Dialog` — create/edit forms
+- `Command` — global search (CMD+K)
+- `Badge` — lead score, deal status, campaign status
+- `KanbanBoard` — deals pipeline view (custom component)
+- `Avatar` + `AvatarGroup` — deal contacts, team members
+- `Timeline` — activity timeline on detail pages
