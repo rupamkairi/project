@@ -15,20 +15,43 @@ Full plan: `plans/ecommerce/00-index.md` (read this for phase ordering).
 
 ## Phase Execution Order
 
+### Backend + Shell
+
 1. `01-foundation.md` — scaffolding, packages, permissions, DB seed. **Must complete first.**
-2. `02-entities.md` — DB schema (12 tables). Complete before routes.
+2. `02-entities.md` — DB schema (15 tables). Complete before routes.
 3. `03-backend-checkout.md` — checkout saga (payment + inventory compensation).
 4. `04-backend-admin-api.md` — admin REST routes.
 5. `05-backend-store-api.md` — store (customer-facing) REST routes.
 6. `06-backend-logic.md` — FSMs, jobs, rules, analytics.
 7. `07-plugins.md` — plugin wiring (payment, tax, fulfillment, notification).
 8. `08-frontend-structure.md` — two web packages (admin + storefront), route trees, stores.
-9. `09-frontend-admin.md` — 12 admin pages.
+9. `09-frontend-admin.md` — all admin pages.
 10. `10-frontend-storefront.md` — storefront pages (home, PLP, PDP, cart, checkout, account, auth).
-11. `11-shell-integration.md` — **FINAL phase.** Wire both web packages + server into shells. PaymentAdapter boot. DB migration. Seed. Verify.
+11. `11-shell-integration.md` — **integration gate.** Wire both web packages + server into shells. PaymentAdapter boot. DB migration. Seed. Verify.
 
 Do not skip phases. Complete Phase N before Phase N+1.
 **Phase 11 is the integration gate — nothing is live until this phase completes.**
+
+### Web UI Detail (read after Phase 11)
+
+Component-level implementation specs. Read `12-web-overview.md` first.
+
+12. `12-web-overview.md` — pain points, design rules, file change manifest (admin + storefront).
+13. `13-web-foundation.md` — admin NavBar + AuthGuard + `EcommerceAdminApiClient`; storefront header + `CartDrawer` + `EcommerceStoreApiClient`; Zustand cart + customer stores.
+14. `14-web-admin-products-categories.md` — Products list/detail/variants, categories.
+15. `15-web-admin-orders-fulfillment.md` — Orders list/detail, fulfillment queue, returns.
+16. `16-web-admin-customers-analytics.md` — Customers, analytics dashboard, settings.
+17. `17-web-storefront-home-catalog.md` — Home, PLP, PDP, `ProductCard`, `VariantSelector`, search.
+18. `18-web-storefront-cart-checkout.md` — `CartDrawer`, cart page, 4-step checkout wizard.
+19. `19-web-storefront-account.md` — Customer auth (login/register/forgot), account, orders, returns, addresses.
+
+### Operations Reference (read before starting)
+
+**Read `22-missed-integrations.md` before Phase 1.** It lists all known pitfalls.
+
+20. `20-data-seeding.md` — DB push process, eco dev users, region/tax/shipping seed, sample products, setup order.
+21. `21-compose-credentials-integration.md` — ports, env vars, Stripe keys, admin vs customer token flow, two Vite aliases, server registration.
+22. `22-missed-integrations.md` — all pitfalls with causes + fixes + quick checklist.
 
 ---
 
