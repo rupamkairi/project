@@ -15,6 +15,8 @@ Full plan: `plans/crm/00-index.md` (read this for phase ordering).
 
 ## Phase Execution Order
 
+### Backend
+
 1. `01-foundation.md` — scaffolding, packages, DB seed. **Must complete before any other phase.**
 2. `02-entities.md` — DB schema. Complete before routes.
 3. `03-backend-api.md` — REST routes.
@@ -23,10 +25,23 @@ Full plan: `plans/crm/00-index.md` (read this for phase ordering).
 6. `06-frontend-structure.md` — web package layout, route tree, API client, Zustand stores.
 7. `07-frontend-pages.md` — all 13 pages.
 8. `08-frontend-components.md` — reusable CRM-specific components.
-9. `09-shell-integration.md` — **FINAL phase.** Wire into server + web shell. Run migration. Verify.
+9. `09-shell-integration.md` — **integration gate.** Wire into server + web shell. Run migration. Verify.
 
 Do not skip phases. Do not start Phase N before Phase N-1 is fully complete.
 **Phase 9 is the integration gate — nothing is live until this phase completes.**
+
+### Web UI Implementation Detail (read after Phase 9)
+
+These plans provide component-level specs for the full web layer rebuild.
+Read `10-web-overview.md` first — it maps pain points and all changed files.
+Then execute phases 11–15 in order.
+
+10. `10-web-overview.md` — pain points, design rules, full file change manifest.
+11. `11-web-foundation.md` — layout shell (NavBar + AuthGuard), `CrmApiClient` class, Tailwind `@source`, store rewire.
+12. `12-web-contacts-accounts-leads.md` — Contacts, Accounts, Leads list + detail pages.
+13. `13-web-deals.md` — Deals kanban + list toggle, deal card, stage move dialogs.
+14. `14-web-activities-campaigns-segments.md` — Activities, Campaigns, Segments pages.
+15. `15-web-dashboard.md` — Dashboard KPI cards, activity feed, pipeline snapshot.
 
 ---
 
@@ -40,7 +55,7 @@ Do not skip phases. Do not start Phase N before Phase N-1 is fully complete.
 | Server path | `composes/crm/server/` |
 | Web path | `composes/crm/web/` |
 | Elysia prefix | `/crm` |
-| Export fn | `createCrmCompose(mediator)` |
+| Export fn | `createCrmCompose(mediator, bus)` |
 | Export type | `CrmApp` |
 | Manifest export | `crmManifest` |
 | DB table prefix | `crm_` |
@@ -145,7 +160,7 @@ Two files need updating in `apps/server/`:
 **`src/index.ts`** — add after platform compose:
 ```typescript
 const { createCrmCompose } = await import("@projectx/crm-server");
-const crmCompose = createCrmCompose(mediator);
+const crmCompose = createCrmCompose(mediator, bus);
 app = app.use(crmCompose);
 ```
 
