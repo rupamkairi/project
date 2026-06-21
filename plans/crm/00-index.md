@@ -44,6 +44,16 @@ Detailed implementation plans for the web layer — component-level specs, dialo
 | [14-web-activities-campaigns-segments.md](./14-web-activities-campaigns-segments.md) | Activities log, Campaigns list + detail, Segments list + detail |
 | [15-web-dashboard.md](./15-web-dashboard.md) | Dashboard KPI cards, activity feed, pipeline snapshot widget |
 
+### Operations & Integration Reference (Phases 16–18)
+
+Operational runbooks discovered during implementation. Reuse for every new compose.
+
+| File | Scope |
+|------|-------|
+| [16-data-seeding.md](./16-data-seeding.md) | DB push process, CRM dev users seed, default pipeline seed, full setup order, edge cases |
+| [17-compose-credentials-integration.md](./17-compose-credentials-integration.md) | Port architecture, `VITE_API_URL`, auth token flow, login card credentials, Vite aliases, server registration |
+| [18-missed-integrations.md](./18-missed-integrations.md) | All integration pitfalls: mediator.dispatch vs send, onError scope, absolute URLs, generatePrefixedId, TTY prompt, checklist |
+
 ---
 
 ## Phase Overview
@@ -64,6 +74,9 @@ Phase 12 — Web Contacts/Accts  Contacts, Accounts, Leads list + detail — ful
 Phase 13 — Web Deals           Kanban + list toggle, deal cards, stage move, dialogs
 Phase 14 — Web Activities/Seg  Activities log, Campaigns, Segments pages
 Phase 15 — Web Dashboard       KPI cards, activity feed, pipeline snapshot
+Phase 16 — Data Seeding        DB push, CRM dev users, pipeline seed, full setup order
+Phase 17 — Credentials Config  VITE_API_URL, auth token flow, login card, Vite aliases
+Phase 18 — Missed Integrations All pitfalls + quick checklist for new composes
 ```
 
 ---

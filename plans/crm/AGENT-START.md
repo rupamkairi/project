@@ -43,6 +43,14 @@ Then execute phases 11–15 in order.
 14. `14-web-activities-campaigns-segments.md` — Activities, Campaigns, Segments pages.
 15. `15-web-dashboard.md` — Dashboard KPI cards, activity feed, pipeline snapshot.
 
+### Operations & Integration Reference (read before/during implementation)
+
+These are runbooks discovered during CRM implementation. **Read 18 before starting any new compose.**
+
+16. `16-data-seeding.md` — DB push process, CRM dev users, pipeline seed, full local setup order.
+17. `17-compose-credentials-integration.md` — `VITE_API_URL`, ports, auth token flow, login card, Vite/tsconfig aliases.
+18. `18-missed-integrations.md` — All pitfalls with causes + fixes. Includes a quick checklist at the end.
+
 ---
 
 ## Compose Identity
@@ -55,7 +63,7 @@ Then execute phases 11–15 in order.
 | Server path | `composes/crm/server/` |
 | Web path | `composes/crm/web/` |
 | Elysia prefix | `/crm` |
-| Export fn | `createCrmCompose(mediator, bus)` |
+| Export fn | `createCrmCompose(mediator, bus, scheduler)` |
 | Export type | `CrmApp` |
 | Manifest export | `crmManifest` |
 | DB table prefix | `crm_` |
@@ -160,7 +168,7 @@ Two files need updating in `apps/server/`:
 **`src/index.ts`** — add after platform compose:
 ```typescript
 const { createCrmCompose } = await import("@projectx/crm-server");
-const crmCompose = createCrmCompose(mediator, bus);
+const crmCompose = createCrmCompose(mediator, bus, bootRegistry.scheduler);
 app = app.use(crmCompose);
 ```
 
