@@ -32,6 +32,11 @@ import { DocumentModule } from "./modules/document";
 import { NotificationModule } from "./modules/notification";
 import { GeoModule } from "./modules/geo";
 import { AnalyticsModule } from "./modules/analytics";
+import { PartyModule } from "./modules/party";
+import { LocationModule } from "./modules/location";
+import { PipelineModule } from "./modules/pipeline";
+import { CommerceModule } from "./modules/commerce";
+import { ActivityModule } from "./modules/activity";
 import { CoreError, getHttpStatus } from "@core";
 import { createPgSearchAdapter } from "./infra/search";
 
@@ -278,6 +283,36 @@ const dbSchemas = [
     filePath: "./infra/db/schema/analytics",
   },
   {
+    id: "party",
+    name: "Party",
+    tables: ["persons", "parties"],
+    filePath: "./infra/db/schema/party",
+  },
+  {
+    id: "location",
+    name: "Location",
+    tables: ["locations"],
+    filePath: "./infra/db/schema/location",
+  },
+  {
+    id: "pipeline",
+    name: "Pipeline",
+    tables: ["pipelines", "pipeline_stages"],
+    filePath: "./infra/db/schema/pipeline",
+  },
+  {
+    id: "commerce",
+    name: "Commerce",
+    tables: ["transactions", "transaction_lines"],
+    filePath: "./infra/db/schema/commerce",
+  },
+  {
+    id: "activity",
+    name: "Activity",
+    tables: ["activities"],
+    filePath: "./infra/db/schema/activity",
+  },
+  {
     id: "events",
     name: "Events",
     tables: ["domain_events"],
@@ -309,6 +344,11 @@ const moduleLayers = [
   NotificationModule,
   GeoModule,
   AnalyticsModule,
+  PartyModule,
+  LocationModule,
+  PipelineModule,
+  CommerceModule,
+  ActivityModule,
 ];
 
 async function main() {

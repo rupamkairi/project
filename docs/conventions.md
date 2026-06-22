@@ -137,6 +137,24 @@ export const crmDeal = pgTable("crm_deals", { ... })
 | `erpPurchaseOrder` | `erp_purchase_orders` |
 | `pltSettings` | `plt_settings` (already plural concept) |
 
+### Foundation master tables — unprefixed
+
+Tables owned by **foundation modules** (`identity`, `party`, `location`, `pipeline`, `commerce`,
+`activity`) are universal master tables shared by every compose. They are **unprefixed and plural** —
+both the Drizzle object and the SQL table.
+
+| Drizzle object | SQL table |
+|----------------|-----------|
+| `persons` | `persons` |
+| `parties` | `parties` |
+| `locations` | `locations` |
+| `transactions` | `transactions` |
+| `pipelineStages` | `pipeline_stages` |
+
+This matches the existing `identity` precedent (`actors`, `organizations`, `roles`, `sessions`). Everything
+else — feature-module tables and compose **detail** tables — keeps the 3-letter prefix. See
+[master-tables.md](./master-tables.md).
+
 ---
 
 ## 8. Package Names

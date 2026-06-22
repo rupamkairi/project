@@ -2,6 +2,12 @@
 
 All planned and implemented composes. Each compose is a full-stack application layer built by orchestrating Core modules.
 
+> **Note:** Per-compose data models now assume the [Master Table Architecture](../master-tables.md).
+> Composes consume the foundation masters (`persons`, `parties`, `locations`, `pipelines`,
+> `transactions`, `activities`, `cat_items`, `geo_addresses`) and add only their own detail tables.
+> The "Modules Used" column below also implies the foundation modules (`party`, `location`, `pipeline`,
+> `commerce`, `activity`) wherever a compose needs people, places, status flows, documents, or logs.
+
 ---
 
 ## Status

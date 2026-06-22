@@ -43,6 +43,19 @@ modules/
 
 ## Standard Module Catalog
 
+Modules split into two kinds:
+
+- **Feature modules** own a bounded domain capability and use a prefixed table namespace
+  (`cat_*`, `inv_*`, `geo_*`). `identity` is the exception — its tables are foundational and unprefixed.
+- **Foundation modules** own the generic **master tables** every compose extends. Their tables are
+  **unprefixed** (`persons`, `transactions`) because they are universal, not owned by any feature or
+  compose. See [master-tables.md](./master-tables.md).
+
+| Kind | Modules |
+|------|---------|
+| Feature | `identity` · `catalog` · `inventory` · `ledger` · `workflow` · `scheduling` · `document` · `notification` · `geo` · `analytics` |
+| Foundation | `party` · `location` · `pipeline` · `commerce` · `activity` |
+
 ---
 
 ### `identity` Module
@@ -617,6 +630,70 @@ analytics.snapshot-metrics    (hourly)     → persists point-in-time metric val
 analytics.generate-reports    (nightly)    → pre-builds scheduled reports
 analytics.rebuild-views       (weekly)     → full materialized view refresh
 ```
+
+---
+
+## Foundation Modules (Master Tables)
+
+These own the generic master tables every compose extends. Tables are unprefixed. Full spec:
+[master-tables.md](./master-tables.md).
+
+### `party` Module
+
+**Owns:** Person, Party (external people and organizations a tenant manages)
+
+| Entity | Table | Key Fields |
+|--------|-------|------------|
+| Person | `persons` | type, firstName, lastName, email, phone, source, partyId, actorId |
+| Party | `parties` | type, name, domain, industry, employeeCount |
+
+`actors` stays auth-only; a person links to an actor via `actorId` only when they log in. `organizations`
+is the tenant boundary; `parties` are organizations a tenant manages, never tenants.
+
+### `location` Module
+
+**Owns:** Location (cross-domain places, hierarchical)
+
+| Entity | Table | Key Fields |
+|--------|-------|------------|
+| Location | `locations` | type, name, code, capacity, parentId, addressId, status |
+
+Covers outlets, tables, rooms, warehouses, wards, beds, buildings, floors. `inv_locations` stays
+inventory-specific.
+
+### `pipeline` Module
+
+**Owns:** Pipeline, PipelineStage (generic status flows)
+
+| Entity | Table | Key Fields |
+|--------|-------|------------|
+| Pipeline | `pipelines` | entityType, name, isDefault |
+| PipelineStage | `pipeline_stages` | pipelineId, name, position, meta(probability/rotPeriod/color) |
+
+Stages are stored here; movement is enforced by the Core FSM primitive. Composes seed their own pipelines
+and register matching FSMs.
+
+### `commerce` Module
+
+**Owns:** Transaction, TransactionLine (financial documents)
+
+| Entity | Table | Key Fields |
+|--------|-------|------------|
+| Transaction | `transactions` | type, referenceNo, personId, partyId, stageId, total, tax |
+| TransactionLine | `transaction_lines` | transactionId, itemId, description, qty, unitPrice, taxRate, lineTotal |
+
+Covers orders, invoices, purchase/sales orders, bills, folios, quotes, receipts.
+
+### `activity` Module
+
+**Owns:** Activity (interaction log)
+
+| Entity | Table | Key Fields |
+|--------|-------|------------|
+| Activity | `activities` | type, subject, body, status, actorId, entityId, entityType, dueAt, completedAt |
+
+`entityId` + `entityType` is a polymorphic target (no DB FK by design). Covers calls, emails, notes,
+tasks, service requests, EMR visit notes, approval comments.
 
 ---
 

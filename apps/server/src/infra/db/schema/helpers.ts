@@ -22,11 +22,11 @@ export const baseColumns = {
 
 export type BaseColumns = typeof baseColumns;
 
-export function moneyColumns(prefix: string) {
+export function moneyColumns<T extends string>(prefix: T): MoneyColumns<T> {
   return {
     [`${prefix}Amount`]: integer(`${prefix}_amount`).notNull(),
     [`${prefix}Currency`]: text(`${prefix}_currency`).notNull(),
-  };
+  } as MoneyColumns<T>;
 }
 
 export type MoneyColumns<T extends string> = {

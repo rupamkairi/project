@@ -11,7 +11,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { baseColumns } from "./helpers";
 
-export const locationTypeEnum = pgEnum("inv_location_type", [
+export const invLocationTypeEnum = pgEnum("inv_location_type", [
   "warehouse",
   "store",
   "shelf",
@@ -23,7 +23,7 @@ export const invLocations = pgTable(
   {
     ...baseColumns,
     name: text("name").notNull(),
-    type: locationTypeEnum("type").notNull().default("warehouse"),
+    type: invLocationTypeEnum("type").notNull().default("warehouse"),
     address: jsonb("address"),
     isDefault: boolean("is_default").notNull().default(false),
   },

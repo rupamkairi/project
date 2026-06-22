@@ -20,7 +20,7 @@ Non-negotiable. Apply to all work regardless of scope.
 - Communicates with other modules only through EventBus and CQRS Mediator
 - Never imports from another module's internals
 - Never accesses another module's database tables directly
-- Owns its own DB namespace (table prefix = module name)
+- Owns its own DB namespace (table prefix = module name; foundation modules own unprefixed master tables — see [master-tables.md](../master-tables.md))
 
 ---
 
@@ -29,6 +29,7 @@ Non-negotiable. Apply to all work regardless of scope.
 - Orchestration only — selects modules, wires cross-module behavior, defines roles/permissions/routes
 - May call modules only through their public interfaces
 - Never imports from another compose
+- Consumes master tables (read/write) via `@db/client`; never duplicates a master concept as a new compose table — extends with detail tables instead ([master-tables.md](../master-tables.md))
 - If logic is reusable across multiple composes → move it to a Module or Core primitive
 - Must export `{name}Compose` (Elysia plugin) and `{name}Manifest` (ComposeManifest) per the shell contract
 

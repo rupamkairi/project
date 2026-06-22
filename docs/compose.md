@@ -28,7 +28,7 @@ A Compose is **not**:
 
 Anything tied to one specific application type:
 
-- Application-specific aggregates: `Course`, `Enrollment` (LMS) / `Order`, `Cart` (Ecommerce) / `Project`, `Milestone` (PM)
+- Application-specific **detail tables** that extend master tables: `crm_deals`, `lms_modules`, `eco_cart`. A "customer" is a `persons` row, an "order" is a `transactions` row — not new tables. See [master-tables.md](./master-tables.md).
 - Role definitions and permission matrices for this application
 - Navigation structure, dashboard shells, widget catalog
 - Notification templates specific to this application
@@ -53,6 +53,44 @@ Move something out of a Compose and into a Module when it becomes:
 - Reusable in two or more Composes
 - A bounded capability with its own stable commands, queries, and events
 - Independent of one application's route structure and UX
+
+---
+
+## Extending master tables
+
+A compose never defines its own `contacts`, `accounts`, or `orders`. The foundation modules already own
+the generic masters (`persons`, `parties`, `locations`, `pipelines`, `transactions`, `activities`, plus
+`cat_items` and `geo_addresses`). A compose:
+
+1. **Seeds** its pipelines (and registers matching FSMs), item types, location types, and party/person
+   types from its own `db/seed/`. Use `seedPipeline(orgId, entityType, stages)`.
+2. **Reads** masters filtered by `organizationId` + `type`.
+3. **Adds** detail tables only for columns it genuinely owns, linking masters via plain id columns.
+
+```typescript
+// Read CRM contacts = persons filtered by type
+const contacts = await db
+  .select()
+  .from(persons)
+  .where(and(eq(persons.organizationId, orgId), inArray(persons.type, ["contact", "lead"])));
+
+// Detail table links several masters via plain id columns (no references())
+export const crmDeals = pgTable(
+  "crm_deals",
+  {
+    ...baseColumns,
+    personId: text("person_id"), // → persons
+    partyId: text("party_id"),   // → parties
+    stageId: text("stage_id"),   // → pipeline_stages
+    itemId: text("item_id"),     // → cat_items
+    probability: integer("probability"),
+    expectedCloseDate: timestamp("expected_close_date"),
+  },
+  (t) => [index("crm_deals_org_stage_idx").on(t.organizationId, t.stageId)],
+);
+```
+
+Full spec and cardinality rules: [master-tables.md](./master-tables.md).
 
 ---
 

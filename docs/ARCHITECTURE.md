@@ -103,11 +103,25 @@ Platform compose is required in any deployment that uses the auth plugin's `Loca
 
 ## Module catalog
 
-10 standard modules, all reusable across any compose:
+15 standard modules, all reusable across any compose:
 
-`identity` · `catalog` · `inventory` · `ledger` · `workflow` · `scheduling` · `document` · `notification` · `geo` · `analytics`
+**Feature modules** — `identity` · `catalog` · `inventory` · `ledger` · `workflow` · `scheduling` · `document` · `notification` · `geo` · `analytics`
+
+**Foundation modules** — own the generic master tables every compose extends: `party` · `location` · `pipeline` · `commerce` · `activity`
 
 → Full reference: [module.md](./module.md)
+
+---
+
+## Master Table Architecture
+
+Composes do **not** define their own `contacts`, `accounts`, or `orders`. A small set of generic,
+type-discriminated **master tables** (in the foundation modules above, plus `cat_items` and
+`geo_addresses`) form a shared substrate. Each compose adds only thin **detail tables** that link masters
+via plain id columns. This drops a compose from ~12 tables to ~3–5 and makes cross-compose reporting a
+single query.
+
+→ Full spec: [master-tables.md](./master-tables.md)
 
 ---
 

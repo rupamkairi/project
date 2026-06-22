@@ -1,8 +1,8 @@
 // Platform API client using Eden Treaty patterns
 // This connects to the server's platform compose routes
 
-const API_BASE =
-  (import.meta.env.VITE_API_URL || "http://localhost:3000") + "/platform";
+const SERVER_ROOT = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const API_BASE = SERVER_ROOT + "/platform";
 
 interface ApiResponse<T> {
   data?: T;
@@ -397,6 +397,76 @@ class ApiClient {
     return this.request<{ url: string }>(
       `/plugin-storage/files/${fileId}/download`,
     );
+  }
+
+  // --- System overview ------------------------------------------------------
+
+  private async rootRequest<T>(endpoint: string): Promise<ApiResponse<T>> {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (this.token) headers.Authorization = `Bearer ${this.token}`;
+    try {
+      const response = await fetch(`${SERVER_ROOT}${endpoint}`, { headers });
+      const data = await response.json();
+      if (!response.ok) return { error: data.error || "Request failed" };
+      return { data };
+    } catch {
+      return { error: "Network error" };
+    }
+  }
+
+  async getOverview() {
+    return this.request<{
+      counts: {
+        persons: number;
+        parties: number;
+        locations: number;
+        transactions: number;
+        pipelines: number;
+        activities: number;
+      };
+    }>("/overview");
+  }
+
+  // Shell-root introspection endpoints (not under /platform)
+  async getModules() {
+    return this.rootRequest<{ modules: any[] }>("/modules");
+  }
+
+  async getSchemas() {
+    return this.rootRequest<{ schemas: any[] }>("/schemas");
+  }
+
+  async getHealth() {
+    return this.rootRequest<{ status: string; [k: string]: any }>("/health");
+  }
+
+  // --- Master table lists ---------------------------------------------------
+
+  private async getMaster(resource: string, params?: { page?: number; limit?: number; type?: string }) {
+    const query = new URLSearchParams();
+    if (params?.page) query.set("page", String(params.page));
+    if (params?.limit) query.set("limit", String(params.limit));
+    if (params?.type) query.set("type", params.type);
+    return this.request<{ data: any[]; pagination: any }>(`/${resource}?${query}`);
+  }
+
+  getPersons(params?: { page?: number; limit?: number; type?: string }) {
+    return this.getMaster("persons", params);
+  }
+  getParties(params?: { page?: number; limit?: number; type?: string }) {
+    return this.getMaster("parties", params);
+  }
+  getLocations(params?: { page?: number; limit?: number; type?: string }) {
+    return this.getMaster("locations", params);
+  }
+  getTransactions(params?: { page?: number; limit?: number; type?: string }) {
+    return this.getMaster("transactions", params);
+  }
+  getPipelines(params?: { page?: number; limit?: number; type?: string }) {
+    return this.getMaster("pipelines", params);
+  }
+  getActivities(params?: { page?: number; limit?: number; type?: string }) {
+    return this.getMaster("activities", params);
   }
 }
 

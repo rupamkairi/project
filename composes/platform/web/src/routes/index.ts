@@ -4,6 +4,8 @@
 import { Route as loginRoute } from "./auth/login";
 import { Route as dashboardLayoutRoute } from "./dashboard.layout";
 import { Route as dashboardIndexRoute } from "./dashboard.index";
+import { Route as dashboardOverviewRoute } from "./dashboard.overview";
+import { masterRoutes } from "./dashboard.masters";
 import { Route as dashboardUsersRoute } from "./dashboard.users";
 import { Route as dashboardRolesRoute } from "./dashboard.roles";
 import { Route as dashboardInvitesRoute } from "./dashboard.invites";
@@ -16,6 +18,8 @@ export const platformRoutes = [
   loginRoute,
   dashboardLayoutRoute.addChildren([
     dashboardIndexRoute,
+    dashboardOverviewRoute,
+    ...masterRoutes,
     dashboardUsersRoute,
     dashboardRolesRoute,
     dashboardInvitesRoute,
@@ -29,6 +33,7 @@ export {
   loginRoute,
   dashboardLayoutRoute,
   dashboardIndexRoute,
+  dashboardOverviewRoute,
   dashboardUsersRoute,
   dashboardRolesRoute,
   dashboardInvitesRoute,

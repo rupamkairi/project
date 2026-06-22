@@ -10,6 +10,7 @@ Architecture: `Core → Module → Compose → Host Shell`
 | I want to... | Read... |
 |---|---|
 | Understand the overall architecture | [ARCHITECTURE.md](./ARCHITECTURE.md) |
+| Understand the shared data model (master/detail tables) | [master-tables.md](./master-tables.md) |
 | Build a new compose | [compose.md](./compose.md) |
 | Add or modify a module | [module.md](./module.md) |
 | Work on core primitives | [core.md](./core.md) |
@@ -32,6 +33,7 @@ Architecture: `Core → Module → Compose → Host Shell`
 | File | Covers |
 |---|---|
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | Three-layer overview, dep direction, compose & module catalog |
+| [master-tables.md](./master-tables.md) | Master/detail table pattern, foundation modules, compose extension contract |
 | [core.md](./core.md) | Core primitives: Entity, Event, CQRS, FSM, Repository, Queue, Realtime |
 | [module.md](./module.md) | Module anatomy, directory structure, public interface contract |
 | [compose.md](./compose.md) | Compose standards, integration contract, manifest requirements |

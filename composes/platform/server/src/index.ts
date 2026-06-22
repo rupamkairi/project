@@ -8,6 +8,8 @@ import { createRoleRoutes } from "./routes/roles.js";
 import { notificationRoutes } from "./routes/notifications.js";
 import { settingsRoutes } from "./routes/settings.js";
 import { createInviteRoutes } from "./routes/invites.js";
+import { createOverviewRoutes } from "./routes/overview.js";
+import { createMastersRoutes } from "./routes/masters.js";
 import { createNotificationPlugin } from "@projectx/plugin-notification-server";
 import { createStoragePlugin } from "@projectx/plugin-storage-server";
 
@@ -143,6 +145,8 @@ export function createPlatformCompose(mediator: Mediator) {
     .use(createUserRoutes(mediator))
     .use(createRoleRoutes(mediator))
     .use(createInviteRoutes())
+    .use(createOverviewRoutes(mediator))
+    .use(createMastersRoutes(mediator))
     .use(notificationRoutes)
     .use(settingsRoutes)
     .use(storagePlugin.plugin as any)

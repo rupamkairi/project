@@ -15,7 +15,13 @@ import {
 } from "@projectx/ui"
 import {
   LayoutDashboard,
+  Gauge,
   Users,
+  Building2,
+  MapPin,
+  Receipt,
+  GitBranch,
+  Activity as ActivityIcon,
   Shield,
   Mail,
   Bell,
@@ -37,6 +43,13 @@ export const Route = createRoute({
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, exact: true },
+  { label: "Overview", href: "/dashboard/overview", icon: Gauge },
+  { label: "Persons", href: "/dashboard/persons", icon: Users },
+  { label: "Parties", href: "/dashboard/parties", icon: Building2 },
+  { label: "Locations", href: "/dashboard/locations", icon: MapPin },
+  { label: "Transactions", href: "/dashboard/transactions", icon: Receipt },
+  { label: "Pipelines", href: "/dashboard/pipelines", icon: GitBranch },
+  { label: "Activities", href: "/dashboard/activities", icon: ActivityIcon },
   { label: "Users", href: "/dashboard/users", icon: Users },
   { label: "Roles", href: "/dashboard/roles", icon: Shield },
   { label: "Invites", href: "/dashboard/invites", icon: Mail },

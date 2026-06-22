@@ -17,6 +17,19 @@ export const itemStatusEnum = pgEnum("cat_item_status", [
   "archived",
 ]);
 
+// Type discriminator: cat_items is the shared "items" master across composes.
+export const itemTypeEnum = pgEnum("cat_item_type", [
+  "product",
+  "service",
+  "course",
+  "menu_item",
+  "room_type",
+  "asset",
+  "stock_item",
+  "drug",
+  "lab_test",
+]);
+
 export const catCategories = pgTable(
   "cat_categories",
   {
@@ -50,6 +63,7 @@ export const catItems = pgTable(
     ...baseColumns,
     name: text("name").notNull(),
     slug: text("slug").notNull(),
+    type: itemTypeEnum("type").notNull().default("product"),
     categoryId: text("category_id"),
     description: text("description"),
     attributes: jsonb("attributes").notNull().default("{}"),
@@ -60,6 +74,7 @@ export const catItems = pgTable(
   (table) => [
     uniqueIndex("cat_items_org_slug_idx").on(table.organizationId, table.slug),
     index("cat_items_org_status_idx").on(table.organizationId, table.status),
+    index("cat_items_org_type_idx").on(table.organizationId, table.type),
     index("cat_items_org_category_idx").on(
       table.organizationId,
       table.categoryId,

@@ -4,6 +4,12 @@ export * from "./outbox";
 export * from "./identity";
 export * from "./catalog";
 export * from "./inventory";
+// Foundation master tables (unprefixed, cross-compose — see docs/master-tables.md)
+export * from "./party";
+export * from "./location";
+export * from "./pipeline";
+export * from "./commerce";
+export * from "./activity";
 export * from "./ledger";
 export * from "./workflow";
 export * from "./scheduling";
