@@ -149,15 +149,15 @@ function validateOutletAcceptsOrders(outlet: Outlet, orderType: "dine-in" | "del
 When order item added, check both outlet and item:
 
 ```typescript
-async function validateOrderItem(menuItemId: string, qty: number, outletId: string): Promise<MenuItem> {
-  const item = await db.query.rstMenuItems.findFirst({
-    where: and(
-      eq(rstMenuItems.id, menuItemId),
-      eq(rstMenuItems.outletId, outletId)
-    ),
+async function validateOrderItem(menuItemId: string, qty: number, outletId: string, orgId: string): Promise<CatalogItem> {
+  // Menu items are cat_items (type=menu_item) — query via mediator
+  const item = await mediator.query({
+    type: "catalog.getItem",
+    payload: { itemId: menuItemId, organizationId: orgId },
   });
-  if (!item) throw new NotFoundError("MENU_ITEM_NOT_FOUND");
-  if (!item.isAvailable) throw new ConflictError("ITEM_UNAVAILABLE", `${item.name} is currently unavailable`);
+  if (!item || item.type !== "menu_item") throw new NotFoundError("MENU_ITEM_NOT_FOUND");
+  if (item.meta?.outletId !== outletId) throw new NotFoundError("MENU_ITEM_NOT_FOUND");
+  if (!item.meta?.isAvailable) throw new ConflictError("ITEM_UNAVAILABLE", `${item.name} is currently unavailable`);
   return item;
 }
 ```

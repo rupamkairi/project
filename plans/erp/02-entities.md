@@ -1,6 +1,9 @@
-# Phase 2 — Entities
+# Phase 2 — Entities (Master Table Architecture)
 
-All Drizzle table definitions. File: `composes/erp/server/src/db/schema/erp.ts`.
+All Drizzle table definitions for ERP-owned detail tables.
+File: `composes/erp/server/src/db/schema/erp.ts`.
+
+> **MTA Rule:** Do not define `erp_vendors`, `erp_customers`, `erp_employees`, `erp_items`, `erp_warehouses`, `erp_purchase_orders`, `erp_sales_orders`, `erp_quotations`, `erp_vendor_invoices`, `erp_sales_invoices`, or `erp_payment_vouchers` here. These are served from foundation master tables. Define only the tables below.
 
 Import pattern:
 ```typescript
@@ -10,263 +13,136 @@ import { generatePrefixedId } from "@core";
 
 ---
 
-## Procurement Tables
+## Master Tables (reused — do not define in ERP compose)
+
+These tables are owned by foundation modules. ERP reads them via mediator or direct Drizzle with type filters.
+
+### parties (vendor / customer)
+- `type: "vendor" | "customer" | "ngo" | "corporate"`
+- Fields: name, domain, industry, employeeCount, meta (jsonb for GSTIN, PAN, paymentTerms, bankDetails, creditLimit, rating)
+- ERP reads: `where type in ('vendor','customer') and organizationId = orgId`
+- Vendor create: `mediator.dispatch({ type: "party.createParty", data: { type: "vendor", organizationId, name, meta: { gstin, pan, currency, paymentTerms } } })`
+
+### persons (employee / vendor_contact)
+- `type: "employee" | "vendor_contact"`
+- Fields: firstName, lastName, email, phone, partyId (their company/employer)
+- Employee-specific fields in `meta` jsonb: `{ empNo, designation, departmentId, pfNo, esiNo, aadhaar, bankAccount, employmentType, joinDate }`
+- ERP reads: `where type = 'employee' and organizationId = orgId`
+
+### cat_items (products / materials / assets)
+- `type: "product" | "stock_item" | "asset" | "service"`
+- Fields: name, sku, unit, price, meta (jsonb for hsn, gstRate, valuationMethod, reorderQty, leadTimeDays)
+- ERP reads items filtered by type
+
+### locations (warehouses)
+- `type: "warehouse"`
+- Fields: name, code, capacity, parentId (for zones within warehouse)
+- Meta: `{ locationType: "store" | "transit" | "virtual", address }`
+
+### transactions + transaction_lines (PO / SO / invoice / quote / receipt)
+- `type: "purchase_order" | "sales_order" | "invoice" | "quote" | "receipt" | "payment"`
+- Fields: organizationId, refNo, partyId (parties.id — vendor/customer), personId (persons.id — contact), stageId (pipeline_stages.id), status, subtotal, taxAmount, total, currency, meta (jsonb)
+- `transaction_lines`: transactionId, itemId (cat_items.id), qty, unitPrice, taxRate, lineTotal, meta (jsonb for hsn, gstRate, cgst, sgst, igst)
+- Vendor invoices: `type = "invoice"`, `meta.direction = "inbound"`
+- Sales invoices: `type = "invoice"`, `meta.direction = "outbound"`
+
+### pipelines + pipeline_stages
+- `entityType: "erp.po" | "erp.so" | "erp.pr"`
+- Seed before use with `seedPipeline(orgId, "erp.po", [{ name: "Draft" }, ...])`
+- PO stages: Draft → Submitted → Approved → Issued → Received → Cancelled
+- SO stages: Draft → Confirmed → Fulfilling → Invoiced → Paid → Cancelled
+- PR stages: Draft → Submitted → Approved → Rejected
+
+### activities
+- `type: "log" | "task" | "note"`
+- Linked to vendors/employees/POs via entityId + entityType
+
+---
+
+## Detail Tables (ERP-owned, erp_ prefixed)
+
+### erp_purchase_requisitions
 
 ```typescript
-export const erpVendor = pgTable("erp_vendors", {
-  id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("vnd")),
-  orgId: text("org_id").notNull(),
-  name: text("name").notNull(),
-  code: text("code").notNull(),                     // VND-001
-  type: text("type").notNull(),                     // supplier | contractor | service-provider
-  status: text("status").notNull().default("pending-approval"),
-  gstin: text("gstin"),                             // India GSTIN (15 chars)
-  pan: text("pan"),                                 // India PAN (10 chars)
-  contactEmail: text("contact_email"),
-  contactPhone: text("contact_phone"),
-  currency: text("currency").notNull().default("INR"),
-  paymentTerms: text("payment_terms").default("NET30"),
-  bankDetails: jsonb("bank_details"),               // { accountNo, bankName, ifsc }
-  rating: numeric("rating", { precision: 3, scale: 2 }).default("0"),
-  addressId: text("address_id"),
-  approvedBy: text("approved_by"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
 export const erpPurchaseRequisition = pgTable("erp_purchase_requisitions", {
   id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("pr")),
-  orgId: text("org_id").notNull(),
-  refNo: text("ref_no").notNull(),                  // PR-2024-001
-  requestedBy: text("requested_by").notNull(),
-  department: text("department"),
-  status: text("status").notNull().default("draft"), // draft|submitted|approved|rejected|converted
+  organizationId: text("organization_id").notNull(),
+  refNo: text("ref_no").notNull(),                   // PR-2024-001
+  requestedById: text("requested_by_id").notNull(),  // persons.id (employee)
+  departmentId: text("department_id"),               // erp_departments.id
+  urgency: text("urgency").default("normal"),        // low | normal | high | urgent
   justification: text("justification"),
   requiredBy: timestamp("required_by"),
-  approvedBy: text("approved_by"),
+  stageId: text("stage_id"),                        // pipeline_stages.id (erp.pr pipeline)
+  status: text("status").notNull().default("draft"), // draft|submitted|approved|rejected|converted
+  approvedBy: text("approved_by"),                  // persons.id
   rejectedReason: text("rejected_reason"),
+  meta: jsonb("meta").default({}),                  // { budgetCode, projectCode }
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+```
 
+### erp_pr_items
+
+```typescript
 export const erpPrItem = pgTable("erp_pr_items", {
   id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("pri")),
-  prId: text("pr_id").notNull().references(() => erpPurchaseRequisition.id),
-  itemId: text("item_id").notNull(),
+  requisitionId: text("requisition_id").notNull().references(() => erpPurchaseRequisition.id),
+  itemId: text("item_id").notNull(),                 // cat_items.id
   qty: numeric("qty", { precision: 12, scale: 3 }).notNull(),
   uom: text("uom").notNull(),
-  estimatedUnitPrice: numeric("estimated_unit_price", { precision: 15, scale: 2 }),
-});
-
-export const erpPurchaseOrder = pgTable("erp_purchase_orders", {
-  id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("po")),
-  orgId: text("org_id").notNull(),
-  poNumber: text("po_number").notNull(),             // PO-2024-001
-  vendorId: text("vendor_id").notNull().references(() => erpVendor.id),
-  prId: text("pr_id"),                              // source PR (optional)
-  status: text("status").notNull().default("draft"),
-  expectedDeliveryDate: timestamp("expected_delivery_date"),
-  paymentTerms: text("payment_terms"),
-  subtotal: numeric("subtotal", { precision: 15, scale: 2 }).default("0"),
-  taxAmount: numeric("tax_amount", { precision: 15, scale: 2 }).default("0"),
-  total: numeric("total", { precision: 15, scale: 2 }).default("0"),
-  currency: text("currency").default("INR"),
-  billingAddress: jsonb("billing_address"),
-  deliveryAddress: jsonb("delivery_address"),
-  approvedBy: text("approved_by"),
-  approvedAt: timestamp("approved_at"),
+  estimatedUnitCost: numeric("estimated_unit_cost", { precision: 15, scale: 2 }),
+  preferredVendorId: text("preferred_vendor_id"),    // parties.id (type=vendor)
   notes: text("notes"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
 });
+```
 
-export const erpPoItem = pgTable("erp_po_items", {
-  id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("poi")),
-  poId: text("po_id").notNull().references(() => erpPurchaseOrder.id),
-  itemId: text("item_id").notNull(),
-  qty: numeric("qty", { precision: 12, scale: 3 }).notNull(),
-  receivedQty: numeric("received_qty", { precision: 12, scale: 3 }).default("0"),
-  uom: text("uom").notNull(),
-  unitPrice: numeric("unit_price", { precision: 15, scale: 2 }).notNull(),
-  discount: numeric("discount", { precision: 5, scale: 2 }).default("0"),
-  lineTotal: numeric("line_total", { precision: 15, scale: 2 }).notNull(),
-  hsn: text("hsn"),                                // HSN/SAC code
-  gstRate: numeric("gst_rate", { precision: 5, scale: 2 }).default("18"),
-});
+### erp_grns (Goods Receipt Notes)
 
-export const erpGoodsReceipt = pgTable("erp_goods_receipts", {
+```typescript
+export const erpGrn = pgTable("erp_grns", {
   id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("grn")),
-  orgId: text("org_id").notNull(),
+  organizationId: text("organization_id").notNull(),
   grnNumber: text("grn_number").notNull(),           // GRN-2024-001
-  poId: text("po_id").notNull().references(() => erpPurchaseOrder.id),
-  vendorId: text("vendor_id").notNull(),
-  warehouseId: text("warehouse_id").notNull(),
-  receivedBy: text("received_by").notNull(),
-  status: text("status").notNull().default("draft"),  // draft|confirmed|quality-passed|quality-failed
+  transactionId: text("transaction_id").notNull(),   // transactions.id (the PO)
+  locationId: text("location_id").notNull(),         // locations.id (warehouse)
+  receivedById: text("received_by_id").notNull(),    // persons.id (employee)
+  status: text("status").notNull().default("draft"), // draft|confirmed|quality-passed|quality-failed
   qualityNotes: text("quality_notes"),
   receivedAt: timestamp("received_at").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
 });
+```
 
-export const erpGrItem = pgTable("erp_gr_items", {
+### erp_grn_items
+
+```typescript
+export const erpGrnItem = pgTable("erp_grn_items", {
   id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("gri")),
-  grnId: text("grn_id").notNull().references(() => erpGoodsReceipt.id),
-  poItemId: text("po_item_id").notNull(),
-  itemId: text("item_id").notNull(),
-  orderedQty: numeric("ordered_qty", { precision: 12, scale: 3 }).notNull(),
-  receivedQty: numeric("received_qty", { precision: 12, scale: 3 }).notNull(),
-  acceptedQty: numeric("accepted_qty", { precision: 12, scale: 3 }).notNull(),
-  rejectedQty: numeric("rejected_qty", { precision: 12, scale: 3 }).default("0"),
+  grnId: text("grn_id").notNull().references(() => erpGrn.id),
+  itemId: text("item_id").notNull(),                 // cat_items.id
+  qtyOrdered: numeric("qty_ordered", { precision: 12, scale: 3 }).notNull(),
+  qtyReceived: numeric("qty_received", { precision: 12, scale: 3 }).notNull(),
+  qtyAccepted: numeric("qty_accepted", { precision: 12, scale: 3 }).notNull(),
+  qtyRejected: numeric("qty_rejected", { precision: 12, scale: 3 }).default("0"),
+  condition: text("condition"),                      // good | damaged | expired
   rejectionReason: text("rejection_reason"),
   batchNo: text("batch_no"),
   expiryDate: timestamp("expiry_date"),
   valuationRate: numeric("valuation_rate", { precision: 15, scale: 2 }),
 });
-
-export const erpVendorInvoice = pgTable("erp_vendor_invoices", {
-  id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("vbi")),
-  orgId: text("org_id").notNull(),
-  invoiceNumber: text("invoice_number").notNull(),
-  vendorId: text("vendor_id").notNull(),
-  poId: text("po_id"),
-  grnId: text("grn_id"),
-  status: text("status").notNull().default("received"),
-  invoiceDate: timestamp("invoice_date").notNull(),
-  dueDate: timestamp("due_date"),
-  subtotal: numeric("subtotal", { precision: 15, scale: 2 }).notNull(),
-  cgst: numeric("cgst", { precision: 15, scale: 2 }).default("0"),
-  sgst: numeric("sgst", { precision: 15, scale: 2 }).default("0"),
-  igst: numeric("igst", { precision: 15, scale: 2 }).default("0"),
-  tdsAmount: numeric("tds_amount", { precision: 15, scale: 2 }).default("0"),
-  total: numeric("total", { precision: 15, scale: 2 }).notNull(),
-  paidAmount: numeric("paid_amount", { precision: 15, scale: 2 }).default("0"),
-  currency: text("currency").default("INR"),
-  journalEntryId: text("journal_entry_id"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-export const erpVendorInvoiceItem = pgTable("erp_vendor_invoice_items", {
-  id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("vii")),
-  invoiceId: text("invoice_id").notNull().references(() => erpVendorInvoice.id),
-  itemId: text("item_id").notNull(),
-  qty: numeric("qty", { precision: 12, scale: 3 }).notNull(),
-  unitPrice: numeric("unit_price", { precision: 15, scale: 2 }).notNull(),
-  lineTotal: numeric("line_total", { precision: 15, scale: 2 }).notNull(),
-  hsn: text("hsn"),
-  gstRate: numeric("gst_rate", { precision: 5, scale: 2 }).default("18"),
-});
-
-export const erpPaymentVoucher = pgTable("erp_payment_vouchers", {
-  id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("pmt")),
-  orgId: text("org_id").notNull(),
-  type: text("type").notNull(),                     // pay | receive
-  partyType: text("party_type").notNull(),           // vendor | customer
-  partyId: text("party_id").notNull(),
-  amount: numeric("amount", { precision: 15, scale: 2 }).notNull(),
-  currency: text("currency").default("INR"),
-  date: timestamp("date").notNull(),
-  mode: text("mode"),                               // bank | cash | cheque | upi
-  reference: text("reference"),                     // cheque/UTR number
-  bankAccountId: text("bank_account_id"),
-  status: text("status").notNull().default("draft"),
-  journalEntryId: text("journal_entry_id"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
 ```
 
----
-
-## Sales Tables
+### erp_delivery_notes
 
 ```typescript
-export const erpCustomer = pgTable("erp_customers", {
-  id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("cst")),
-  orgId: text("org_id").notNull(),
-  name: text("name").notNull(),
-  code: text("code").notNull(),                     // CST-001
-  gstin: text("gstin"),
-  pan: text("pan"),
-  contactEmail: text("contact_email"),
-  contactPhone: text("contact_phone"),
-  currency: text("currency").default("INR"),
-  paymentTerms: text("payment_terms").default("NET30"),
-  creditLimit: numeric("credit_limit", { precision: 15, scale: 2 }).default("0"),
-  outstandingBalance: numeric("outstanding_balance", { precision: 15, scale: 2 }).default("0"),
-  billingAddress: jsonb("billing_address"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-export const erpQuotation = pgTable("erp_quotations", {
-  id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("qtn")),
-  orgId: text("org_id").notNull(),
-  quotationNo: text("quotation_no").notNull(),
-  customerId: text("customer_id").notNull().references(() => erpCustomer.id),
-  date: timestamp("date").notNull(),
-  validUntil: timestamp("valid_until"),
-  status: text("status").notNull().default("draft"),  // draft|submitted|accepted|rejected|expired
-  subtotal: numeric("subtotal", { precision: 15, scale: 2 }).default("0"),
-  taxAmount: numeric("tax_amount", { precision: 15, scale: 2 }).default("0"),
-  total: numeric("total", { precision: 15, scale: 2 }).default("0"),
-  currency: text("currency").default("INR"),
-  terms: text("terms"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-export const erpQuotationItem = pgTable("erp_quotation_items", {
-  id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("qti")),
-  quotationId: text("quotation_id").notNull().references(() => erpQuotation.id),
-  itemId: text("item_id").notNull(),
-  qty: numeric("qty", { precision: 12, scale: 3 }).notNull(),
-  uom: text("uom").notNull(),
-  unitPrice: numeric("unit_price", { precision: 15, scale: 2 }).notNull(),
-  discount: numeric("discount", { precision: 5, scale: 2 }).default("0"),
-  lineTotal: numeric("line_total", { precision: 15, scale: 2 }).notNull(),
-  hsn: text("hsn"),
-  gstRate: numeric("gst_rate", { precision: 5, scale: 2 }).default("18"),
-});
-
-export const erpSalesOrder = pgTable("erp_sales_orders", {
-  id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("sod")),
-  orgId: text("org_id").notNull(),
-  soNumber: text("so_number").notNull(),
-  customerId: text("customer_id").notNull().references(() => erpCustomer.id),
-  quotationId: text("quotation_id"),
-  date: timestamp("date").notNull(),
-  deliveryDate: timestamp("delivery_date"),
-  status: text("status").notNull().default("draft"),
-  subtotal: numeric("subtotal", { precision: 15, scale: 2 }).default("0"),
-  taxAmount: numeric("tax_amount", { precision: 15, scale: 2 }).default("0"),
-  total: numeric("total", { precision: 15, scale: 2 }).default("0"),
-  invoicedAmount: numeric("invoiced_amount", { precision: 15, scale: 2 }).default("0"),
-  currency: text("currency").default("INR"),
-  shippingAddress: jsonb("shipping_address"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-export const erpSoItem = pgTable("erp_so_items", {
-  id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("soi")),
-  soId: text("so_id").notNull().references(() => erpSalesOrder.id),
-  itemId: text("item_id").notNull(),
-  qty: numeric("qty", { precision: 12, scale: 3 }).notNull(),
-  deliveredQty: numeric("delivered_qty", { precision: 12, scale: 3 }).default("0"),
-  invoicedQty: numeric("invoiced_qty", { precision: 12, scale: 3 }).default("0"),
-  uom: text("uom").notNull(),
-  unitPrice: numeric("unit_price", { precision: 15, scale: 2 }).notNull(),
-  discount: numeric("discount", { precision: 5, scale: 2 }).default("0"),
-  lineTotal: numeric("line_total", { precision: 15, scale: 2 }).notNull(),
-  hsn: text("hsn"),
-  gstRate: numeric("gst_rate", { precision: 5, scale: 2 }).default("18"),
-});
-
 export const erpDeliveryNote = pgTable("erp_delivery_notes", {
   id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("dn")),
-  orgId: text("org_id").notNull(),
+  organizationId: text("organization_id").notNull(),
   dnNumber: text("dn_number").notNull(),
-  soId: text("so_id").notNull().references(() => erpSalesOrder.id),
-  customerId: text("customer_id").notNull(),
-  warehouseId: text("warehouse_id").notNull(),
+  transactionId: text("transaction_id").notNull(),   // transactions.id (the SO)
+  locationId: text("location_id").notNull(),         // locations.id (source warehouse)
   date: timestamp("date").notNull(),
   status: text("status").notNull().default("draft"),
   shippingAddress: jsonb("shipping_address"),
@@ -276,94 +152,24 @@ export const erpDeliveryNote = pgTable("erp_delivery_notes", {
 export const erpDnItem = pgTable("erp_dn_items", {
   id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("dni")),
   dnId: text("dn_id").notNull().references(() => erpDeliveryNote.id),
-  soItemId: text("so_item_id").notNull(),
-  itemId: text("item_id").notNull(),
+  transactionLineId: text("transaction_line_id").notNull(), // transaction_lines.id (SO line)
+  itemId: text("item_id").notNull(),                 // cat_items.id
   qty: numeric("qty", { precision: 12, scale: 3 }).notNull(),
   uom: text("uom").notNull(),
   batchNo: text("batch_no"),
   valuationRate: numeric("valuation_rate", { precision: 15, scale: 2 }),
 });
-
-export const erpSalesInvoice = pgTable("erp_sales_invoices", {
-  id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("si")),
-  orgId: text("org_id").notNull(),
-  siNumber: text("si_number").notNull(),
-  customerId: text("customer_id").notNull().references(() => erpCustomer.id),
-  soId: text("so_id"),
-  dnId: text("dn_id"),
-  date: timestamp("date").notNull(),
-  dueDate: timestamp("due_date"),
-  status: text("status").notNull().default("draft"),
-  subtotal: numeric("subtotal", { precision: 15, scale: 2 }).notNull(),
-  cgst: numeric("cgst", { precision: 15, scale: 2 }).default("0"),
-  sgst: numeric("sgst", { precision: 15, scale: 2 }).default("0"),
-  igst: numeric("igst", { precision: 15, scale: 2 }).default("0"),
-  total: numeric("total", { precision: 15, scale: 2 }).notNull(),
-  paidAmount: numeric("paid_amount", { precision: 15, scale: 2 }).default("0"),
-  currency: text("currency").default("INR"),
-  irn: text("irn"),                               // e-Invoice Reference Number
-  eWayBillNo: text("e_way_bill_no"),
-  journalEntryId: text("journal_entry_id"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-export const erpSiItem = pgTable("erp_si_items", {
-  id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("sii")),
-  siId: text("si_id").notNull().references(() => erpSalesInvoice.id),
-  itemId: text("item_id").notNull(),
-  qty: numeric("qty", { precision: 12, scale: 3 }).notNull(),
-  uom: text("uom").notNull(),
-  unitPrice: numeric("unit_price", { precision: 15, scale: 2 }).notNull(),
-  discount: numeric("discount", { precision: 5, scale: 2 }).default("0"),
-  lineTotal: numeric("line_total", { precision: 15, scale: 2 }).notNull(),
-  hsn: text("hsn"),
-  gstRate: numeric("gst_rate", { precision: 5, scale: 2 }).default("18"),
-  cgst: numeric("cgst", { precision: 15, scale: 2 }).default("0"),
-  sgst: numeric("sgst", { precision: 15, scale: 2 }).default("0"),
-  igst: numeric("igst", { precision: 15, scale: 2 }).default("0"),
-});
 ```
 
----
-
-## Inventory Tables
+### erp_stock_entries
 
 ```typescript
-export const erpItem = pgTable("erp_items", {
-  id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("itm")),
-  orgId: text("org_id").notNull(),
-  code: text("code").notNull(),                     // ITEM-001
-  name: text("name").notNull(),
-  description: text("description"),
-  type: text("type").notNull(),                     // stock | service | asset
-  uom: text("uom").notNull().default("Nos"),        // unit of measure
-  valuationMethod: text("valuation_method").default("FIFO"), // FIFO | moving-average
-  hsn: text("hsn"),                               // HSN/SAC code for GST
-  gstRate: numeric("gst_rate", { precision: 5, scale: 2 }).default("18"),
-  reorderQty: numeric("reorder_qty", { precision: 12, scale: 3 }).default("0"),
-  leadTimeDays: integer("lead_time_days").default(0),
-  isActive: boolean("is_active").default(true),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-export const erpWarehouse = pgTable("erp_warehouses", {
-  id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("wh")),
-  orgId: text("org_id").notNull(),
-  name: text("name").notNull(),
-  code: text("code").notNull(),
-  type: text("type").default("store"),              // store | transit | virtual
-  parentId: text("parent_id"),
-  address: jsonb("address"),
-  isActive: boolean("is_active").default(true),
-});
-
 export const erpStockEntry = pgTable("erp_stock_entries", {
   id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("ste")),
-  orgId: text("org_id").notNull(),
-  type: text("type").notNull(),                     // receipt|issue|transfer|manufacture|adjustment
+  organizationId: text("organization_id").notNull(),
+  type: text("type").notNull(),                      // receipt|issue|transfer|manufacture|adjustment
   date: timestamp("date").notNull(),
-  reference: text("reference"),                     // GRN ID, WO ID, etc.
+  reference: text("reference"),                      // GRN ID, WO ID, etc.
   referenceType: text("reference_type"),
   totalValue: numeric("total_value", { precision: 15, scale: 2 }).default("0"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -372,9 +178,9 @@ export const erpStockEntry = pgTable("erp_stock_entries", {
 export const erpStockEntryItem = pgTable("erp_stock_entry_items", {
   id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("sei")),
   entryId: text("entry_id").notNull().references(() => erpStockEntry.id),
-  itemId: text("item_id").notNull(),
-  warehouseFrom: text("warehouse_from"),
-  warehouseTo: text("warehouse_to"),
+  itemId: text("item_id").notNull(),                 // cat_items.id
+  locationFrom: text("location_from"),               // locations.id (source warehouse)
+  locationTo: text("location_to"),                   // locations.id (destination warehouse)
   qty: numeric("qty", { precision: 12, scale: 3 }).notNull(),
   valuationRate: numeric("valuation_rate", { precision: 15, scale: 2 }),
   lineValue: numeric("line_value", { precision: 15, scale: 2 }),
@@ -383,83 +189,226 @@ export const erpStockEntryItem = pgTable("erp_stock_entry_items", {
 
 export const erpStockLedger = pgTable("erp_stock_ledger", {
   id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("slg")),
-  itemId: text("item_id").notNull(),
-  warehouseId: text("warehouse_id").notNull(),
+  itemId: text("item_id").notNull(),                 // cat_items.id
+  locationId: text("location_id").notNull(),         // locations.id (warehouse)
   date: timestamp("date").notNull(),
-  qty: numeric("qty", { precision: 12, scale: 3 }).notNull(),  // + in, - out
+  qty: numeric("qty", { precision: 12, scale: 3 }).notNull(), // + in, - out
   valuationRate: numeric("valuation_rate", { precision: 15, scale: 2 }),
   stockValue: numeric("stock_value", { precision: 15, scale: 2 }),
-  balance: numeric("balance", { precision: 12, scale: 3 }),    // running balance
+  balance: numeric("balance", { precision: 12, scale: 3 }),   // running balance
   entryId: text("entry_id").notNull(),
 }, (t) => [
-  index("slg_item_wh_date_idx").on(t.itemId, t.warehouseId, t.date),
+  index("slg_item_loc_date_idx").on(t.itemId, t.locationId, t.date),
 ]);
 ```
 
----
-
-## Finance Tables
+### erp_bom (Bill of Materials)
 
 ```typescript
-export const erpAccount = pgTable("erp_accounts", {
-  id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("acc")),
-  orgId: text("org_id").notNull(),
-  code: text("code").notNull(),                     // 1-1000 assets, 2-2000 liab, etc.
+export const erpBom = pgTable("erp_bom", {
+  id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("bom")),
+  organizationId: text("organization_id").notNull(),
+  itemId: text("item_id").notNull(),                 // cat_items.id (finished product, type=product)
+  version: integer("version").default(1),
+  isActive: boolean("is_active").default(true),
+  quantity: numeric("quantity", { precision: 12, scale: 3 }).default("1"),
+  uom: text("uom").notNull(),
+  operatingCost: numeric("operating_cost", { precision: 15, scale: 2 }).default("0"),
+});
+
+export const erpBomItem = pgTable("erp_bom_items", {
+  id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("bmi")),
+  bomId: text("bom_id").notNull().references(() => erpBom.id),
+  componentItemId: text("component_item_id").notNull(), // cat_items.id (raw material, type=stock_item)
+  qty: numeric("qty", { precision: 12, scale: 3 }).notNull(),
+  uom: text("uom").notNull(),
+  scrapPercent: numeric("scrap_percent", { precision: 5, scale: 2 }).default("0"),
+});
+```
+
+### erp_work_orders
+
+```typescript
+export const erpWorkOrder = pgTable("erp_work_orders", {
+  id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("wo")),
+  organizationId: text("organization_id").notNull(),
+  woNumber: text("wo_number").notNull(),
+  bomId: text("bom_id").notNull().references(() => erpBom.id),
+  qty: numeric("qty", { precision: 12, scale: 3 }).notNull(),
+  producedQty: numeric("produced_qty", { precision: 12, scale: 3 }).default("0"),
+  targetLocationId: text("target_location_id").notNull(), // locations.id (finished goods warehouse)
+  status: text("status").notNull().default("draft"),
+  stageId: text("stage_id"),                         // pipeline_stages.id (optional WO pipeline)
+  scheduledStart: timestamp("scheduled_start"),
+  scheduledEnd: timestamp("scheduled_end"),
+  actualStart: timestamp("actual_start"),
+  actualEnd: timestamp("actual_end"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+```
+
+### erp_departments
+
+```typescript
+export const erpDepartment = pgTable("erp_departments", {
+  id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("dep")),
+  organizationId: text("organization_id").notNull(),
   name: text("name").notNull(),
-  type: text("type").notNull(),                     // asset|liability|equity|income|expense
-  subType: text("sub_type"),                        // current-asset|fixed-asset|current-liability|etc.
+  code: text("code"),
+  parentId: text("parent_id"),                       // self-reference for hierarchy
+  managerId: text("manager_id"),                     // persons.id (employee who manages)
+});
+```
+
+### erp_designations
+
+```typescript
+export const erpDesignation = pgTable("erp_designations", {
+  id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("dsg")),
+  organizationId: text("organization_id").notNull(),
+  name: text("name").notNull(),
+  level: integer("level").default(1),
+  departmentId: text("department_id").references(() => erpDepartment.id),
+});
+```
+
+### erp_leave_types
+
+```typescript
+export const erpLeaveType = pgTable("erp_leave_types", {
+  id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("lt")),
+  organizationId: text("organization_id").notNull(),
+  name: text("name").notNull(),
+  maxDays: integer("max_days").default(0),
+  isPaid: boolean("is_paid").default(true),
+  isCarryForward: boolean("is_carry_forward").default(false),
+  maxCarryForward: integer("max_carry_forward").default(0),
+});
+```
+
+### erp_leave_allocations
+
+```typescript
+export const erpLeaveAllocation = pgTable("erp_leave_allocations", {
+  id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("la")),
+  personId: text("person_id").notNull(),             // persons.id (employee)
+  leaveTypeId: text("leave_type_id").notNull().references(() => erpLeaveType.id),
+  year: integer("year").notNull(),
+  allocated: numeric("allocated", { precision: 5, scale: 1 }).notNull(),
+  used: numeric("used", { precision: 5, scale: 1 }).default("0"),
+  balance: numeric("balance", { precision: 5, scale: 1 }),
+});
+```
+
+### erp_leave_applications
+
+```typescript
+export const erpLeaveApplication = pgTable("erp_leave_applications", {
+  id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("lav")),
+  personId: text("person_id").notNull(),             // persons.id (employee)
+  leaveTypeId: text("leave_type_id").notNull(),
+  fromDate: timestamp("from_date").notNull(),
+  toDate: timestamp("to_date").notNull(),
+  days: numeric("days", { precision: 5, scale: 1 }).notNull(),
+  status: text("status").notNull().default("draft"),
+  reason: text("reason"),
+  approvedBy: text("approved_by"),                  // persons.id
+  createdAt: timestamp("created_at").defaultNow(),
+});
+```
+
+### erp_attendance
+
+```typescript
+export const erpAttendance = pgTable("erp_attendance", {
+  id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("att")),
+  personId: text("person_id").notNull(),             // persons.id (employee)
+  date: timestamp("date").notNull(),
+  status: text("status").notNull(),                 // present|absent|half-day|leave|holiday
+  checkIn: timestamp("check_in"),
+  checkOut: timestamp("check_out"),
+  workHours: numeric("work_hours", { precision: 4, scale: 2 }),
+}, (t) => [
+  index("att_person_date_idx").on(t.personId, t.date),
+]);
+```
+
+### erp_gl_accounts
+
+```typescript
+export const erpGlAccount = pgTable("erp_gl_accounts", {
+  id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("acc")),
+  organizationId: text("organization_id").notNull(),
+  code: text("code").notNull(),                      // 1-1000 assets, 2-2000 liab, etc.
+  name: text("name").notNull(),
+  type: text("type").notNull(),                      // asset|liability|equity|revenue|expense
+  subType: text("sub_type"),
   parentId: text("parent_id"),
   currency: text("currency").default("INR"),
-  isGroup: boolean("is_group").default(false),      // group account (no direct postings)
+  isGroup: boolean("is_group").default(false),
   isFrozen: boolean("is_frozen").default(false),
   balance: numeric("balance", { precision: 15, scale: 2 }).default("0"),
 });
+```
 
+### erp_fiscal_years
+
+```typescript
 export const erpFiscalYear = pgTable("erp_fiscal_years", {
   id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("fy")),
-  orgId: text("org_id").notNull(),
-  name: text("name").notNull(),                     // "FY 2024-25"
+  organizationId: text("organization_id").notNull(),
+  name: text("name").notNull(),                      // "FY 2024-25"
   startDate: timestamp("start_date").notNull(),
   endDate: timestamp("end_date").notNull(),
   isClosed: boolean("is_closed").default(false),
 });
+```
 
+### erp_journal_entries
+
+```typescript
 export const erpJournalEntry = pgTable("erp_journal_entries", {
   id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("je")),
-  orgId: text("org_id").notNull(),
+  organizationId: text("organization_id").notNull(),
+  transactionId: text("transaction_id"),             // transactions.id (optional — links to invoice/payment)
   date: timestamp("date").notNull(),
   reference: text("reference"),
   referenceType: text("reference_type"),
-  narration: text("narration"),
-  status: text("status").notNull().default("draft"),  // draft|posted|cancelled
+  description: text("description"),
+  status: text("status").notNull().default("draft"), // draft|posted|cancelled
   totalDebit: numeric("total_debit", { precision: 15, scale: 2 }).default("0"),
   totalCredit: numeric("total_credit", { precision: 15, scale: 2 }).default("0"),
-  fiscalYearId: text("fiscal_year_id"),
+  fiscalYearId: text("fiscal_year_id").references(() => erpFiscalYear.id),
   postedBy: text("posted_by"),
+  postedAt: timestamp("posted_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const erpJournalLine = pgTable("erp_journal_lines", {
   id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("jln")),
   journalId: text("journal_id").notNull().references(() => erpJournalEntry.id),
-  accountId: text("account_id").notNull().references(() => erpAccount.id),
+  glAccountId: text("gl_account_id").notNull().references(() => erpGlAccount.id),
   debit: numeric("debit", { precision: 15, scale: 2 }).default("0"),
   credit: numeric("credit", { precision: 15, scale: 2 }).default("0"),
-  partyType: text("party_type"),                    // vendor | customer | employee
-  partyId: text("party_id"),
+  partyId: text("party_id"),                        // parties.id (vendor or customer)
+  personId: text("person_id"),                      // persons.id (employee)
   costCenter: text("cost_center"),
   description: text("description"),
 });
+```
 
+### erp_bank_accounts
+
+```typescript
 export const erpBankAccount = pgTable("erp_bank_accounts", {
   id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("bka")),
-  orgId: text("org_id").notNull(),
+  organizationId: text("organization_id").notNull(),
   accountName: text("account_name").notNull(),
   accountNo: text("account_no").notNull(),
   bankName: text("bank_name").notNull(),
   ifsc: text("ifsc"),
   currency: text("currency").default("INR"),
-  glAccountId: text("gl_account_id"),              // linked CoA account
+  glAccountId: text("gl_account_id").references(() => erpGlAccount.id),
   isActive: boolean("is_active").default(true),
 });
 
@@ -471,220 +420,156 @@ export const erpBankTransaction = pgTable("erp_bank_transactions", {
   debit: numeric("debit", { precision: 15, scale: 2 }).default("0"),
   credit: numeric("credit", { precision: 15, scale: 2 }).default("0"),
   balance: numeric("balance", { precision: 15, scale: 2 }),
-  status: text("status").default("unmatched"),     // unmatched | matched
-  matchedVoucherId: text("matched_voucher_id"),
+  status: text("status").default("unmatched"),      // unmatched | matched
+  matchedTransactionId: text("matched_transaction_id"), // transactions.id (receipt/payment type)
 });
 ```
 
----
-
-## Manufacturing Tables
-
-```typescript
-export const erpBom = pgTable("erp_boms", {
-  id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("bom")),
-  orgId: text("org_id").notNull(),
-  itemId: text("item_id").notNull(),               // finished good
-  version: integer("version").default(1),
-  isDefault: boolean("is_default").default(false),
-  quantity: numeric("quantity", { precision: 12, scale: 3 }).default("1"),
-  uom: text("uom").notNull(),
-  operatingCost: numeric("operating_cost", { precision: 15, scale: 2 }).default("0"),
-  isActive: boolean("is_active").default(true),
-});
-
-export const erpBomItem = pgTable("erp_bom_items", {
-  id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("bmi")),
-  bomId: text("bom_id").notNull().references(() => erpBom.id),
-  itemId: text("item_id").notNull(),               // raw material
-  qty: numeric("qty", { precision: 12, scale: 3 }).notNull(),
-  uom: text("uom").notNull(),
-  warehouseId: text("warehouse_id"),               // source warehouse
-  scrapPct: numeric("scrap_pct", { precision: 5, scale: 2 }).default("0"),
-});
-
-export const erpWorkOrder = pgTable("erp_work_orders", {
-  id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("wo")),
-  orgId: text("org_id").notNull(),
-  woNumber: text("wo_number").notNull(),
-  bomId: text("bom_id").notNull().references(() => erpBom.id),
-  itemId: text("item_id").notNull(),
-  quantity: numeric("quantity", { precision: 12, scale: 3 }).notNull(),
-  producedQty: numeric("produced_qty", { precision: 12, scale: 3 }).default("0"),
-  warehouseId: text("warehouse_id").notNull(),
-  status: text("status").notNull().default("draft"),
-  plannedStart: timestamp("planned_start"),
-  actualStart: timestamp("actual_start"),
-  actualEnd: timestamp("actual_end"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-```
-
----
-
-## HR Tables
-
-```typescript
-export const erpDepartment = pgTable("erp_departments", {
-  id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("dep")),
-  orgId: text("org_id").notNull(),
-  name: text("name").notNull(),
-  parentId: text("parent_id"),
-  headId: text("head_id"),                         // employee ID of dept head
-});
-
-export const erpEmployee = pgTable("erp_employees", {
-  id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("emp")),
-  orgId: text("org_id").notNull(),
-  empNo: text("emp_no").notNull(),                 // EMP-001
-  actorId: text("actor_id"),                       // linked platform actor (optional)
-  name: text("name").notNull(),
-  email: text("email"),
-  phone: text("phone"),
-  departmentId: text("department_id").references(() => erpDepartment.id),
-  designation: text("designation"),
-  employmentType: text("employment_type").default("permanent"), // permanent|contract|intern
-  joinDate: timestamp("join_date"),
-  exitDate: timestamp("exit_date"),
-  pan: text("pan"),
-  aadhaar: text("aadhaar"),                        // India Aadhaar (masked)
-  bankAccount: jsonb("bank_account"),              // { accountNo, bankName, ifsc }
-  pfNo: text("pf_no"),                            // PF account number
-  esiNo: text("esi_no"),                           // ESI number
-  status: text("status").default("active"),        // active|resigned|terminated
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-export const erpLeaveType = pgTable("erp_leave_types", {
-  id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("lt")),
-  orgId: text("org_id").notNull(),
-  name: text("name").notNull(),                    // Annual Leave, Sick Leave, etc.
-  maxDays: integer("max_days").default(0),
-  isPaid: boolean("is_paid").default(true),
-  isCarryForward: boolean("is_carry_forward").default(false),
-  maxCarryForward: integer("max_carry_forward").default(0),
-});
-
-export const erpLeaveAllocation = pgTable("erp_leave_allocations", {
-  id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("la")),
-  employeeId: text("employee_id").notNull().references(() => erpEmployee.id),
-  leaveTypeId: text("leave_type_id").notNull().references(() => erpLeaveType.id),
-  year: integer("year").notNull(),
-  allocated: numeric("allocated", { precision: 5, scale: 1 }).notNull(),
-  used: numeric("used", { precision: 5, scale: 1 }).default("0"),
-  balance: numeric("balance", { precision: 5, scale: 1 }),
-});
-
-export const erpLeaveApplication = pgTable("erp_leave_applications", {
-  id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("lav")),
-  employeeId: text("employee_id").notNull().references(() => erpEmployee.id),
-  leaveTypeId: text("leave_type_id").notNull(),
-  fromDate: timestamp("from_date").notNull(),
-  toDate: timestamp("to_date").notNull(),
-  days: numeric("days", { precision: 5, scale: 1 }).notNull(),
-  status: text("status").notNull().default("draft"),
-  reason: text("reason"),
-  approvedBy: text("approved_by"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-export const erpAttendance = pgTable("erp_attendance", {
-  id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("att")),
-  employeeId: text("employee_id").notNull().references(() => erpEmployee.id),
-  date: timestamp("date").notNull(),
-  status: text("status").notNull(),               // present|absent|half-day|leave|holiday
-  checkIn: timestamp("check_in"),
-  checkOut: timestamp("check_out"),
-  workHours: numeric("work_hours", { precision: 4, scale: 2 }),
-}, (t) => [
-  index("att_emp_date_idx").on(t.employeeId, t.date),
-]);
-```
-
----
-
-## Payroll + Asset + Tax Tables
+### erp_salary_structures
 
 ```typescript
 export const erpSalaryStructure = pgTable("erp_salary_structures", {
   id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("sal")),
-  orgId: text("org_id").notNull(),
+  organizationId: text("organization_id").notNull(),
   name: text("name").notNull(),
   components: jsonb("components").notNull(),
   // components shape:
-  // { earnings: [{ name, type: "fixed|formula", value, formula? }],
+  // { earnings: [{ name, type: "fixed|formula|percentage", value, formula? }],
   //   deductions: [{ name, type: "fixed|formula|percentage", value, formula? }] }
-  // examples:
-  //   { name: "Basic", type: "formula", formula: "gross * 0.5" }
-  //   { name: "PF", type: "percentage", value: 12, basis: "basic" }
-  //   { name: "TDS", type: "formula", formula: "annual_income_tax / 12" }
 });
+```
 
-export const erpSalarySlip = pgTable("erp_salary_slips", {
-  id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("ss")),
-  employeeId: text("employee_id").notNull().references(() => erpEmployee.id),
-  month: integer("month").notNull(),               // 1-12
-  year: integer("year").notNull(),
-  structureId: text("structure_id").references(() => erpSalaryStructure.id),
-  workingDays: integer("working_days").notNull(),
-  presentDays: integer("present_days").notNull(),
-  earnings: jsonb("earnings").notNull(),           // [{ name, amount }]
-  deductions: jsonb("deductions").notNull(),       // [{ name, amount }]
-  grossPay: numeric("gross_pay", { precision: 15, scale: 2 }).notNull(),
-  netPay: numeric("net_pay", { precision: 15, scale: 2 }).notNull(),
-  status: text("status").notNull().default("draft"),
-  payrollEntryId: text("payroll_entry_id"),
-  journalEntryId: text("journal_entry_id"),
-});
+### erp_payroll_runs
 
-export const erpPayrollEntry = pgTable("erp_payroll_entries", {
-  id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("pe")),
-  orgId: text("org_id").notNull(),
-  month: integer("month").notNull(),
-  year: integer("year").notNull(),
-  status: text("status").notNull().default("draft"),
-  employeeCount: integer("employee_count").default(0),
+```typescript
+export const erpPayrollRun = pgTable("erp_payroll_runs", {
+  id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("pr")),
+  organizationId: text("organization_id").notNull(),
+  period: text("period").notNull(),                  // "YYYY-MM"
+  status: text("status").notNull().default("draft"), // draft|submitted|paid
+  processedAt: timestamp("processed_at"),
   totalGross: numeric("total_gross", { precision: 15, scale: 2 }).default("0"),
   totalDeductions: numeric("total_deductions", { precision: 15, scale: 2 }).default("0"),
   totalNet: numeric("total_net", { precision: 15, scale: 2 }).default("0"),
+  employeeCount: integer("employee_count").default(0),
   createdAt: timestamp("created_at").defaultNow(),
 });
+```
 
+### erp_salary_slips
+
+```typescript
+export const erpSalarySlip = pgTable("erp_salary_slips", {
+  id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("ss")),
+  payrollRunId: text("payroll_run_id").notNull().references(() => erpPayrollRun.id),
+  personId: text("person_id").notNull(),             // persons.id (employee)
+  workingDays: integer("working_days").notNull(),
+  presentDays: integer("present_days").notNull(),
+  structureId: text("structure_id").references(() => erpSalaryStructure.id),
+  earnings: jsonb("earnings").notNull(),             // [{ name, amount }]
+  deductions: jsonb("deductions").notNull(),         // [{ name, amount }]
+  gross: numeric("gross", { precision: 15, scale: 2 }).notNull(),
+  net: numeric("net", { precision: 15, scale: 2 }).notNull(),
+  status: text("status").notNull().default("draft"), // draft|submitted|paid
+  journalEntryId: text("journal_entry_id"),
+});
+```
+
+### erp_assets
+
+```typescript
 export const erpAsset = pgTable("erp_assets", {
   id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("ast")),
-  orgId: text("org_id").notNull(),
+  organizationId: text("organization_id").notNull(),
+  itemId: text("item_id"),                          // cat_items.id (type=asset), optional link
   code: text("code").notNull(),
   name: text("name").notNull(),
-  category: text("category").notNull(),            // machinery|vehicle|furniture|IT-equipment
-  status: text("status").default("active"),        // active|under-maintenance|disposed
+  category: text("category").notNull(),             // machinery|vehicle|furniture|IT-equipment
+  status: text("status").default("active"),         // active|under-maintenance|disposed
   purchaseDate: timestamp("purchase_date").notNull(),
   purchaseCost: numeric("purchase_cost", { precision: 15, scale: 2 }).notNull(),
   usefulLifeYears: integer("useful_life_years").notNull(),
   depreciationMethod: text("depreciation_method").default("straight-line"),
   accumulatedDepreciation: numeric("accumulated_depreciation", { precision: 15, scale: 2 }).default("0"),
   bookValue: numeric("book_value", { precision: 15, scale: 2 }),
-  warehouseId: text("warehouse_id"),
-  assignedToId: text("assigned_to_id"),            // employee ID
+  locationId: text("location_id"),                  // locations.id (warehouse/office where asset is kept)
+  assignedToId: text("assigned_to_id"),             // persons.id (employee assigned to)
 });
 
+export const erpAssetDepreciation = pgTable("erp_asset_depreciation", {
+  id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("adp")),
+  assetId: text("asset_id").notNull().references(() => erpAsset.id),
+  period: text("period").notNull(),                 // "YYYY-MM"
+  depreciationAmount: numeric("depreciation_amount", { precision: 15, scale: 2 }).notNull(),
+  bookValueAfter: numeric("book_value_after", { precision: 15, scale: 2 }).notNull(),
+  postedAt: timestamp("posted_at"),
+  journalEntryId: text("journal_entry_id"),
+});
+```
+
+### erp_gst_templates
+
+```typescript
 export const erpGstTemplate = pgTable("erp_gst_templates", {
   id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("gst")),
-  orgId: text("org_id").notNull(),
-  name: text("name").notNull(),                    // "GST 18%", "GST 5%", "GST 12% (Exempt)"
-  type: text("type").notNull(),                    // sales | purchase
+  organizationId: text("organization_id").notNull(),
+  name: text("name").notNull(),
+  type: text("type").notNull(),                     // sales | purchase
   cgstRate: numeric("cgst_rate", { precision: 5, scale: 2 }).default("0"),
   sgstRate: numeric("sgst_rate", { precision: 5, scale: 2 }).default("0"),
   igstRate: numeric("igst_rate", { precision: 5, scale: 2 }).default("0"),
   cessRate: numeric("cess_rate", { precision: 5, scale: 2 }).default("0"),
 });
+```
 
+### erp_gst_returns
+
+```typescript
 export const erpGstReturn = pgTable("erp_gst_returns", {
   id: text("id").primaryKey().$defaultFn(() => generatePrefixedId("grt")),
-  orgId: text("org_id").notNull(),
-  type: text("type").notNull(),                    // GSTR1 | GSTR3B
-  period: text("period").notNull(),                // "2024-06" (YYYY-MM)
-  status: text("status").default("draft"),         // draft | filed
-  data: jsonb("data"),                             // serialized return data
+  organizationId: text("organization_id").notNull(),
+  type: text("type").notNull(),                     // GSTR1 | GSTR3B
+  period: text("period").notNull(),                 // "2024-06" (YYYY-MM)
+  status: text("status").default("draft"),          // draft | filed
+  data: jsonb("data"),                              // serialized return data
   filedAt: timestamp("filed_at"),
 });
 ```
+
+---
+
+## ID Prefixes
+
+| Entity | Prefix | Example |
+|--------|--------|---------|
+| Purchase Requisition | `pr` | `pr_01ARZ...` |
+| PR Item | `pri` | `pri_01ARZ...` |
+| GRN | `grn` | `grn_01ARZ...` |
+| GRN Item | `gri` | `gri_01ARZ...` |
+| Delivery Note | `dn` | `dn_01ARZ...` |
+| DN Item | `dni` | `dni_01ARZ...` |
+| Stock Entry | `ste` | `ste_01ARZ...` |
+| Stock Entry Item | `sei` | `sei_01ARZ...` |
+| Stock Ledger | `slg` | `slg_01ARZ...` |
+| BOM | `bom` | `bom_01ARZ...` |
+| BOM Item | `bmi` | `bmi_01ARZ...` |
+| Work Order | `wo` | `wo_01ARZ...` |
+| Department | `dep` | `dep_01ARZ...` |
+| Designation | `dsg` | `dsg_01ARZ...` |
+| Leave Type | `lt` | `lt_01ARZ...` |
+| Leave Allocation | `la` | `la_01ARZ...` |
+| Leave Application | `lav` | `lav_01ARZ...` |
+| Attendance | `att` | `att_01ARZ...` |
+| GL Account | `acc` | `acc_01ARZ...` |
+| Fiscal Year | `fy` | `fy_01ARZ...` |
+| Journal Entry | `je` | `je_01ARZ...` |
+| Journal Line | `jln` | `jln_01ARZ...` |
+| Bank Account | `bka` | `bka_01ARZ...` |
+| Bank Transaction | `btx` | `btx_01ARZ...` |
+| Salary Structure | `sal` | `sal_01ARZ...` |
+| Payroll Run | `prn` | `prn_01ARZ...` |
+| Salary Slip | `ss` | `ss_01ARZ...` |
+| Asset | `ast` | `ast_01ARZ...` |
+| Asset Depreciation | `adp` | `adp_01ARZ...` |
+| GST Template | `gst` | `gst_01ARZ...` |
+| GST Return | `grt` | `grt_01ARZ...` |

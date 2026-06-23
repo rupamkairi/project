@@ -73,30 +73,43 @@ Five front-end apps: POSApp, KDSApp, DeliveryApp (dispatcher + rider), CustomerA
 
 ---
 
-## DB Tables (20 total)
+## Master Table Architecture
 
-| Drizzle | SQL | Key fields |
-|---------|-----|------------|
-| `rstOutlet` | `rst_outlets` | id, orgId, name, code, type, status, address, location (jsonb), operatingHours (jsonb), acceptsDelivery, deliveryRadius, preparationTimeMinutes, aggregatorIds (jsonb) |
-| `rstTable` | `rst_tables` | id, outletId, tableNumber, section, capacity, status, currentOrderId, qrCode |
-| `rstMenuItem` | `rst_menu_items` | id, outletId, categoryId, name, description, basePrice, type (veg/non-veg/vegan), station, isAvailable, sortOrder, thumbnailUrl |
-| `rstMenuModifier` | `rst_menu_modifiers` | id, outletId, name, type (single/multi), required, minSelect, maxSelect, options (jsonb) |
-| `rstMenuItemModifier` | `rst_menu_item_modifiers` | menuItemId, modifierId |
-| `rstOrder` | `rst_orders` | id, orgId, outletId, orderNumber, type, status, source, tableId, waiterId, customerId, deliveryAddress (jsonb), riderId, subtotal, discount, tax, deliveryFee, total, paymentStatus, couponCode, aggregatorOrderId |
-| `rstOrderItem` | `rst_order_items` | id, orderId, menuItemId, name, qty, unitPrice, modifiers (jsonb), note, status |
-| `rstKot` | `rst_kots` | id, orderId, outletId, kotNumber, status, station, priority, sentAt, acceptedAt, prepStartAt, readyAt |
-| `rstKotItem` | `rst_kot_items` | id, kotId, orderItemId, menuItemId, name, qty, modifiers (jsonb), status |
-| `rstDelivery` | `rst_deliveries` | id, orderId, outletId, riderId, status, pickupAddress, dropAddress (jsonb), distance, estimatedDeliveryAt, pickedUpAt, deliveredAt, riderLocation (jsonb), failureReason |
-| `rstRider` | `rst_riders` | id, actorId, outletId, name, phone, vehicleType, status (available/busy/offline), currentLocation (jsonb), activeDeliveryId |
-| `rstBill` | `rst_bills` | id, orderId, outletId, billNumber, status, subtotal, discount, tax, serviceCharge, total, payments (jsonb), splitWith (jsonb), settledAt, ledgerTransactionId |
-| `rstShift` | `rst_shifts` | id, outletId, cashierId, startedAt, endedAt, status, openingBalance, closingBalance, variance, approvedBy |
-| `rstShiftTransaction` | `rst_shift_transactions` | id, shiftId, method, amount, reference |
-| `rstIngredient` | `rst_ingredients` | id, outletId, name, unit, currentStock, reorderLevel, costPerUnit |
-| `rstRecipe` | `rst_recipes` | id, menuItemId, ingredients (jsonb: [{ingredientId, qty}]) |
-| `rstAggregatorOrder` | `rst_aggregator_orders` | id, outletId, source, aggregatorOrderId, rawPayload (jsonb), internalOrderId, status, receivedAt |
-| `rstTableReservation` | `rst_table_reservations` | id, outletId, tableId, guestName, phone, partySize, reservedAt, status, notes |
-| `rstCoupon` | `rst_coupons` | id, orgId, code, type, value, minOrderValue, maxDiscount, usedCount, maxUses, expiresAt, isActive |
-| `rstCategory` | `rst_categories` | id, outletId, name, sortOrder, isActive, mealPeriod (breakfast/lunch/dinner/all) |
+Restaurant compose uses the Master Table Architecture (MTA). Foundation modules own shared generic tables. The compose filters master tables by `type` + `organizationId` and adds rst-prefixed detail tables for restaurant-specific data.
+
+See `docs/master-tables.md` for full MTA reference.
+
+### Master Tables (read/filter only — already exist, do not create)
+
+| Master Table | Filter | Restaurant use |
+|-------------|--------|----------------|
+| `locations` | `type = "outlet"` | Outlets (branches) |
+| `locations` | `type = "table"`, `parentId = outletId` | Dine-in tables within an outlet |
+| `cat_items` | `type = "menu_item"` | Menu items (food + drinks) |
+| `cat_items` | `type = "stock_item"` | Raw ingredients / stock |
+| `persons` | `type = "customer"` | Dine-in and delivery customers |
+| `persons` | `type = "rider"` | Delivery riders |
+| `transactions` | `type = "order"` | Orders (dine-in, takeaway, delivery) |
+| `transaction_lines` | — | Order line items |
+| `transactions` | `type = "bill"` | Bills (settlement records) |
+| `pipelines` + `pipeline_stages` | `entityType = "rst.order"` | Order status pipeline |
+| `pipelines` + `pipeline_stages` | `entityType = "rst.delivery"` | Delivery status pipeline |
+
+### Detail Tables (rst-owned, create these)
+
+| Drizzle | SQL | Purpose |
+|---------|-----|---------|
+| `rstCategories` | `rst_categories` | Menu categories (starters, mains, etc.) |
+| `rstKot` | `rst_kot` | Kitchen order tickets |
+| `rstKotItems` | `rst_kot_items` | Line items per KOT |
+| `rstDeliveries` | `rst_deliveries` | Delivery tracking detail per order |
+| `rstShifts` | `rst_shifts` | Staff shifts per outlet |
+| `rstShiftAssignments` | `rst_shift_assignments` | Who worked which shift |
+| `rstRecipes` | `rst_recipes` | Ingredient breakdown per menu item |
+| `rstRecipeIngredients` | `rst_recipe_ingredients` | Ingredient rows per recipe |
+| `rstReservations` | `rst_reservations` | Table reservation records |
+| `rstModifiers` | `rst_modifiers` | Add-on modifiers (extra cheese, etc.) |
+| `rstModifierGroups` | `rst_modifier_groups` | Modifier group config per menu item |
 
 ---
 
@@ -107,6 +120,43 @@ Five front-end apps: POSApp, KDSApp, DeliveryApp (dispatcher + rider), CustomerA
 3. **Delivery FSM:** `pending-assignment → assigned → rider-heading-to-outlet → reached-outlet → picked-up → out-for-delivery → delivered | failed → returned`
 4. **Bill FSM:** `open → printed → settled | voided`
 5. **Shift FSM:** `open → closing → closed | variance-flagged`
+
+---
+
+## Mediator Route Patterns
+
+```typescript
+// Outlets — locations filtered by type=outlet
+const outlets = await mediator.query({ type: "location.listLocations", ..., payload: { type: "outlet", organizationId: orgId } })
+
+// Tables for an outlet — locations filtered by type=table and parentId=outletId
+const tables = await mediator.query({ type: "location.listLocations", ..., payload: { type: "table", parentId: outletId } })
+
+// Menu items
+const menu = await mediator.query({ type: "catalog.listItems", ..., payload: { type: "menu_item", organizationId: orgId } })
+
+// Create order
+const tx = await mediator.send({ type: "commerce.createTransaction", ..., payload: { type: "order", personId: customerId, stageId: placedStageId } })
+// Then add lines
+await mediator.send({ type: "commerce.addLine", ..., payload: { transactionId: tx.id, itemId: menuItemId, qty: 2, unitPrice: item.price } })
+```
+
+KOT creation: direct Drizzle on `rst_kot`.
+Delivery assignment: direct Drizzle on `rst_deliveries`.
+
+## Pipeline Seeding
+
+Use `seedPipeline` from `apps/server/src/infra/db/seed.ts`:
+
+```typescript
+import { seedPipeline } from "apps/server/src/infra/db/seed"
+await seedPipeline(orgId, "rst.order", [
+  { name: "Placed" }, { name: "Preparing" }, { name: "Ready" }, { name: "Served" }, { name: "Cancelled" },
+])
+await seedPipeline(orgId, "rst.delivery", [
+  { name: "Assigned" }, { name: "Picked Up" }, { name: "On the Way" }, { name: "Delivered" }, { name: "Failed" },
+])
+```
 
 ---
 

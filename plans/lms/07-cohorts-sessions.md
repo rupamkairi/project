@@ -14,15 +14,16 @@ POST   /lms/instructor/cohorts/:id/cancel       course:update (own)
 GET    /lms/admin/cohorts                       enrollment:manage
 ```
 
+Cohorts are stored in the `lms_cohorts` detail table. The associated course is referenced as `itemId` (cat_items.id, type=course). Members are tracked in `lms_cohort_members` with a `transactionId` back to the enrollment order.
+
 **Create cohort body:**
 ```typescript
 {
+  itemId: string;            // cat_items.id — the course
   name: string;
   startDate: string;         // ISO datetime
   endDate: string;
-  capacity: number;
-  timezone: string;          // IANA tz, e.g. "Asia/Kolkata"
-  instructorId?: string;     // defaults to course instructor
+  maxSize?: number;
 }
 ```
 
@@ -54,6 +55,8 @@ Waitlist behavior: when enrollment count < capacity, pop first `waiting` entry, 
 ---
 
 ## 7.3 Live Session Routes
+
+Live sessions are `activities` (type=meeting) in the master table. Created via mediator command `activity.log`. The `entityId` links to a cohort or course; `entityType` is `"lms.cohort"` or `"lms.course"`. `actorId` is the instructor's `persons.id`.
 
 ```
 GET    /lms/instructor/cohorts/:id/sessions      course:update (own)
@@ -132,24 +135,24 @@ After session ends: `session.attendeeCount = count(distinct learnerId)` in atten
 
 When a learner enrolls with `cohortId`:
 ```typescript
+// Count current members — wrap in transaction
+const memberCount = await db.select({ count: count() })
+  .from(lmsCohortMembers)
+  .where(eq(lmsCohortMembers.cohortId, cohortId));
+
 const cohort = await db.query.lmsCohorts.findFirst({ where: eq(lmsCohorts.id, cohortId) });
-if (cohort.enrolledCount >= cohort.capacity) {
-  // Check if waitlist is allowed (org config)
-  if (orgConfig.allowWaitlist) {
-    // Add to waitlist instead
-    await db.insert(lmsWaitlist).values({ cohortId, learnerId });
-    return { status: "waitlisted" };
-  }
+if (cohort.maxSize && memberCount[0].count >= cohort.maxSize) {
   throw new ConflictError("COHORT_FULL", "This cohort is at capacity");
 }
 
-// Atomic increment
-await db.update(lmsCohorts)
-  .set({ enrolledCount: sql`enrolled_count + 1` })
-  .where(and(eq(lmsCohorts.id, cohortId), lt(lmsCohorts.enrolledCount, lmsCohorts.capacity)));
+// Insert into lms_cohort_members with the transactionId from the enrollment
+await db.insert(lmsCohortMembers).values({
+  id: generateId(), organizationId: orgId,
+  cohortId, personId, enrolledAt: new Date(), transactionId,
+});
 ```
 
-The `lt(enrolledCount, capacity)` in the WHERE clause prevents race condition without a separate lock.
+The count + insert wrapped in a DB transaction prevents race conditions.
 
 ---
 

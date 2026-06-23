@@ -52,17 +52,26 @@ const serviceCharge = orgConfig.serviceChargePct
 
 const total = taxableAmount + tax + serviceCharge + parseFloat(order.deliveryFee);
 
-await db.insert(rstBills).values({
-  orderId,
-  outletId: order.outletId,
-  billNumber,
-  status: "open",
-  subtotal: subtotal.toString(),
-  discount: discount.toString(),
-  tax: tax.toString(),
-  serviceCharge: serviceCharge.toString(),
-  total: total.toString(),
-  payments: [],
+// Bills are transactions (type="bill") linked to the order transaction
+const openStage = await getStageByName(orgId, "rst.order", "Placed");  // use appropriate bill open stage
+await mediator.send({
+  type: "commerce.createTransaction",
+  payload: {
+    type: "bill",
+    organizationId: orgId,
+    stageId: openStage.id,
+    meta: {
+      orderId,
+      outletId: order.meta?.outletId,
+      billNumber,
+      subtotal: subtotal.toString(),
+      discount: discount.toString(),
+      tax: tax.toString(),
+      serviceCharge: serviceCharge.toString(),
+      total: total.toString(),
+      payments: [],
+    },
+  },
 });
 ```
 

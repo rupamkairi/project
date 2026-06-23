@@ -75,27 +75,53 @@ Component-level implementation specs. Read `12-web-overview.md` first.
 
 ---
 
-## DB Tables to Create (Phase 2)
+## Master Table Architecture
+
+**Never recreate persons / cat_items / transactions / locations — filter by `type` + `organization_id`.**
+See `docs/master-tables.md` for the full pattern.
+
+Use `seedPipeline(orgId, 'eco.order', stages)` from `apps/server/src/infra/db/seed.ts` to seed order/fulfillment pipelines.
+
+### Master tables (read / filter only — already exist in DB)
+
+| Master table | Filter | Role in ecommerce |
+|-------------|--------|-------------------|
+| `persons` | `type = "customer"` | Customers (guest carts use `person_id = null`) |
+| `cat_items` | `type = "product"` | Products |
+| `cat_variants` | child of `cat_items` | Product variants |
+| `transactions` | `type = "order"` | Orders |
+| `transaction_lines` | child of `transactions` | Order / cart line items |
+| `transactions` (draft stage) | `type = "order"`, early pipeline stage | Carts |
+| `locations` | `type = "warehouse"` | Warehouses / fulfillment sources |
+| `pipelines` + `pipeline_stages` | `entityType = "eco.order"` | Order status flow |
+| `pipelines` + `pipeline_stages` | `entityType = "eco.fulfillment"` | Fulfillment status flow |
+| `geo_addresses` | polymorphic on `persons` | Billing / shipping addresses |
+
+### Detail tables (eco-owned, create these in Phase 2)
 
 See `plans/ecommerce/02-entities.md` for full field specs.
 
-| Drizzle object | SQL table | Key fields |
-|----------------|-----------|------------|
-| `ecoProduct` | `eco_products` | id, orgId, title, handle, description, status, categoryId, tags, weight |
-| `ecoVariant` | `eco_variants` | id, productId, sku, price, compareAtPrice, stockQty, options (jsonb), status |
-| `ecoCategory` | `eco_categories` | id, orgId, name, slug, parentId, description |
-| `ecoRegion` | `eco_regions` | id, orgId, name, currency, countries (jsonb), taxIncluded, taxProfileId |
-| `ecoCart` | `eco_carts` | id, orgId, customerId (nullable), regionId, shippingAddressId, billingAddressId, couponId, status |
-| `ecoCartItem` | `eco_cart_items` | id, cartId, variantId, qty, unitPrice, lineTotal |
-| `ecoOrder` | `eco_orders` | id, orgId, customerId, cartId, regionId, status, subtotal, shipping, tax, discount, total, shippingAddressId, billingAddressId |
-| `ecoOrderItem` | `eco_order_items` | id, orderId, variantId, qty, unitPrice, lineTotal |
-| `ecoFulfillment` | `eco_fulfillments` | id, orderId, status, carrier, trackingNumber, shippedAt, deliveredAt |
-| `ecoReturn` | `eco_returns` | id, orderId, customerId, status, reason, items (jsonb), refundAmount, processedAt |
-| `ecoCustomer` | `eco_customers` | id, orgId, email, firstName, lastName, phone, passwordHash |
-| `ecoShippingOption` | `eco_shipping_options` | id, regionId, name, type, rate, estimatedDays, conditions (jsonb) |
-| `ecoTaxProfile` | `eco_tax_profiles` | id, orgId, name, provider |
-| `ecoTaxRate` | `eco_tax_rates` | id, profileId, name, rate, jurisdiction, productType, isDefault |
-| `ecoCoupon` | `eco_coupons` | id, orgId, code, type, value, minOrderValue, usageLimit, usedCount, expiresAt |
+| Drizzle object | SQL table | Notes |
+|----------------|-----------|-------|
+| `ecoRegion` | `eco_regions` | Currency, countries, taxProfileId |
+| `ecoTaxProfile` | `eco_tax_profiles` | Provider (manual / taxjar / avalara) |
+| `ecoTaxRate` | `eco_tax_rates` | Rate, jurisdiction, productType |
+| `ecoShippingOption` | `eco_shipping_options` | regionId, type, rate, conditions |
+| `ecoCustomerGroup` | `eco_customer_groups` | Wholesale / VIP / B2B groups |
+| `ecoCustomerGroupMember` | `eco_customer_group_members` | Join: groupId + personId |
+| `ecoReturn` | `eco_returns` | transactionId → transactions (type=order) |
+| `ecoReturnItem` | `eco_return_items` | returnId + transactionLineId |
+| `ecoClaim` | `eco_claims` | transactionId → transactions (type=order) |
+| `ecoSwap` | `eco_swaps` | transactionId → transactions (type=order) |
+| `ecoSwapItem` | `eco_swap_items` | Return leg of swap |
+| `ecoGiftCard` | `eco_gift_cards` | code, balance, personId, transactionId |
+| `ecoFulfillment` | `eco_fulfillments` | transactionId + locationId (warehouse) + stageId |
+| `ecoFulfillmentItem` | `eco_fulfillment_items` | fulfillmentId + transactionLineId |
+| `ecoDraftOrder` | `eco_draft_orders` | Admin-created order; converts to transaction on placement |
+| `ecoDraftOrderItem` | `eco_draft_order_items` | draftOrderId + itemId (cat_items) |
+| `ecoOrderEdit` | `eco_order_edits` | Proposed edit to a placed transaction |
+| `ecoOrderEditItem` | `eco_order_edit_items` | orderEditId + itemId (cat_items) |
+| `ecoCartDetail` | `eco_cart` | Optional: transactionId + regionId + couponId + abandonedAt |
 
 ---
 
@@ -110,6 +136,11 @@ See `plans/ecommerce/02-entities.md` for full field specs.
 | Analytics | analytics | `analytics.track` |
 | Background jobs | workflow | `workflow.schedule` |
 | Product catalog sync | catalog | `catalog.getItem`, `catalog.getVariant` (read-only) |
+| Create cart / order | commerce | `commerce.createTransaction` (type="order", stageId=draftStageId) |
+| Add cart item | commerce | `commerce.createTransactionLine` |
+| Move order stage | commerce | `commerce.transitionStage` |
+| Query customers | party | `party.listPersons` (type="customer") |
+| Query warehouses | location | `location.listLocations` (type="warehouse") |
 
 ---
 

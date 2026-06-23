@@ -102,11 +102,12 @@ Add to `composes/crm/server/src/routes/segments.ts`:
 .get("/:id/contacts", async (ctx) => {
   const actor = (ctx as any).actor;
   const { params } = ctx as any;
+  // Evaluates segment.filters against persons master (type=contact)
+  // Returns matching persons rows
   const result = await mediator.query({
     type: "crm.getSegmentContacts",
-    params: { segmentId: params.id },
-    actorId: actor?.id,
-    orgId: actor?.orgId,
+    orgId: actor?.orgId, actorId: actor?.id,
+    payload: { segmentId: params.id }
   });
   return result;
 })

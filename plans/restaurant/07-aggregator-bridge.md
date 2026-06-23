@@ -116,9 +116,9 @@ async function ingestAggregatorOrder(input: AggregatorOrderInput): Promise<void>
     receivedAt: new Date(),
   }).returning();
 
-  // 3. Validate outlet is open
-  const outlet = await db.query.rstOutlets.findFirst({ where: eq(rstOutlets.id, input.outletId) });
-  if (outlet.status !== "open") {
+  // 3. Validate outlet is open — outlets are locations (type=outlet)
+  const outlet = await mediator.query({ type: "location.getLocation", payload: { locationId: input.outletId } });
+  if (outlet.status !== "active") {
     await rejectAggregatorOrder(aggOrder[0].id, "OUTLET_CLOSED");
     return;
   }
@@ -131,17 +131,22 @@ async function ingestAggregatorOrder(input: AggregatorOrderInput): Promise<void>
     return;
   }
 
-  // 5. Create internal order
+  // 5. Create internal order — orders are transactions (type="order")
   const orderNumber = await nextOrderNumber(input.outletId);
-  const order = await db.insert(rstOrders).values({
-    orgId: outlet.orgId,
-    outletId: input.outletId,
-    orderNumber,
-    type: "delivery",
-    status: "placed",
-    source: input.source,
-    deliveryAddress: input.deliveryAddress,
-    specialInstructions: input.specialInstructions,
+  const placedStage = await getStageByName(outlet.organizationId, "rst.order", "Placed");
+  const order = await mediator.send({
+    type: "commerce.createTransaction",
+    payload: {
+      type: "order",
+      organizationId: outlet.organizationId,
+      stageId: placedStage.id,
+      meta: {
+        outletId: input.outletId,
+        orderNumber,
+        orderType: "delivery",
+        source: input.source,
+        deliveryAddress: input.deliveryAddress,
+        specialInstructions: input.specialInstructions,
     aggregatorOrderId: aggOrder[0].id,
     subtotal: input.subtotal.toString(),
     total: input.subtotal.toString(),  // tax handled separately
@@ -181,7 +186,7 @@ async function rejectAggregatorOrder(aggOrderId: string, reason: string): Promis
 
 ## 7.6 Menu Item Mapping
 
-Aggregator item IDs must be mapped to internal menu item IDs. Mapping stored in `rstMenuItems.aggregatorIds` jsonb:
+Aggregator item IDs must be mapped to internal menu item IDs. Mapping stored in `cat_items.meta.aggregatorIds` jsonb (menu items are cat_items with type="menu_item"):
 
 ```json
 { "swiggy": "swg_12345", "zomato": "zmt_67890" }
@@ -190,13 +195,12 @@ Aggregator item IDs must be mapped to internal menu item IDs. Mapping stored in 
 Admin UI in admin app allows mapping: `PATCH /restaurant/admin/menu/:id/aggregator-ids`
 
 ```typescript
-async function resolveMenuItems(items: AggregatorItem[], outletId: string, source: string) {
+async function resolveMenuItems(items: AggregatorItem[], outletId: string, source: string, orgId: string) {
   return Promise.all(items.map(async (item) => {
-    const menuItem = await db.query.rstMenuItems.findFirst({
-      where: and(
-        eq(rstMenuItems.outletId, outletId),
-        sql`aggregator_ids->>'${source}' = ${item.externalId}`
-      ),
+    // Menu items are cat_items (type=menu_item) — query via mediator
+    const menuItem = await mediator.query({
+      type: "catalog.findItemByExternalId",
+      payload: { organizationId: orgId, type: "menu_item", source, externalId: item.externalId },
     });
     return { ...item, menuItemId: menuItem?.id ?? null };
   }));
@@ -219,7 +223,9 @@ Body: `{ reason: string }`. Calls aggregator rejection API.
 
 ## 7.8 Aggregator ID Configuration
 
-Each outlet has `aggregatorIds` jsonb: `{ swiggy: "outletId", zomato: "resId", ubereats: "storeId" }`.
+Each outlet (locations record, type="outlet") has `meta.aggregatorIds` jsonb: `{ swiggy: "outletId", zomato: "resId", ubereats: "storeId" }`.
+
+`outletCode` maps to `locations.code` (where type="outlet"). Lookup outlet by code to get `locationId` and aggregator secret.
 
 Webhook URL routing: `POST /restaurant/webhooks/swiggy/:outletCode`
 

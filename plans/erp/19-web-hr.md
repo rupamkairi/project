@@ -1,5 +1,7 @@
 # Phase 19 — Web: HR
 
+> **MTA:** Employee data comes from `persons` table (`type="employee"`). The `/erp/employees` route is unchanged on the client. HR-specific fields (designation, department, pfNo, aadhaar) are stored in `meta` jsonb on the persons record or via `erp_departments` / `erp_designations` detail tables.
+
 ---
 
 ## 19.1 EmployeesPage

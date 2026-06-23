@@ -8,8 +8,8 @@
 
 | Phase | File | Description |
 |-------|------|-------------|
-| 01 | [01-foundation.md](01-foundation.md) | Package structure, compose factory, permissions, roles, ID prefixes |
-| 02 | [02-entities.md](02-entities.md) | All 20 Drizzle table definitions |
+| 01 | [01-foundation.md](01-foundation.md) | Package structure, compose factory, permissions, roles, ID prefixes. Master tables already exist — rst compose creates detail tables only. |
+| 02 | [02-entities.md](02-entities.md) | MTA table mapping: master tables (read/filter) + rst_ detail table definitions |
 | 03 | [03-menu-outlets.md](03-menu-outlets.md) | Menu CRUD, modifier groups, 86-toggle, outlet status, operating hours |
 | 04 | [04-orders-kots.md](04-orders-kots.md) | Order FSM, KOT creation + station routing, KDS queue endpoint |
 | 05 | [05-delivery.md](05-delivery.md) | Delivery FSM, rider pool, nearest-rider algorithm, live location ping |
@@ -82,6 +82,14 @@ packages/restaurant-web/src/
   stores/
   realtime/
 ```
+
+---
+
+## P0 Blockers
+
+- Master tables already exist — rst compose creates detail tables only
+- Foundation modules (`locations`, `cat_items`, `persons`, `transactions`, `pipelines`) must be provisioned before running restaurant migrations
+- Run `seedPipeline(orgId, "rst.order", [...])` and `seedPipeline(orgId, "rst.delivery", [...])` before seeding restaurant data
 
 ---
 

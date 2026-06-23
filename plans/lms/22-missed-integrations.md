@@ -29,19 +29,22 @@ const intent = await stripe.paymentIntents.create({ ... });
 
 **Guard:**
 ```typescript
+// Enrollments live in transactions master table (type=order)
 await db.transaction(async (tx) => {
   const existing = await tx.select()
-    .from(lmsEnrollments)
+    .from(transactions)
+    .innerJoin(transactionLines, eq(transactionLines.transactionId, transactions.id))
     .where(and(
-      eq(lmsEnrollments.learnerId, learnerId),
-      eq(lmsEnrollments.courseId, courseId),
-      notInArray(lmsEnrollments.status, ["cancelled", "refunded"]),
+      eq(transactions.type, "order"),
+      eq(transactions.personId, personId),
+      eq(transactionLines.itemId, courseItemId),
+      notInArray(transactions.stageId, [droppedStageId, cancelledStageId]),
     ))
-    .for("update")  // row-level lock
+    .for("update")
     .limit(1);
 
   if (existing.length > 0) throw new ConflictError("ALREADY_ENROLLED");
-  // Insert enrollment inside same transaction
+  // Dispatch commerce.createTransaction inside same transaction
 });
 ```
 
@@ -178,38 +181,50 @@ if (result.length === 0) throw new ConflictError("COUPON_EXHAUSTED");
 
 **Pitfall:** Cohort cancelled but enrolled learners remain `active` → they still see cohort in UI.
 
-**Hook: `lms.cohort.cancelled` → batch update enrollments:**
+**Hook: `lms.cohort.cancelled` → advance enrollment transactions to Dropped stage:**
 ```typescript
 bus.on("lms.cohort.cancelled", async ({ cohortId }) => {
-  await db.update(lmsEnrollments)
-    .set({ status: "cancelled", cancelledAt: new Date(), cancelReason: "cohort_cancelled" })
-    .where(and(
-      eq(lmsEnrollments.cohortId, cohortId),
-      inArray(lmsEnrollments.status, ["active", "pending-payment"]),
-    ));
+  // Enrollments live in transactions master table. Find members via lms_cohort_members.
+  const members = await db.query.lmsCohortMembers.findMany({
+    where: eq(lmsCohortMembers.cohortId, cohortId),
+  });
+  for (const member of members) {
+    if (!member.transactionId) continue;
+    await mediator.dispatch({
+      type: "commerce.advanceTransactionStage",
+      transactionId: member.transactionId,
+      stageId: droppedStageId,
+    });
+    await mediator.dispatch({ type: "payment.refund", transactionId: member.transactionId });
+  }
 });
 ```
 
 ---
 
-## 22.10 Module Completion: Recompute completionPct
+## 22.10 Lesson Completion: Recompute course completion %
 
-**Pitfall:** `completionPct` computed client-side or not updated → `issueCertificate` check fails on completed courses.
+**Pitfall:** Completion % computed client-side or not checked on every lesson complete → certificate never issued.
 
-**Pattern — recompute server-side on every module completion:**
+**Pattern — recompute server-side on every lesson completion (in lms.lesson.completed hook):**
 ```typescript
-const completedCount = await db.select({ count: sql<number>`count(*)` })
-  .from(lmsModuleProgress)
+// Count completed lessons for this person in the course
+const allLessons = await getAllCourseLessons(itemId);  // all lesson ids for the course
+
+const completedCount = await db.select({ count: count() })
+  .from(lmsProgress)
   .where(and(
-    eq(lmsModuleProgress.enrollmentId, enrollmentId),
-    isNotNull(lmsModuleProgress.completedAt),
+    eq(lmsProgress.personId, personId),
+    inArray(lmsProgress.lessonId, allLessons.map(l => l.id)),
+    isNotNull(lmsProgress.completedAt),
   ));
 
-const newPct = Math.floor((completedCount[0].count / course.totalModules) * 100);
-await db.update(lmsEnrollments).set({ completionPct: newPct }).where(eq(lmsEnrollments.id, enrollmentId));
+const pct = Math.floor((completedCount[0].count / allLessons.length) * 100);
+const detail = await db.query.lmsCourseDetail.findFirst({ where: eq(lmsCourseDetail.itemId, itemId) });
 
-if (newPct >= course.completionThreshold) {
-  await bus.publish("lms.enrollment.completed", { enrollmentId });
+if (pct >= (detail?.completionThreshold ?? 80)) {
+  await mediator.dispatch({ type: "commerce.advanceTransactionStage", transactionId, stageId: completedStageId });
+  bus.emit("lms.enrollment.completed", { personId, itemId, transactionId });
 }
 ```
 

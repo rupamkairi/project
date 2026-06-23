@@ -7,16 +7,18 @@ The most complex page. Kanban view is primary, list view is secondary toggle.
 ## Data model
 
 ```
-Pipeline (default)
-  └─ Stage[] (ordered by probability)
-        └─ Deal[] (filtered by stageId)
+Pipeline (default — from pipelines master, entityType="crm.deal")
+  └─ Stage[] (from pipeline_stages master, ordered by position)
+        └─ Deal[] (from crm_deals, filtered by stage_id)
 ```
 
-Load sequence:
-1. `crmApi.getPipelines()` → pick `isDefault: true` pipeline
-2. `crmApi.getPipelineStages(pipelineId)` → ordered stages array
-3. `crmApi.getDeals({ pipelineId })` → all deals for this pipeline
-4. Group deals client-side by `stageId`
+Load sequence (all `useState + useEffect`, no TanStack Query):
+1. `crmApi.getPipelines()` → pick `isDefault: true` pipeline (server reads `pipelines` master where `entityType = "crm.deal"`)
+2. `crmApi.getPipelineStages(pipelineId)` → ordered stages array (server reads `pipeline_stages` master)
+3. `crmApi.getDeals({ pipelineId })` → all deals for this pipeline (server reads `crm_deals`)
+4. Group deals client-side by `stage_id`
+
+Stages are always dynamic — never hardcoded column labels.
 
 ---
 
@@ -131,11 +133,11 @@ Add to `composes/crm/server/src/routes/pipelines.ts`:
 .get("/:id/stages", async (ctx) => {
   const { params } = ctx as any;
   const actor = (ctx as any).actor;
+  // Reads from pipeline_stages master table via pipeline module query
   const result = await mediator.query({
-    type: "crm.listPipelineStages",
-    params: { pipelineId: params.id },
-    actorId: actor?.id,
-    orgId: actor?.orgId,
+    type: "pipeline.listStages",
+    orgId: actor?.orgId, actorId: actor?.id,
+    payload: { pipelineId: params.id }
   });
   return result;
 })

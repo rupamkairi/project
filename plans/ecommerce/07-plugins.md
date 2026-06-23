@@ -11,6 +11,8 @@ This phase documents wiring patterns and specifies the P1 plugins (fulfillment, 
 
 Already implemented: `@projectx/plugin-payment-server`.
 
+The `orderId` passed to `onPaymentReceived` / `onPaymentFailed` is the `transactions.id` (master table row). It is NOT a separate `eco_order_id`. Hooks use it to call `commerce.transitionStage` and `ledger.recordPayment` via mediator.
+
 Compose wiring (finalize in Phase 1):
 
 ```typescript
@@ -106,6 +108,7 @@ if (env.FULFILLMENT_PROVIDER) {
 
   bootRegistry.adapters.register("fulfillment", fulfillment.adapter);
   app.use(fulfillment.plugin); // mounts /ecommerce/fulfillment/webhook/:provider
+  // fulfillmentId above is eco_fulfillments.id; updates eco_fulfillments.stageId via pipeline FSM
 }
 ```
 

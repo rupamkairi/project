@@ -22,19 +22,20 @@ Add CRM web to `@source` list so Tailwind scans CRM classes:
 
 **File:** `composes/crm/web/src/lib/api.ts`
 
-Replace Eden Treaty with a class-based client matching the platform pattern.
-Eden Treaty is unreliable here because all server routes use `(ctx as any)` — no type inference.
+Replace Eden Treaty with a class-based client. Eden Treaty is unreliable here because all server
+routes use `(ctx as any)` — no type inference. API calls must use an absolute URL via
+`VITE_API_URL` — relative paths like `/crm/...` hit Vite (port 10060), not the API server (port 10050).
 
 ```typescript
 import { useAuthStore } from "@projectx/platform-web";
 
+const BASE = (import.meta.env.VITE_API_URL || "http://localhost:3000") + "/crm";
+
 class CrmApiClient {
-  private get token() {
-    return useAuthStore.getState().token;
-  }
+  private get token() { return useAuthStore.getState().token; }
 
   private async request<T>(path: string, init: RequestInit = {}): Promise<{ data?: T; error?: string }> {
-    const res = await fetch(`/crm${path}`, {
+    const res = await fetch(`${BASE}${path}`, {
       ...init,
       headers: {
         "Content-Type": "application/json",
@@ -47,27 +48,52 @@ class CrmApiClient {
     return { data: body as T };
   }
 
-  // Contacts
-  getContacts(params?: Record<string, any>) { ... }
-  getContact(id: string) { ... }
-  createContact(body: any) { ... }
-  updateContact(id: string, body: any) { ... }
-  deleteContact(id: string) { ... }
+  // Contacts — server filters persons master by type=contact
+  getContacts(params?: Record<string, any>) { return this.request("/contacts"); }
+  getContact(id: string) { return this.request(`/contacts/${id}`); }
+  createContact(body: any) { return this.request("/contacts", { method: "POST", body: JSON.stringify(body) }); }
+  updateContact(id: string, body: any) { return this.request(`/contacts/${id}`, { method: "PATCH", body: JSON.stringify(body) }); }
+  deleteContact(id: string) { return this.request(`/contacts/${id}`, { method: "DELETE" }); }
 
-  // Accounts — same CRUD shape
-  // Leads — same CRUD shape + convertLead(id)
-  // Deals — same CRUD + moveDeal(id, stageId)
-  // Activities — same CRUD
-  // Pipelines — getPipelines(), getPipeline(id)
-  // Campaigns — same CRUD
-  // Segments — same CRUD
-  // Analytics — getAnalytics(params)
+  // Accounts — server filters parties master by type=company
+  getAccounts(params?: Record<string, any>) { return this.request("/parties"); }
+  getAccount(id: string) { return this.request(`/parties/${id}`); }
+  createAccount(body: any) { return this.request("/parties", { method: "POST", body: JSON.stringify(body) }); }
+
+  // Leads — server filters persons master by type=lead
+  getLeads(params?: Record<string, any>) { return this.request("/leads"); }
+  getLead(id: string) { return this.request(`/leads/${id}`); }
+  createLead(body: any) { return this.request("/leads", { method: "POST", body: JSON.stringify(body) }); }
+  convertLead(id: string) { return this.request(`/leads/${id}/convert`, { method: "POST" }); }
+
+  // Deals — crm_deals (CRM-owned detail table)
+  getDeals(params?: Record<string, any>) { return this.request("/deals"); }
+  getDeal(id: string) { return this.request(`/deals/${id}`); }
+  createDeal(body: any) { return this.request("/deals", { method: "POST", body: JSON.stringify(body) }); }
+  updateDeal(id: string, body: any) { return this.request(`/deals/${id}`, { method: "PATCH", body: JSON.stringify(body) }); }
+  moveDeal(id: string, stageId: string) { return this.request(`/deals/${id}/move`, { method: "POST", body: JSON.stringify({ stageId }) }); }
+
+  // Pipelines — server reads from pipelines master (entityType=crm.deal)
+  getPipelines(params?: Record<string, any>) { return this.request("/pipelines"); }
+  getPipelineStages(id: string) { return this.request(`/pipelines/${id}/stages`); }
+
+  // Activities — server reads from activities master
+  getActivities(params?: Record<string, any>) { return this.request("/activities"); }
+  createActivity(body: any) { return this.request("/activities", { method: "POST", body: JSON.stringify(body) }); }
+
+  // Campaigns, Segments — CRM-owned detail tables
+  getCampaigns(params?: Record<string, any>) { return this.request("/campaigns"); }
+  getSegments(params?: Record<string, any>) { return this.request("/segments"); }
+  getSegmentContacts(id: string) { return this.request(`/segments/${id}/contacts`); }
+
+  // Analytics
+  getAnalytics() { return this.request("/analytics/summary"); }
 }
 
 export const crmApi = new CrmApiClient();
 ```
 
-All stores and pages use `crmApi.*` methods.
+All stores and pages use `crmApi.*` methods. Pages use `useState + useEffect` (no TanStack Query).
 
 ---
 

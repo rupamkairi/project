@@ -40,17 +40,21 @@ export function registerRestaurantHooks(bus: EventBus, mediator: Mediator): void
     const kots = await getKotsForOrder(orderId);
     const allReady = kots.every(k => k.status === "ready");
     if (allReady) {
-      await db.update(rstOrders).set({ status: "ready" }).where(eq(rstOrders.id, orderId));
+      // Advance order to Ready stage in rst.order pipeline
+      const readyStage = await getStageByName(orgId, "rst.order", "Ready");
+      await mediator.send({ type: "commerce.advanceStage", payload: { transactionId: orderId, stageId: readyStage.id } });
       bus.emit("rst.order.ready", { orderId });
 
       const order = await getOrder(orderId);
-      if (order.type === "delivery") {
-        // Auto-create delivery record
+      if (order.meta?.orderType === "delivery") {
+        // Auto-create delivery record in rst_deliveries
+        const assignedStage = await getStageByName(orgId, "rst.delivery", "Assigned");
         const delivery = await db.insert(rstDeliveries).values({
-          orderId,
-          outletId: order.outletId,
-          status: "pending-assignment",
-          dropAddress: order.deliveryAddress,
+          id: createId(),
+          organizationId: order.organizationId,
+          transactionId: orderId,
+          stageId: assignedStage.id,
+          deliveryAddress: order.meta.deliveryAddress,
         }).returning();
         bus.emit("rst.delivery.created", { deliveryId: delivery[0].id });
       }
@@ -60,17 +64,17 @@ export function registerRestaurantHooks(bus: EventBus, mediator: Mediator): void
   // Order completed (settled) → update analytics, reset table
   bus.on("rst.order.completed", async ({ orderId }) => {
     const order = await getOrder(orderId);
-    if (order.tableId && order.type === "dine-in") {
-      await db.update(rstTables)
-        .set({ status: "dirty", currentOrderId: null })
-        .where(eq(rstTables.id, order.tableId));
+    const tableId = order.meta?.tableId;
+    if (tableId && order.meta?.orderType === "dine-in") {
+      // Reset the table location status in master locations table
+      await mediator.send({ type: "location.updateStatus", payload: { locationId: tableId, status: "active" } });
     }
     await mediator.dispatch({
       type: "accounting.postRevenue",
       amount: order.subtotal,
       tax: order.tax,
       referenceId: orderId,
-      outletId: order.outletId,
+      outletId: order.meta?.outletId,
     });
   });
 
@@ -90,20 +94,19 @@ export function registerRestaurantHooks(bus: EventBus, mediator: Mediator): void
     await ingestAggregatorOrder(normalized);
   });
 
-  // Delivery failed → free rider
+  // Delivery failed → free rider (update rider person meta), revert order stage
   bus.on("rst.delivery.failed", async ({ deliveryId, riderId }) => {
-    await db.update(rstRiders).set({ status: "available", activeDeliveryId: null })
-      .where(eq(rstRiders.id, riderId));
+    // Rider is a persons record (type=rider) — update status in meta via mediator
+    await mediator.send({ type: "identity.updatePersonMeta", payload: { personId: riderId, meta: { status: "available", activeDeliveryId: null } } });
     const delivery = await getDelivery(deliveryId);
-    await db.update(rstOrders).set({ status: "ready" }).where(eq(rstOrders.id, delivery.orderId));
+    const readyStage = await getStageByName(delivery.organizationId, "rst.order", "Ready");
+    await mediator.send({ type: "commerce.advanceStage", payload: { transactionId: delivery.transactionId, stageId: readyStage.id } });
   });
 
   // Delivery delivered → complete order + free rider
   bus.on("rst.delivery.delivered", async ({ deliveryId, riderId, orderId }) => {
-    await db.update(rstRiders).set({ status: "available", activeDeliveryId: null })
-      .where(eq(rstRiders.id, riderId));
-    await db.update(rstOrders).set({ status: "completed", deliveredAt: new Date() })
-      .where(eq(rstOrders.id, orderId));
+    await mediator.send({ type: "identity.updatePersonMeta", payload: { personId: riderId, meta: { status: "available", activeDeliveryId: null } } });
+    await db.update(rstDeliveries).set({ deliveredAt: new Date() }).where(eq(rstDeliveries.id, deliveryId));
     bus.emit("rst.order.completed", { orderId });
   });
 }
@@ -121,17 +124,16 @@ export function registerRestaurantJobs(scheduler: Scheduler, mediator: Mediator)
     name: "rst.delivery-assignment-check",
     cron: "*/2 * * * *",
     fn: async () => {
+      // rst_deliveries — filter by stageId matching the "Assigned" stage (pending assignment = no personId yet)
       const unassigned = await db.query.rstDeliveries.findMany({
-        where: eq(rstDeliveries.status, "pending-assignment"),
-        with: { order: true },
+        where: (d, { isNull }) => isNull(d.personId),
       });
       for (const delivery of unassigned) {
-        // Auto-assign if available rider exists
-        const rider = await findNearestRider(delivery.outletId, delivery.order.outletId);
+        // Auto-assign if available rider exists (riders are persons type=rider)
+        const rider = await findNearestRider(delivery.organizationId, delivery.transactionId);
         if (rider) {
           await assignRider(delivery.id, rider.id);
         } else {
-          // Notify dispatcher: unassigned delivery
           bus.emit("rst.delivery.no-rider", { deliveryId: delivery.id });
         }
       }
@@ -143,19 +145,20 @@ export function registerRestaurantJobs(scheduler: Scheduler, mediator: Mediator)
     name: "rst.operating-hours-check",
     cron: "*/10 * * * *",   // every 10 min
     fn: async () => {
-      const outlets = await db.query.rstOutlets.findMany();
+      // Outlets are locations with type="outlet" — read via mediator
+      const outlets = await mediator.query({ type: "location.listLocations", payload: { type: "outlet" } });
       const now = new Date();
       const dayOfWeek = now.toLocaleDateString("en-US", { weekday: "short" }).toLowerCase();
       const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
       for (const outlet of outlets) {
-        const hours = outlet.operatingHours?.[dayOfWeek];
+        const hours = outlet.meta?.operatingHours?.[dayOfWeek];
         if (!hours) continue;
-        if (currentTime < hours.open && outlet.status === "open") {
-          await db.update(rstOutlets).set({ status: "closed" }).where(eq(rstOutlets.id, outlet.id));
+        if (currentTime < hours.open && outlet.status === "active") {
+          await mediator.send({ type: "location.updateStatus", payload: { locationId: outlet.id, status: "inactive" } });
         }
-        if (currentTime >= hours.open && currentTime <= hours.close && outlet.status === "closed") {
-          await db.update(rstOutlets).set({ status: "open" }).where(eq(rstOutlets.id, outlet.id));
+        if (currentTime >= hours.open && currentTime <= hours.close && outlet.status === "inactive") {
+          await mediator.send({ type: "location.updateStatus", payload: { locationId: outlet.id, status: "active" } });
         }
       }
     },
@@ -166,8 +169,10 @@ export function registerRestaurantJobs(scheduler: Scheduler, mediator: Mediator)
     name: "rst.reorder-alerts",
     cron: "0 8 * * *",
     fn: async () => {
-      const lowStock = await db.query.rstIngredients.findMany({
-        where: lte(rstIngredients.currentStock, rstIngredients.reorderLevel),
+      // Ingredients are cat_items (type=stock_item) — query low stock via inventory mediator
+      const lowStock = await mediator.query({ type: "inventory.listLowStock", payload: { organizationId: orgId } });
+      // Note: original pattern was:
+      // where: lte(rstIngredients.currentStock, rstIngredients.reorderLevel),
       });
       if (lowStock.length > 0) {
         await mediator.dispatch({ type: "notify.lowStockAlert", items: lowStock });

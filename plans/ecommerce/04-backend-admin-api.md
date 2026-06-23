@@ -33,9 +33,11 @@ routes/admin/
 
 ## 4.1 Products — `/admin/products`
 
+Server implementation queries `cat_items` (`type = "product"`) via mediator. Never query `eco_products`.
+
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `GET` | `/admin/products` | manager+ | List products. Filters: `status`, `categoryId`, `tags`, `search`. |
+| `GET` | `/admin/products` | manager+ | List products. Server filters `cat_items` by `type="product"` + `orgId`. Filters: `status`, `categoryId`, `tags`, `search`. |
 | `POST` | `/admin/products` | manager+ | Create product (status=draft by default) |
 | `GET` | `/admin/products/:id` | manager+ | Product detail with variants, inventory levels |
 | `PATCH` | `/admin/products/:id` | manager+ | Update product fields |
@@ -54,9 +56,11 @@ routes/admin/
 
 ## 4.2 Orders — `/admin/orders`
 
+Server implementation queries `transactions` (`type = "order"`) via mediator. Never query `eco_orders`.
+
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `GET` | `/admin/orders` | manager+ | List. Filters: `status`, `customerId`, `dateFrom/To`, `minTotal`, `regionId`. |
+| `GET` | `/admin/orders` | manager+ | List. Server filters `transactions` by `type="order"` + `orgId`. Filters: `stageId` (maps to status), `personId` (customer), `dateFrom/To`, `minTotal`. |
 | `GET` | `/admin/orders/:id` | manager+ | Order detail with items, fulfillments, returns, payments |
 | `PATCH` | `/admin/orders/:id` | admin | Admin fields only (note, tags) |
 | `POST` | `/admin/orders/:id/cancel` | admin | Cancel unfulfilled order. Releases inventory. Triggers refund if paid. |
@@ -71,9 +75,11 @@ routes/admin/
 
 ## 4.3 Customers — `/admin/customers`
 
+Server implementation queries `persons` (`type = "customer"`) via mediator. Never query `eco_customers`.
+
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `GET` | `/admin/customers` | manager+ | List customers. Filters: `groupId`, `search`. |
+| `GET` | `/admin/customers` | manager+ | List customers. Server filters `persons` by `type="customer"` + `orgId`. Filters: `groupId`, `search`. |
 | `GET` | `/admin/customers/:id` | manager+ | Customer profile with orders, returns, lifetime value |
 | `PATCH` | `/admin/customers/:id` | admin | Update customer (block/unblock) |
 | `GET` | `/admin/customers/:id/orders` | support+ | Customer order history |

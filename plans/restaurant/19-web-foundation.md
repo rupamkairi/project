@@ -117,6 +117,8 @@ export function KotStatusCard({ kot }) {
 
 ## 19.5 Restaurant API Client
 
+The API client maps frontend resource names to MTA-backed endpoints. Outlets and tables are `locations` filtered by type. Menu items and ingredients are `cat_items` filtered by type. Orders are `transactions` filtered by type.
+
 ```typescript
 export class RestaurantApiClient {
   private base = "/restaurant";
@@ -142,10 +144,50 @@ export class RestaurantApiClient {
   post = <T>(path: string, body?: unknown) => this.request<T>("POST", path, body);
   patch = <T>(path: string, body?: unknown) => this.request<T>("PATCH", path, body);
   delete = <T>(path: string) => this.request<T>("DELETE", path);
+
+  // Outlets — locations?type=outlet
+  getOutlets(params?: Record<string, string>) {
+    return this.get("/outlets?" + new URLSearchParams(params))
+  }
+
+  // Tables for an outlet — locations?type=table&parentId=outletId
+  getTables(outletId?: string) {
+    const p: Record<string, string> = { type: "table" }
+    if (outletId) p.parentId = outletId
+    return this.get("/tables?" + new URLSearchParams(p))
+  }
+
+  // Menu items — cat_items?type=menu_item
+  getMenuItems(params?: Record<string, string>) {
+    return this.get("/menu-items?" + new URLSearchParams(params))
+  }
+
+  // Ingredients — cat_items?type=stock_item
+  getIngredients(params?: Record<string, string>) {
+    return this.get("/ingredients?" + new URLSearchParams(params))
+  }
+
+  // Orders — transactions?type=order
+  getOrders(params?: Record<string, string>) {
+    return this.get("/orders?" + new URLSearchParams(params))
+  }
+
+  // Customers — persons?type=customer
+  getCustomers(params?: Record<string, string>) {
+    return this.get("/customers?" + new URLSearchParams(params))
+  }
+
+  // Riders — persons?type=rider
+  getRiders(params?: Record<string, string>) {
+    return this.get("/riders?" + new URLSearchParams(params))
+  }
 }
 
 export const rstApi = new RestaurantApiClient();
 ```
+
+**Table grid view** fetches `locations?type=table&parentId={selectedOutletId}` for the selected outlet.
+**POS order screen** creates a transaction via `commerce.createTransaction` then adds lines via `commerce.addLine`.
 
 ---
 

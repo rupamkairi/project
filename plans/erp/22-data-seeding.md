@@ -137,12 +137,22 @@ const GST_TEMPLATES = [
 ## 22.6 Warehouses
 
 ```typescript
+// Warehouses are locations with type="warehouse"
 const WAREHOUSES = [
-  { id: "wh-main",    code: "WH-MAIN",    name: "Main Warehouse",         type: "store",   isDefault: true },
-  { id: "wh-qc",      code: "WH-QC",      name: "Quality Control",        type: "transit", isDefault: false },
-  { id: "wh-fg",      code: "WH-FG",      name: "Finished Goods Store",   type: "store",   isDefault: false },
-  { id: "wh-scrap",   code: "WH-SCRAP",   name: "Scrap / Rejected Goods", type: "virtual", isDefault: false },
+  { type: "warehouse", name: "Main Warehouse", meta: { code: "WH-MAIN", locationType: "store" } },
+  { type: "warehouse", name: "Quality Control", meta: { code: "WH-QC", locationType: "transit" } },
+  { type: "warehouse", name: "Finished Goods Store", meta: { code: "WH-FG", locationType: "store" } },
+  { type: "warehouse", name: "Scrap / Rejected Goods", meta: { code: "WH-SCRAP", locationType: "virtual" } },
 ];
+
+for (const wh of WAREHOUSES) {
+  await db.insert(locations).values({
+    id: generateId(),
+    organizationId: orgId,
+    ...wh,
+    version: 1,
+  }).onConflictDoNothing();
+}
 ```
 
 ---
@@ -168,19 +178,110 @@ Add ERP permissions to existing platform actors (use `mediator.dispatch({ type: 
 
 ---
 
-## 22.8 Sample Data (dev only)
+## 22.8 Pipeline Seeding (required before any approval flows)
 
-Script: `db:seed:erp:sample`
+Pipelines must be seeded before any PR/PO/SO approval workflows work.
 
-Creates:
-- 5 vendors (mix of company/individual, states: MH, DL, KA, TN)
-- 5 ERP customers (mix of GSTIN registered + unregistered)
-- 20 items (mix of raw material, finished good, consumable)
-- Initial stock entries for all items
-- 1 complete P2P cycle: PR → PO → GRN → Invoice → Payment
-- 1 complete O2C cycle: Quotation → SO → DN → SI
-- 1 work order (submitted state)
-- Sample journal entries for current fiscal year
-- 5 employees with attendance data for current month
+```typescript
+import { seedPipeline } from "apps/server/src/infra/db/seed"
 
-This gives a realistic demo state on first boot.
+// PR approval pipeline
+await seedPipeline(orgId, "erp.pr", [
+  { name: "Draft" },
+  { name: "Submitted" },
+  { name: "Approved" },
+  { name: "Rejected" },
+])
+
+// PO approval pipeline
+await seedPipeline(orgId, "erp.po", [
+  { name: "Draft" },
+  { name: "Submitted" },
+  { name: "Approved" },
+  { name: "Issued" },
+  { name: "Received" },
+  { name: "Cancelled" },
+])
+
+// SO approval pipeline
+await seedPipeline(orgId, "erp.so", [
+  { name: "Draft" },
+  { name: "Confirmed" },
+  { name: "Fulfilling" },
+  { name: "Invoiced" },
+  { name: "Paid" },
+  { name: "Cancelled" },
+])
+```
+
+## 22.9 Sample Data (dev only, MTA-aware)
+
+```typescript
+// Seed vendor (as a party)
+await db.insert(parties).values({
+  id: generateId(),
+  organizationId: orgId,
+  type: "vendor",
+  name: "Demo Supplier Pvt Ltd",
+  meta: { gstin: "27AABCU9603R1ZX", pan: "AABCU9603R", currency: "INR", paymentTerms: "NET30" },
+  version: 1,
+})
+
+// Seed customer (as a party)
+await db.insert(parties).values({
+  id: generateId(),
+  organizationId: orgId,
+  type: "customer",
+  name: "Demo Customer Ltd",
+  meta: { gstin: "07AAACR5055K1Z5", creditLimit: 500000 },
+  version: 1,
+})
+
+// Seed employee (as a person)
+await db.insert(persons).values({
+  id: generateId(),
+  organizationId: orgId,
+  type: "employee",
+  firstName: "Rahul",
+  lastName: "Sharma",
+  email: "rahul.sharma@company.com",
+  meta: { empNo: "EMP-001", designation: "Procurement Officer", pfNo: "MH/12345" },
+})
+
+// Seed item (as a cat_item)
+await db.insert(catItems).values({
+  id: generateId(),
+  organizationId: orgId,
+  type: "stock_item",
+  name: "Raw Material A",
+  sku: "RM-001",
+  unit: "Kg",
+  meta: { hsn: "720210", gstRate: 18, reorderQty: 100, valuationMethod: "FIFO" },
+  version: 1,
+})
+
+// Seed warehouse (as a location)
+await db.insert(locations).values({
+  id: generateId(),
+  organizationId: orgId,
+  type: "warehouse",
+  name: "Main Warehouse",
+  meta: { code: "WH-MAIN", capacity: 10000 },
+})
+
+// Seed purchase order (as a transaction)
+await db.insert(transactions).values({
+  id: generateId(),
+  organizationId: orgId,
+  type: "purchase_order",
+  refNo: "PO-2024-001",
+  partyId: vendorPartyId,
+  stageId: poApprovedStageId,
+  status: "approved",
+  subtotal: 50000,
+  taxAmount: 9000,
+  total: 59000,
+  currency: "INR",
+  meta: { expectedDeliveryDate: "2024-07-01", paymentTerms: "NET30" },
+})
+```

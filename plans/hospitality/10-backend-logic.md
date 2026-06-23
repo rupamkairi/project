@@ -19,55 +19,64 @@
 ```typescript
 export function registerHospitalityHooks(bus: EventBus, mediator: Mediator): void {
 
-  // Check-in complete → create departure-clean task on checkout
-  bus.on("hsp.reservation.checked-in", async ({ reservationId, roomId, guestId }) => {
-    // Any welcome service requests auto-created here if guest has preferences
-    const guest = await getGuest(guestId);
-    if (guest.preferences?.pillowType) {
-      await db.insert(hspServiceRequests).values({
-        reservationId,
-        guestId,
-        roomId,
-        type: "housekeeping",
-        description: `Pillow preference: ${guest.preferences.pillowType}`,
+  // Check-in complete → create welcome service activity if guest has preferences
+  // guest is now persons (type=guest), preferences stored in meta
+  bus.on("hsp.reservation.checked-in", async ({ reservationId, locationId, personId }) => {
+    const guest = await db.query.persons.findFirst({ where: eq(persons.id, personId) });
+    if (guest?.meta?.preferences?.pillowType) {
+      await db.insert(activities).values({
+        id: generateId(), organizationId: guest.organizationId,
+        type: "service_request",
+        entityId: reservationId,
+        entityType: "hsp.reservation",
+        actorId: null,  // unassigned initially
+        meta: { description: `Pillow preference: ${guest.meta.preferences.pillowType}` },
         status: "pending",
+        version: 1,
       });
     }
   });
 
-  // Check-out complete → departure-clean task + update guest stats
-  bus.on("hsp.reservation.checked-out", async ({ reservationId, roomId }) => {
-    // Check if same-day arrival on this room
-    const sameDay = await db.query.hspReservations.findFirst({
+  // Check-out complete → departure-clean assignment + update guest stats
+  // rooms are now locations (type=room), housekeeping tasks are hsp_housekeeping_assignments
+  bus.on("hsp.reservation.checked-out", async ({ reservationId, locationId }) => {
+    // Check if same-day arrival on this room type
+    const reservation = await db.query.transactions.findFirst({
+      where: eq(transactions.id, reservationId),
+    });
+    const sameDay = await db.query.transactions.findFirst({
       where: and(
-        eq(hspReservations.roomTypeId, /* roomTypeId from reservation */ ""),
-        eq(hspReservations.checkInDate, todayStr()),
-        eq(hspReservations.status, "confirmed")
+        eq(transactions.organizationId, reservation!.organizationId),
+        eq(transactions.type, "order"),
+        // same roomTypeId in meta, checking in today
+        sql`meta->>'checkIn' = ${todayStr()}`,
+        sql`meta->>'roomTypeId' = ${reservation!.meta?.roomTypeId}`,
       ),
     });
-    await db.insert(hspHousekeepingTasks).values({
-      roomId,
-      type: "departure-clean",
+    await db.insert(hspHousekeepingAssignments).values({
+      id: generateId(), organizationId: reservation!.organizationId,
+      locationId,  // locations.id (room)
+      actorId: null,  // to be assigned by supervisor
+      date: todayStr(),
+      taskType: "departure-clean",
       status: "pending",
       priority: sameDay ? "rush" : "normal",
-      scheduledFor: new Date(),
     });
-    bus.emit("hsp.housekeeping.task-created", { roomId, type: "departure-clean" });
+    bus.emit("hsp.housekeeping.task-created", { locationId, type: "departure-clean" });
   });
 
   // Room inspected → alert front desk (may unblock arriving guest)
-  bus.on("hsp.room.inspected", async ({ roomId }) => {
-    // Check if there's a checked-in guest waiting for this room
-    const waitingReservation = await db.query.hspReservations.findFirst({
+  // rooms are locations; status tracked on location.status
+  bus.on("hsp.room.inspected", async ({ locationId }) => {
+    const waitingReservation = await db.query.transactions.findFirst({
       where: and(
-        eq(hspReservations.roomId, roomId),  // pre-assigned
-        eq(hspReservations.checkInDate, todayStr()),
-        eq(hspReservations.status, "confirmed")
+        eq(transactions.type, "order"),
+        sql`meta->>'roomId' = ${locationId}`,
+        sql`meta->>'checkIn' = ${todayStr()}`,
       ),
     });
     if (waitingReservation) {
-      bus.emit("hsp.room.ready-for-arrival", { roomId, reservationId: waitingReservation.id });
-      // Notify front desk
+      bus.emit("hsp.room.ready-for-arrival", { locationId, reservationId: waitingReservation.id });
     }
   });
 
@@ -89,14 +98,14 @@ export function registerHospitalityHooks(bus: EventBus, mediator: Mediator): voi
     });
   });
 
-  // Maintenance request closed → unblock room if needed
-  bus.on("hsp.maintenance.closed", async ({ requestId, roomId, roomBlockRequired }) => {
-    if (roomBlockRequired && roomId) {
-      await db.update(hspRooms).set({
-        isBlocked: false,
-        blockReason: null,
-        housekeepingStatus: "dirty",
-      }).where(eq(hspRooms.id, roomId));
+  // Maintenance request closed → unblock room (location) if needed
+  // Rooms are now locations (type=room); status updated on the location record
+  bus.on("hsp.maintenance.closed", async ({ requestId, locationId, roomBlockRequired }) => {
+    if (roomBlockRequired && locationId) {
+      await db.update(locations).set({
+        status: "available",  // or "housekeeping" if needs clean
+        meta: sql`meta - 'blockReason'`,
+      }).where(eq(locations.id, locationId));
     }
   });
 
@@ -127,15 +136,18 @@ export function registerHospitalityJobs(scheduler: Scheduler, mediator: Mediator
   });
 
   // No-show processing — 2AM daily
+  // Reservations are now transactions (type=order); stage = "Confirmed" means not yet checked in
   scheduler.register({
     name: "hsp.no-show-processing",
     cron: "0 2 * * *",
     fn: async () => {
       const yesterday = addDays(todayStr(), -1);
-      const noShows = await db.query.hspReservations.findMany({
+      const noShows = await db.query.transactions.findMany({
         where: and(
-          eq(hspReservations.checkInDate, yesterday),
-          eq(hspReservations.status, "confirmed")  // not checked in
+          eq(transactions.type, "order"),
+          sql`meta->>'checkIn' = ${yesterday}`,
+          // stageId = "Confirmed" stage id (not checked in)
+          inArray(transactions.stageId, await getStageIds("hsp.reservation", ["Confirmed"])),
         ),
       });
       for (const res of noShows) {

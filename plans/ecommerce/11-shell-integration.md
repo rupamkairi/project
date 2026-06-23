@@ -100,16 +100,21 @@ const ecommerceCompose = createEcommerceCompose(mediator, bootRegistry.adapters)
 
 ### File 4: Run DB migration
 
-From `apps/server/`:
+From project root (or `apps/server/`):
 ```bash
-bun run db:generate    # generates migration for new eco_* tables
-bun run db:migrate     # applies migration
+bun db:push    # pushes eco_ detail table schema via WebSocket (Neon compatible)
 ```
+Do not use `db:migrate` — it requires TCP and fails with Neon serverless URLs.
 
-Confirm tables: `eco_products`, `eco_variants`, `eco_categories`, `eco_regions`,
-`eco_carts`, `eco_cart_items`, `eco_orders`, `eco_order_items`, `eco_fulfillments`,
-`eco_returns`, `eco_customers`, `eco_shipping_options`, `eco_tax_profiles`,
-`eco_tax_rates`, `eco_coupons`.
+Confirm eco_ **detail** tables (master tables already exist from foundation modules):
+`eco_regions`, `eco_tax_profiles`, `eco_tax_rates`, `eco_shipping_options`,
+`eco_customer_groups`, `eco_customer_group_members`, `eco_returns`, `eco_return_items`,
+`eco_claims`, `eco_swaps`, `eco_swap_items`, `eco_gift_cards`, `eco_fulfillments`,
+`eco_fulfillment_items`, `eco_draft_orders`, `eco_order_edits`.
+
+Do NOT expect `eco_orders`, `eco_order_items`, `eco_carts`, `eco_cart_items`, `eco_customers`,
+`eco_products`, or `eco_variants` — those concepts live in master tables
+(`transactions`, `transaction_lines`, `persons`, `cat_items`, `cat_variants`).
 
 ---
 

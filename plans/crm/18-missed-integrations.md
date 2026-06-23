@@ -125,18 +125,38 @@ export function createCrmCompose(mediator, bus, scheduler) {
 
 ## 18.6 DB Schema Must Be Re-exported Through `apps/server` Barrel
 
-**Symptom:** `db:push` doesn't create CRM tables. `db:generate` produces no migration for CRM.
+**Symptom:** `db:push` doesn't create CRM detail tables. `db:generate` produces no migration for CRM.
 
-**Cause:** Drizzle-kit reads only `apps/server/src/infra/db/schema/index.ts`. If CRM tables aren't re-exported from this file, Drizzle doesn't know they exist.
+**Cause:** Drizzle-kit reads only `apps/server/src/infra/db/schema/index.ts`. If CRM detail tables aren't re-exported from this file, Drizzle doesn't know they exist.
 
-**Fix:** `apps/server/src/infra/db/schema/index.ts` must import and re-export every CRM table:
+**Fix:** `apps/server/src/infra/db/schema/index.ts` must import and re-export CRM detail tables only:
 
 ```typescript
-import { crmContacts, crmAccounts, ... } from "@projectx/crm-server/db/schema";
-export { crmContacts, crmAccounts, ... };
+// CRM detail tables — do NOT include crmContacts, crmAccounts, crmPipelines (they don't exist)
+import { crmLeads, crmDeals, crmSegments, crmCampaigns, crmCampaignContacts, crmEmailThreads, crmEmailMessages }
+  from "@projectx/crm-server/db/schema";
+export { crmLeads, crmDeals, crmSegments, crmCampaigns, crmCampaignContacts, crmEmailThreads, crmEmailMessages };
 ```
 
-This was done for CRM. Any new compose must follow the same pattern.
+This was done for CRM. Any new compose must follow the same pattern — export only the compose's own detail tables.
+
+## 18.14 Do Not Create Master Tables in Compose Schema
+
+**Symptom:** Drizzle tries to create `crm_contacts`, `crm_accounts`, `crm_pipelines`, etc., which either conflict with master tables or create phantom tables the mediator never touches.
+
+**Cause:** Old scaffold pattern defined all entities as compose-owned tables. Under MTA, contacts, accounts, leads (person record), pipelines, pipeline stages, and activities live in master tables owned by foundation modules.
+
+**Fix:** CRM compose schema files must NOT define `crm_contacts`, `crm_accounts`, `crm_pipelines`, `crm_pipeline_stages`, or `crm_activities`. Only these detail tables are CRM-owned:
+- `crm_leads` (sequencing extension for persons of type=lead)
+- `crm_deals`
+- `crm_segments`
+- `crm_campaigns`
+- `crm_campaign_contacts`
+- `crm_email_threads` (P1)
+- `crm_email_messages` (P1)
+
+Master reads go through mediator queries (`party.listPersons`, `pipeline.listStages`, `activity.list`).
+Master writes go through mediator commands (`party.createPerson`, `party.createParty`, `activity.log`).
 
 ---
 
@@ -289,6 +309,9 @@ All child routes must use `getParentRoute: () => <parent>` with a statically imp
 
 ## Quick Checklist — New Compose Integration
 
+- [ ] Compose schema files define only detail tables — never recreate master tables (`persons`, `parties`, `pipelines`, `pipeline_stages`, `activities`)
+- [ ] Master reads use mediator queries; master writes use mediator commands
+- [ ] Pipeline seeded via `seedPipeline(orgId, entityType, stages)` — not direct inserts into `crm_pipelines`
 - [ ] `VITE_API_URL` in `.env` — absolute URL, not relative
 - [ ] `vite-env.d.ts` in compose web `src/` — typed `ImportMetaEnv`
 - [ ] API client uses `VITE_API_URL + "/compose-prefix"` — not `/compose-prefix`

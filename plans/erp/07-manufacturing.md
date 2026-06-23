@@ -4,6 +4,8 @@
 
 ## 7.1 BOM Routes
 
+> **MTA note:** BOM's `itemId` (finished product) references `cat_items.id` with `type = "product"`. BOM items' `itemId` (raw materials) reference `cat_items.id` with `type = "stock_item"`. The `erp_boms` and `erp_bom_items` tables are ERP-owned detail tables.
+
 ```
 GET    /erp/boms                    erp:inventory:read
 POST   /erp/boms                    erp:operations-manager (permission: erp:inventory:adjust)
@@ -16,16 +18,16 @@ GET    /erp/boms/by-item/:itemId    erp:inventory:read
 **Create BOM body:**
 ```typescript
 {
-  itemId: string;           // finished good item ID
+  itemId: string;           // cat_items.id of finished good (type="product")
   version?: number;         // auto-increments if not provided
   quantity: number;         // output quantity this BOM produces
   uom: string;
   operatingCost?: number;
   items: Array<{
-    itemId: string;         // raw material
+    itemId: string;         // cat_items.id of raw material (type="stock_item")
     qty: number;
     uom: string;
-    warehouseId?: string;   // source warehouse
+    locationId?: string;    // locations.id of source warehouse (type="warehouse")
     scrapPct?: number;      // waste factor (e.g. 5 = 5% extra consumed)
   }>;
 }
@@ -36,6 +38,8 @@ BOM explosion: `GET /erp/boms/:id/explode?quantity=N` — returns full material 
 ---
 
 ## 7.2 Work Order Routes
+
+> **MTA note:** Work order auto-sets `itemId` from BOM — this is a `cat_items.id` reference.
 
 ```
 GET    /erp/work-orders             erp:inventory:read
@@ -51,7 +55,7 @@ POST   /erp/work-orders/:id/cancel  erp:inventory:adjust
 {
   bomId: string;
   quantity: number;
-  warehouseId: string;    // target warehouse for finished goods
+  locationId: string;     // locations.id of target warehouse for finished goods (type="warehouse")
   plannedStart?: string;  // ISO date
 }
 ```
@@ -64,7 +68,7 @@ Auto-sets `itemId` from BOM. Auto-generates `woNumber`: `WO-{YYYY}-{seq}`.
 
 **Start (`/start`):**
 1. Validate status is `submitted`
-2. Check all raw materials available in source warehouses (BOM items × quantity)
+2. Check all raw materials available in source locations (BOM items × quantity) — query `locations` table (type="warehouse") for stock availability
 3. Create `erpStockEntry` (type: `manufacture`, direction: raw material issue)
 4. Deduct each raw material from source warehouse
 5. Set `actualStart = now`, status → `in-process`

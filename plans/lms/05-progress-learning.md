@@ -1,40 +1,30 @@
 # Phase 5 — Progress & Learning
 
+Progress tracking uses the `lms_progress` detail table (lesson-level). There is no `lms_module_progress` or `lms_enrollments` table — enrollment state lives in `transactions` (master table, type=order).
+
 ---
 
 ## 5.1 Progress Routes
 
 ```
-GET    /lms/enrollments/:id/progress           learner (own)
-POST   /lms/progress/heartbeat                 learner
-POST   /lms/progress/:moduleId/complete        learner
-POST   /lms/progress/quiz/submit               learner
-GET    /lms/instructor/courses/:id/progress    enrollment:read
+GET    /lms/progress                           learner (own) — lesson progress for enrolled courses
+POST   /lms/progress/heartbeat                 learner — video watch progress
+POST   /lms/lessons/:lessonId/complete         learner — mark lesson complete
+POST   /lms/lessons/:lessonId/quiz/submit      learner — submit quiz answers
+GET    /lms/instructor/courses/:itemId/progress  enrollment:read — student progress overview
 ```
 
 ---
 
-## 5.2 Module Progress Tracking
+## 5.2 Lesson Progress Tracking
 
-On enrollment activated, seed progress records for all published modules:
+Progress is written to `lms_progress` on first interaction. No pre-seeding needed.
 
 ```typescript
-async function seedModuleProgress(enrollmentId: string, courseId: string, learnerId: string): Promise<void> {
-  const modules = await db.query.lmsCourseModules.findMany({
-    where: and(eq(lmsCourseModules.courseId, courseId), eq(lmsCourseModules.isPublished, true)),
-  });
-  if (modules.length === 0) return;
-
-  await db.insert(lmsModuleProgress).values(
-    modules.map((m) => ({
-      enrollmentId,
-      moduleId: m.id,
-      learnerId,
-      courseId,
-      status: "not-started",
-    }))
-  );
-}
+// GET /lms/progress — returns lms_progress rows for the person's enrolled courses
+const progress = await db.query.lmsProgress.findMany({
+  where: eq(lmsProgress.personId, actor.personId),
+});
 ```
 
 ---
@@ -43,16 +33,14 @@ async function seedModuleProgress(enrollmentId: string, courseId: string, learne
 
 `POST /lms/progress/heartbeat`
 
-Debounced: accept at most 1 DB update per 10 seconds per enrollment per module.
-Implemented via in-memory last-update map keyed by `enrollmentId:moduleId` (or Redis for multi-server).
+Debounced: accept at most 1 DB write per 10 seconds per person per lesson.
+Implemented via in-memory last-update map keyed by `personId:lessonId`.
 
 Body:
 ```typescript
 {
-  enrollmentId: string;
-  moduleId: string;
-  progressPct: number;   // 0–100
-  timeSpentSec: number;  // cumulative seconds this session
+  lessonId: string;
+  watchedSeconds: number;  // cumulative seconds watched this session
 }
 ```
 
@@ -61,159 +49,130 @@ Handler:
 const HEARTBEAT_MIN_INTERVAL_MS = 10_000;
 const lastHeartbeat = new Map<string, number>();
 
-async function handleHeartbeat(learnerId: string, body: HeartbeatBody): Promise<void> {
-  const key = `${body.enrollmentId}:${body.moduleId}`;
+async function handleHeartbeat(personId: string, body: HeartbeatBody): Promise<void> {
+  const key = `${personId}:${body.lessonId}`;
   const last = lastHeartbeat.get(key) ?? 0;
   if (Date.now() - last < HEARTBEAT_MIN_INTERVAL_MS) return;  // drop
 
   lastHeartbeat.set(key, Date.now());
 
-  await db.update(lmsModuleProgress)
-    .set({
-      status: "in-progress",
-      startedAt: sql`COALESCE(started_at, NOW())`,
-      progressPct: body.progressPct,
-      timeSpentSec: sql`time_spent_sec + ${body.timeSpentSec}`,
+  // Upsert lms_progress for this person + lesson
+  await db
+    .insert(lmsProgress)
+    .values({
+      id: generateId(),
+      organizationId: actor.orgId,
+      personId,
+      lessonId: body.lessonId,
+      watchedSeconds: body.watchedSeconds,
     })
-    .where(and(
-      eq(lmsModuleProgress.enrollmentId, body.enrollmentId),
-      eq(lmsModuleProgress.moduleId, body.moduleId)
-    ));
-
-  // Update lastAccessedAt on enrollment
-  await db.update(lmsEnrollments)
-    .set({ lastAccessedAt: new Date() })
-    .where(eq(lmsEnrollments.id, body.enrollmentId));
+    .onConflictDoUpdate({
+      target: [lmsProgress.organizationId, lmsProgress.personId, lmsProgress.lessonId],
+      set: { watchedSeconds: body.watchedSeconds },
+    });
 }
 ```
 
 ---
 
-## 5.4 Complete a Module
+## 5.4 Complete a Lesson
 
-`POST /lms/progress/:moduleId/complete`
-
-Body: `{ enrollmentId: string }`
+`POST /lms/lessons/:lessonId/complete`
 
 Guards:
-1. Enrollment `status = 'active'`
-2. Module must not already be `completed`
-3. For video modules: `progressPct >= 90` (configurable)
-4. For quiz modules: must have a passing quiz submission (see 5.5)
-5. For assignment modules: must have a `graded` submission with `score >= assignment.passingScore`
+1. Learner must have an active enrollment transaction for the course (check via transactions master table)
+2. Lesson must not already be completed (`completedAt IS NOT NULL`)
+3. For video lessons: watchedSeconds must cover >= 90% of durationMinutes * 60
+4. For quiz lessons: must have a passing quiz submission
 
 On complete:
 ```typescript
-await db.transaction(async (tx) => {
-  await tx.update(lmsModuleProgress).set({
-    status: "completed",
+await db
+  .insert(lmsProgress)
+  .values({
+    id: generateId(),
+    organizationId: actor.orgId,
+    personId: actor.personId,
+    lessonId,
     completedAt: new Date(),
-    progressPct: 100,
-  }).where(and(
-    eq(lmsModuleProgress.enrollmentId, enrollmentId),
-    eq(lmsModuleProgress.moduleId, moduleId)
-  ));
-
-  // Recompute enrollment completionPct
-  const allProgress = await tx.query.lmsModuleProgress.findMany({
-    where: eq(lmsModuleProgress.enrollmentId, enrollmentId),
+  })
+  .onConflictDoUpdate({
+    target: [lmsProgress.organizationId, lmsProgress.personId, lmsProgress.lessonId],
+    set: { completedAt: new Date() },
   });
-  const completed = allProgress.filter((p) => p.status === "completed").length;
-  const total = allProgress.length;
-  const pct = Math.floor((completed / total) * 100);
 
-  await tx.update(lmsEnrollments).set({ completionPct: pct })
-    .where(eq(lmsEnrollments.id, enrollmentId));
+// Recognize deferred revenue proportionally
+const allLessons = await getAllCourseLessons(itemId);
+const revenueShare = transactionTotal / allLessons.length;
+await mediator.dispatch({ type: "accounting.recognizeRevenue", amount: revenueShare, transactionId, lessonId });
 
-  // Recognize deferred revenue proportionally
-  const course = await tx.query.lmsCourses.findFirst({ where: eq(lmsCourses.id, enrollment.courseId) });
-  const revenueShare = parseFloat(enrollment.pricePaid) / total;
-  await mediator.dispatch({ type: "accounting.recognizeRevenue", amount: revenueShare, enrollmentId, moduleId });
-});
-
-// Check if course completion threshold met
-if (newPct >= course.completionThreshold) {
-  await completeEnrollment(enrollmentId);  // handles certificate issuance
-}
-
-// Unlock next module if sequential
-await unlockNextModule(enrollmentId, moduleId, courseId);
+bus.emit("lms.lesson.completed", { personId: actor.personId, lessonId, itemId });
 ```
+
+The `lms.lesson.completed` hook (Phase 10) checks overall completion and advances the enrollment transaction stage.
 
 ---
 
-## 5.5 Sequential Module Unlock
+## 5.5 Sequential Lesson Unlock
 
-```typescript
-async function unlockNextModule(enrollmentId: string, completedModuleId: string, courseId: string): Promise<void> {
-  const modules = await db.query.lmsCourseModules.findMany({
-    where: and(eq(lmsCourseModules.courseId, courseId), eq(lmsCourseModules.isPublished, true)),
-    orderBy: [asc(lmsCourseModules.sortOrder)],
-  });
-
-  const currentIndex = modules.findIndex((m) => m.id === completedModuleId);
-  if (currentIndex === -1 || currentIndex === modules.length - 1) return;
-
-  const nextModule = modules[currentIndex + 1];
-  if (!nextModule.requiredPrevious) return;  // not locked
-
-  // Emit unlock event — frontend uses this to refresh module list
-  bus.emit("lms.module.unlocked", { enrollmentId, moduleId: nextModule.id });
-}
-```
+Sequential unlock is enforced at read time (assertLessonAccess in Phase 4). No unlock event needed — the frontend re-fetches progress to determine which lessons are accessible.
 
 ---
 
 ## 5.6 Quiz Submission
 
-`POST /lms/progress/quiz/submit`
+`POST /lms/lessons/:lessonId/quiz/submit`
 
 Body:
 ```typescript
 {
-  enrollmentId: string;
-  moduleId: string;
   answers: { questionId: string; answer: string | string[] }[];
 }
 ```
 
 Guards:
-1. Module `type = 'quiz'`
-2. Enrollment `status = 'active'`
-3. Attempt count check:
+1. Lesson `contentType = 'quiz'`
+2. Active enrollment transaction for the course
+3. Attempt count check against `lmsOrgConfig.maxQuizAttempts`:
 ```typescript
-const attempts = await db.query.lmsModuleProgress.findFirst({
-  where: and(eq(lmsModuleProgress.enrollmentId, enrollmentId), eq(lmsModuleProgress.moduleId, moduleId)),
-});
-const maxAttempts = course.maxQuizAttempts ?? orgConfig.maxQuizAttempts;
-if (attempts.quizAttempts >= maxAttempts) {
+const attemptCount = await db.select({ count: count() })
+  .from(lmsSubmissions)
+  .where(and(
+    eq(lmsSubmissions.personId, actor.personId),
+    eq(lmsSubmissions.assignmentId, quizAssignmentId)   // quiz mapped to assignment
+  ));
+const maxAttempts = orgConfig.maxQuizAttempts;
+if (attemptCount[0].count >= maxAttempts) {
   throw new ConflictError("MAX_ATTEMPTS_REACHED", `Maximum ${maxAttempts} attempts allowed`);
 }
 ```
 
 Scoring:
 ```typescript
-const questions = await db.query.lmsQuizQuestions.findMany({ where: eq(lmsQuizQuestions.moduleId, moduleId) });
+const quiz = await db.query.lmsQuizzes.findFirst({ where: eq(lmsQuizzes.lessonId, lessonId) });
+const questions = await db.query.lmsQuizQuestions.findMany({ where: eq(lmsQuizQuestions.quizId, quiz.id) });
+
 let earned = 0;
-let total = 0;
 const results = questions.map((q) => {
-  const points = parseFloat(q.points ?? "1");
-  total += points;
   const answer = answers.find((a) => a.questionId === q.id)?.answer;
   const correct = isCorrect(q, answer);
-  if (correct) earned += points;
-  return { questionId: q.id, correct, correctAnswer: q.correctAnswer, explanation: q.explanation };
+  if (correct) earned++;
+  return { questionId: q.id, correct, explanation: q.explanation };
 });
 
-const score = (earned / total) * 100;
-const passed = score >= parseFloat(assignment.passingScore);
+const score = Math.round((earned / questions.length) * 100);
+const passed = score >= (quiz.passingScore ?? 70);
 
-await db.update(lmsModuleProgress).set({
-  quizScore: score.toString(),
-  quizAttempts: sql`quiz_attempts + 1`,
-}).where(...);
+// Record score in lms_progress
+await db
+  .insert(lmsProgress)
+  .values({ id: generateId(), organizationId: actor.orgId, personId: actor.personId, lessonId, score: score.toString() })
+  .onConflictDoUpdate({
+    target: [lmsProgress.organizationId, lmsProgress.personId, lmsProgress.lessonId],
+    set: { score: score.toString(), completedAt: passed ? new Date() : undefined },
+  });
 ```
 
 Returns: `{ score, passed, results, attemptsUsed, attemptsLeft }`.
 
-If passed + module completion criteria met → trigger module complete.
+If passed → trigger lesson complete (which checks overall course completion).

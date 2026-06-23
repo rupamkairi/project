@@ -236,7 +236,7 @@ return new Elysia({ prefix: "/ecommerce" })
 
 ## 22.12 DB Schema Missing from Barrel → `db:push` Skips Tables
 
-**Symptom:** `db:push` runs but `eco_products` (or other eco tables) not created.
+**Symptom:** `db:push` runs but `eco_regions` (or other eco detail tables) not created. Note: `eco_products`, `eco_orders`, `eco_customers` do not exist — these concepts live in master tables (`cat_items`, `transactions`, `persons`).
 
 **Cause:** `apps/server/src/infra/db/schema/index.ts` missing `export * from "./ecommerce"`.
 
@@ -256,6 +256,8 @@ export * from "./ecommerce";   // ← add this
 
 **Cause:** `registerEcommerceHandlers(mediator)` must be called inside `createEcommerceCompose` BEFORE route plugins mount. Handler registration must be synchronous at compose creation time.
 
+**Note:** Customer login handler queries `persons` master (`type = "customer"`) — not `eco_customers`. Ensure `persons` rows exist with correct `meta.passwordHash`.
+
 **Correct order:**
 ```typescript
 export function createEcommerceCompose(mediator: Mediator, adapters: AdapterRegistry) {
@@ -269,6 +271,22 @@ export function createEcommerceCompose(mediator: Mediator, adapters: AdapterRegi
     .use(createStoreRoutes(mediator))
 }
 ```
+
+---
+
+## Quick Checklist — Master Table Architecture
+
+- [ ] No `eco_orders`, `eco_carts`, `eco_customers`, `eco_products`, `eco_variants` tables — these do not exist
+- [ ] Orders / carts → `transactions` (`type = "order"`, with `stage_id` from pipeline)
+- [ ] Order lines / cart lines → `transaction_lines`
+- [ ] Customers → `persons` (`type = "customer"`)
+- [ ] Products → `cat_items` (`type = "product"`) + `cat_variants`
+- [ ] Warehouses → `locations` (`type = "warehouse"`)
+- [ ] Order status / fulfillment status → `pipelines` + `pipeline_stages`; seed with `seedPipeline(orgId, "eco.order", stages)`
+- [ ] Addresses → `geo_addresses` (polymorphic)
+- [ ] Cart create → `mediator.dispatch({ type: "commerce.createTransaction", ..., payload: { type: "order", stageId: draftStageId } })`
+- [ ] Cart item add → `mediator.dispatch({ type: "commerce.createTransactionLine", ... })`
+- [ ] Order placement → `mediator.dispatch({ type: "commerce.transitionStage", ..., toStage: "placed" })`
 
 ---
 

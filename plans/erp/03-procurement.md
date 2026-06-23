@@ -12,6 +12,10 @@ Vendor Registration → PR → PO → GRN → 3-Way Match → Vendor Invoice →
 
 **File:** `composes/erp/server/src/routes/procurement/vendors.ts`
 
+> **MTA note:** Vendors are stored in the `parties` table with `type = "vendor"`. There is no `erp_vendors` table.
+> - Read: `mediator.dispatch({ type: "party.listParties", filter: { type: "vendor", organizationId } })`
+> - Create: `mediator.dispatch({ type: "party.createParty", data: { type: "vendor", ... } })` — `type: "vendor"` is set automatically by the route handler.
+
 ```
 GET    /erp/vendors                    erp:vendor:read
 POST   /erp/vendors                    erp:vendor:create
@@ -27,8 +31,8 @@ GET    /erp/vendors/:id/invoices       erp:invoice:read
 ```typescript
 {
   name: string;
-  code: string;
-  type: "supplier" | "contractor" | "service-provider";
+  // no code field — parties use slug derived from name
+  type: "supplier" | "contractor" | "service-provider";  // stored in parties.meta.subType
   gstin?: string;        // validated: 15-char regex /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/
   pan?: string;          // 10-char regex
   contactEmail?: string;
@@ -83,6 +87,10 @@ Convert to PO: creates `erpPurchaseOrder` with items copied from PR, status `dra
 
 **File:** `composes/erp/server/src/routes/procurement/purchase-orders.ts`
 
+> **MTA note:** POs are stored in the `transactions` table with `type = "purchase_order"`. PO line items are stored in `transaction_lines`. There is no `erp_purchase_orders` or `erp_purchase_order_items` table.
+> - Create PO: `mediator.dispatch({ type: "commerce.createTransaction", data: { type: "purchase_order", partyId: vendorId, ... } })`
+> - PO approval pipeline: `pipelines` + `pipeline_stages` with `entityType = "erp.po"`
+
 ```
 GET    /erp/purchase-orders                     erp:purchase-order:read
 POST   /erp/purchase-orders                     erp:purchase-order:create
@@ -99,7 +107,7 @@ GET    /erp/purchase-orders/:id/grns            erp:goods-receipt:read
 **Create PO body:**
 ```typescript
 {
-  vendorId: string;
+  vendorId: string;   // parties.id with type="vendor"
   prId?: string;
   expectedDeliveryDate?: string;
   paymentTerms?: string;
@@ -119,7 +127,7 @@ GET    /erp/purchase-orders/:id/grns            erp:goods-receipt:read
 
 Server computes: `lineTotal = qty * unitPrice * (1 - discount/100)`. `subtotal` = sum of lineTotals. `taxAmount` = sum of (lineTotal * gstRate/100). `total = subtotal + taxAmount`.
 
-Guard on approve: vendor must have `status = "active"`. Check `erpVendor.status` before advancing FSM.
+Guard on approve: vendor must have `status = "active"`. Check `parties.status` (via `party.getParty`) before advancing FSM.
 
 ---
 
@@ -138,8 +146,8 @@ POST   /erp/goods-receipts/:id/quality erp:goods-receipt:approve
 **Create GRN body:**
 ```typescript
 {
-  poId: string;
-  warehouseId: string;
+  transactionId: string;  // transactions.id of the purchase_order
+  locationId: string;     // locations.id with type="warehouse"
   items: Array<{
     poItemId: string;
     itemId: string;
@@ -167,6 +175,8 @@ On confirm:
 
 **File:** `composes/erp/server/src/routes/procurement/vendor-invoices.ts`
 
+> **MTA note:** Vendor invoices are stored in the `transactions` table with `type = "invoice"` and `meta.subType = "vendor_invoice"` and `meta.direction = "inbound"`. Line items go in `transaction_lines`. There is no `erp_vendor_invoices` table.
+
 ```
 GET    /erp/vendor-invoices                       erp:invoice:read
 POST   /erp/vendor-invoices                       erp:invoice:create
@@ -179,8 +189,9 @@ POST   /erp/vendor-invoices/:id/match             erp:invoice:approve  ← trigg
 **3-Way Match logic** (run on `/match`):
 ```typescript
 async function perform3WayMatch(invoiceId: string, db: DB): Promise<MatchResult> {
-  const invoice = await db.select().from(erpVendorInvoice).where(eq(erpVendorInvoice.id, invoiceId));
-  const po = await db.select().from(erpPurchaseOrder).where(eq(erpPurchaseOrder.id, invoice.poId));
+  // invoice, po = transactions rows; grn = erp_grns row
+  const invoice = await db.select().from(transactions).where(eq(transactions.id, invoiceId));
+  const po = await db.select().from(transactions).where(eq(transactions.id, invoice.meta.poTransactionId));
   const grn = await db.select().from(erpGoodsReceipt).where(eq(erpGoodsReceipt.id, invoice.grnId));
 
   const checks = {
@@ -202,6 +213,8 @@ async function perform3WayMatch(invoiceId: string, db: DB): Promise<MatchResult>
 ## 3.6 Payment Voucher Routes
 
 **File:** `composes/erp/server/src/routes/procurement/payments.ts`
+
+> **MTA note:** Payments are stored in the `transactions` table. Outgoing payments (to vendors) use `type = "payment"`. Incoming receipts (from customers) use `type = "receipt"`.
 
 ```
 GET    /erp/payment-vouchers           erp:invoice:read

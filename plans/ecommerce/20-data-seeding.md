@@ -32,25 +32,33 @@ export default defineConfig({
 
 ### Verify tables after push
 
+These are the eco_ **detail** tables that should be created. Master tables (persons, cat_items, cat_variants, transactions, transaction_lines, locations, pipelines, pipeline_stages, geo_addresses) already exist from foundation modules.
+
 ```
-eco_products
-eco_variants
-eco_categories
 eco_regions
-eco_carts
-eco_cart_items
-eco_orders
-eco_order_items
-eco_fulfillments
-eco_returns
-eco_customers
-eco_shipping_options
 eco_tax_profiles
 eco_tax_rates
-eco_coupons
+eco_shipping_options
+eco_customer_groups
+eco_customer_group_members
+eco_returns
+eco_return_items
+eco_claims
+eco_swaps
+eco_swap_items
+eco_gift_cards
+eco_fulfillments
+eco_fulfillment_items
+eco_draft_orders
+eco_draft_order_items
+eco_order_edits
+eco_order_edit_items
+eco_cart            (optional — only if abandonment tracking added)
 ```
 
-If any table missing: check `apps/server/src/infra/db/schema/index.ts` has `export * from "./ecommerce"`.
+Do NOT look for `eco_orders`, `eco_order_items`, `eco_carts`, `eco_cart_items`, `eco_customers`, `eco_products`, or `eco_variants` — these do not exist. Those concepts live in master tables.
+
+If any eco_ table is missing: check `apps/server/src/infra/db/schema/index.ts` has `export * from "./ecommerce"`.
 
 ---
 
@@ -58,10 +66,35 @@ If any table missing: check `apps/server/src/infra/db/schema/index.ts` has `expo
 
 File: `apps/server/src/infra/db/seed-eco-dev.ts`
 
-Creates 5 roles + 3 admin actors + 2 test customers.
+Creates 5 roles + 3 admin actors + 2 test customers. Also seeds order and fulfillment pipelines via `seedPipeline()`.
 
 ```bash
 cd apps/server && bun run db:seed:eco
+```
+
+### Pipeline Seed (runs inside seed-eco-dev.ts)
+
+```typescript
+import { seedPipeline } from "apps/server/src/infra/db/seed"
+
+await seedPipeline(orgId, "eco.order", [
+  { name: "Draft" },
+  { name: "Placed" },
+  { name: "Fulfilling" },
+  { name: "Shipped" },
+  { name: "Delivered" },
+  { name: "Completed" },
+  { name: "Cancelled" },
+  { name: "Refunded" },
+])
+
+await seedPipeline(orgId, "eco.fulfillment", [
+  { name: "Pending" },
+  { name: "Shipped" },
+  { name: "In Transit" },
+  { name: "Delivered" },
+  { name: "Returned" },
+])
 ```
 
 ### Admin Users Created
@@ -72,14 +105,14 @@ cd apps/server && bun run db:seed:eco
 | `eco-manager@platform.local` | `eco123` | `eco:manager` |
 | `eco-fulfillment@platform.local` | `eco123` | `eco:fulfillment` |
 
-### Test Customers Created (in `eco_customers` table, NOT `actors`)
+### Test Customers Created (in `persons` table with `type = "customer"`, NOT `actors`)
 
 | Email | Password | Notes |
 |-------|----------|-------|
 | `customer1@test.local` | `test123` | Has 2 completed orders (from seed) |
 | `customer2@test.local` | `test123` | Empty account |
 
-Customers are stored in `eco_customers` table with bcrypt `passwordHash`. They do NOT exist in `actors` or `actor_roles` — customer auth is separate.
+Customers are rows in the `persons` master table (`type = "customer"`) with bcrypt `passwordHash` in `meta`. They do NOT exist in `actors` or `actor_roles` — customer auth is separate.
 
 ### Roles Created
 
@@ -175,9 +208,10 @@ db.insert(ecoShippingOption).values({
 
 File: `composes/ecommerce/server/src/db/seed/products.seed.ts`
 
-5 products with variants. Used for storefront testing.
+5 products with variants. Used for storefront testing. Products are inserted into `cat_items` (`type = "product"`) and variants into `cat_variants` — never into `eco_products` / `eco_variants`.
 
 ```typescript
+// Insert into cat_items, not eco_products
 const SAMPLE_PRODUCTS = [
   {
     title: "Classic Tee",
@@ -276,9 +310,9 @@ Add:
 | Situation | Symptom | Fix |
 |-----------|---------|-----|
 | `db:push` hangs | Process doesn't exit | `strict: false` in drizzle.config.ts |
-| `eco_customers` missing | Login returns 500 | Customers in separate table — verify `export * from "./ecommerce"` in schema barrel |
+| Customers missing | Login returns 500 | Customers live in `persons` master (`type="customer"`) — not in `eco_customers`. Check `persons` rows exist. |
 | Customer login returns 404 | Store auth routes not mounted | Verify `createEcommerceCompose` mounted in `apps/server/src/index.ts` |
 | PaymentAdapter missing | Checkout step 3 → 500 | Register payment plugin before compose boots; see Phase 11 shell integration |
 | `eco_shipping_options` empty | Step 2 shipping selector empty | Run `db:seed:eco:products` — creates default options |
 | `cartId` stale after DB reset | 404 on cart operations | Clear browser localStorage (`eco-cart-storage`) |
-| Sample products not visible | Storefront shows empty catalog | Run `db:seed:eco:products`; confirm `status = published` in `eco_products` |
+| Sample products not visible | Storefront shows empty catalog | Run `db:seed:eco:products`; confirm `status = published` in `cat_items` (type="product") |

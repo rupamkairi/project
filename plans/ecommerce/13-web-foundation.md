@@ -51,7 +51,7 @@ class EcommerceAdminApiClient {
     return { data: body as T };
   }
 
-  // Products
+  // Products — server filters cat_items by type="product" + orgId
   getProducts(params?: Record<string, any>) { return this.request("/products", { method: "GET" }); }
   getProduct(id: string) { return this.request(`/products/${id}`); }
   createProduct(body: any) { return this.request("/products", { method: "POST", body: JSON.stringify(body) }); }
@@ -72,7 +72,7 @@ class EcommerceAdminApiClient {
   updateCategory(id: string, body: any) { return this.request(`/categories/${id}`, { method: "PATCH", body: JSON.stringify(body) }); }
   deleteCategory(id: string) { return this.request(`/categories/${id}`, { method: "DELETE" }); }
 
-  // Orders
+  // Orders — server filters transactions by type="order" + orgId
   getOrders(params?: Record<string, any>) { return this.request("/orders?" + new URLSearchParams(params).toString()); }
   getOrder(id: string) { return this.request(`/orders/${id}`); }
   updateOrderStatus(id: string, status: string) { return this.request(`/orders/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }); }
@@ -89,7 +89,7 @@ class EcommerceAdminApiClient {
   rejectReturn(id: string, reason: string) { return this.request(`/returns/${id}/reject`, { method: "POST", body: JSON.stringify({ reason }) }); }
   processRefund(id: string, amount: number) { return this.request(`/returns/${id}/refund`, { method: "POST", body: JSON.stringify({ amount }) }); }
 
-  // Customers
+  // Customers — server filters persons by type="customer" + orgId
   getCustomers(params?: Record<string, any>) { return this.request("/customers?" + new URLSearchParams(params).toString()); }
   getCustomer(id: string) { return this.request(`/customers/${id}`); }
 
@@ -144,14 +144,14 @@ class EcommerceStoreApiClient {
   forgotPassword(email: string) { return this.request("/auth/forgot-password", { method: "POST", body: JSON.stringify({ email }) }); }
   resetPassword(token: string, password: string) { return this.request("/auth/reset-password", { method: "POST", body: JSON.stringify({ token, password }) }); }
 
-  // Catalog
+  // Catalog — server filters cat_items by type="product" + status="published"
   getProducts(params?: Record<string, any>) { return this.request("/products?" + new URLSearchParams(params).toString()); }
   getProductByHandle(handle: string) { return this.request(`/products/${handle}`); }
   getCategories() { return this.request("/categories"); }
   getCategory(id: string) { return this.request(`/categories/${id}`); }
   searchProducts(q: string, params?: Record<string, any>) { return this.request(`/search?q=${encodeURIComponent(q)}&` + new URLSearchParams(params).toString()); }
 
-  // Cart
+  // Cart — backend creates/reads transactions (type=order) in draft stage
   createCart(regionId: string) { return this.request("/cart", { method: "POST", body: JSON.stringify({ regionId }) }); }
   getCart(cartId: string) { return this.request(`/cart/${cartId}`); }
   addToCart(cartId: string, variantId: string, qty: number) { return this.request(`/cart/${cartId}/items`, { method: "POST", body: JSON.stringify({ variantId, qty }) }); }
@@ -169,6 +169,7 @@ class EcommerceStoreApiClient {
   // Customer account
   getAccount() { return this.request("/account"); }
   updateAccount(body: any) { return this.request("/account", { method: "PATCH", body: JSON.stringify(body) }); }
+  // Orders — server filters transactions by type="order" + personId
   getOrders() { return this.request("/account/orders"); }
   getOrder(id: string) { return this.request(`/account/orders/${id}`); }
   createReturn(orderId: string, body: any) { return this.request(`/account/orders/${orderId}/return`, { method: "POST", body: JSON.stringify(body) }); }

@@ -1,5 +1,7 @@
 # Phase 21 — Web: Reports
 
+> **MTA:** Report queries filter master tables by type. Vendor aging uses `parties where type='vendor'`. Customer AR aging uses `parties where type='customer'`. GSTR reports use `transactions where type in ('invoice','receipt')` filtered by organizationId.
+
 ---
 
 ## 21.1 KpiDashboardPage (default /erp route)

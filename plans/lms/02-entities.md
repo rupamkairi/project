@@ -1,247 +1,242 @@
 # Phase 2 — Entities
 
-All tables use `createId()` (ULID) for primary keys. Timestamps as ISO strings.
+All lms_ detail tables use `createId()` (ULID) for primary keys. Timestamps as ISO strings.
 
 ---
 
-```typescript
-// lms_categories
-export const lmsCategories = pgTable("lms_categories", {
-  id: text("id").primaryKey().$defaultFn(createId),
-  orgId: text("org_id").notNull(),
-  name: text("name").notNull(),
-  slug: text("slug").notNull(),
-  parentId: text("parent_id"),
-  sortOrder: integer("sort_order").default(0),
-  isActive: boolean("is_active").default(true),
-  createdAt: timestamp("created_at").defaultNow(),
-});
+## Master Tables (reused — do not define in LMS compose)
 
-// lms_courses
-export const lmsCourses = pgTable("lms_courses", {
+These tables are owned by foundation modules. LMS compose reads and filters them. Never recreate these as standalone lms_ tables.
+
+### cat_items (courses)
+
+- `type: "course"`
+- `name` — course title
+- `sku` — course code
+- `description` stored in `meta`
+- Pricing via `cat_price_lists`
+- `instructorId: text` — points to `persons.id` (type=instructor), stored in `meta.instructorId`
+- LMS reads: `where type = 'course' and organizationId = orgId`
+
+### persons (students / instructors)
+
+- `type: "student"` | `"instructor"`
+- `firstName`, `lastName`, `email`, `phone`
+- `actorId: nullable` — links to platform login when user has account
+- LMS reads learners: `where type = 'student' and organizationId = orgId`
+- LMS reads instructors: `where type = 'instructor' and organizationId = orgId`
+
+### transactions (enrollments)
+
+- `type: "order"`
+- `personId` → student (`persons.id`)
+- Course referenced in `transaction_lines` as `itemId` → `cat_items.id`
+- `stageId` → enrollment pipeline stage
+- Enrollment = transaction of type "order" for the course item
+- Created via mediator command: `commerce.createTransaction`
+
+### activities (live sessions)
+
+- `type: "meeting"`
+- `subject` — session title
+- `body` — agenda
+- `dueAt` — scheduled time
+- `completedAt` — when the session ended
+- `entityId` + `entityType`: `"lms.course"` or `"lms.cohort"`
+- `actorId` → instructor (`persons.id`) who runs it
+- Created via mediator command: `activity.log`
+
+### pipelines + pipeline_stages
+
+- `entityType: "lms.enrollment"` — stages: Enrolled → In Progress → Completed | Dropped
+- `entityType: "lms.course"` — stages: Draft → Review → Published | Archived
+- Seeded via `seedPipeline(orgId, entityType, stages)` from `apps/server/src/infra/db/seed.ts`
+
+---
+
+## Detail Tables (LMS-owned, lms_ prefixed)
+
+```typescript
+// lms_course_detail
+export const lmsCourseDetail = pgTable("lms_course_detail", {
   id: text("id").primaryKey().$defaultFn(createId),
-  orgId: text("org_id").notNull(),
-  title: text("title").notNull(),
-  slug: text("slug").notNull().unique(),
-  description: text("description"),
-  instructorId: text("instructor_id").notNull(),
-  categoryId: text("category_id"),
-  status: text("status").notNull().default("draft"),
-  // draft | under-review | published | archived
-  type: text("type").notNull().default("self-paced"),
-  // self-paced | cohort | live-only | hybrid
-  level: text("level").notNull().default("all-levels"),
+  organizationId: text("organization_id").notNull(),
+  itemId: text("item_id").notNull(),           // cat_items.id — the course
+  instructorId: text("instructor_id").notNull(), // persons.id (type=instructor)
+  level: text("level").notNull().default("beginner"),
+  // beginner | intermediate | advanced
+  durationHours: numeric("duration_hours", { precision: 5, scale: 1 }),
   language: text("language").default("en"),
   prerequisites: jsonb("prerequisites").$type<string[]>().default([]),
-  durationHours: numeric("duration_hours", { precision: 5, scale: 1 }),
-  moduleCount: integer("module_count").default(0),
-  price: numeric("price", { precision: 10, scale: 2 }).notNull().default("0"),
-  compareAtPrice: numeric("compare_at_price", { precision: 10, scale: 2 }),
-  currency: text("currency").default("USD"),
-  enrolledCount: integer("enrolled_count").default(0),
-  completedCount: integer("completed_count").default(0),
-  rating: numeric("rating", { precision: 3, scale: 2 }).default("0"),
-  reviewCount: integer("review_count").default(0),
+  // array of cat_items.id (other courses)
+  certificateTemplateId: text("certificate_template_id"),
   completionThreshold: integer("completion_threshold").default(80),
-  tags: jsonb("tags").$type<string[]>().default([]),
-  thumbnailDocId: text("thumbnail_doc_id"),
-  previewVideoUrl: text("preview_video_url"),
-  certificateTemplate: jsonb("certificate_template").$type<{
-    title: string;
-    body: string;
-    expiresAfterDays?: number;
-    logoDocId?: string;
-  }>(),
+  isPublished: boolean("is_published").default(false),
   publishedAt: timestamp("published_at"),
-  archivedAt: timestamp("archived_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// lms_course_modules
-export const lmsCourseModules = pgTable("lms_course_modules", {
+// lms_modules (course sections)
+export const lmsModules = pgTable("lms_modules", {
   id: text("id").primaryKey().$defaultFn(createId),
-  courseId: text("course_id").notNull().references(() => lmsCourses.id),
+  organizationId: text("organization_id").notNull(),
+  itemId: text("item_id").notNull(),  // cat_items.id — the course
   title: text("title").notNull(),
-  description: text("description"),
-  sortOrder: integer("sort_order").notNull(),
-  type: text("type").notNull(),
-  // video | article | quiz | assignment | live-session | download
-  contentRef: text("content_ref"),  // video URL, article URL
-  contentDocId: text("content_doc_id"),  // for downloads
-  estimatedMinutes: integer("estimated_minutes").default(0),
+  position: integer("position").notNull(),
+  isPublished: boolean("is_published").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// lms_lessons (individual lessons with content type)
+export const lmsLessons = pgTable("lms_lessons", {
+  id: text("id").primaryKey().$defaultFn(createId),
+  organizationId: text("organization_id").notNull(),
+  moduleId: text("module_id").notNull().references(() => lmsModules.id),
+  title: text("title").notNull(),
+  position: integer("position").notNull(),
+  contentType: text("content_type").notNull(),
+  // video | text | pdf | embed | quiz
+  contentUrl: text("content_url"),
+  durationMinutes: integer("duration_minutes"),
   isFree: boolean("is_free").default(false),
   isPublished: boolean("is_published").default(false),
-  requiredPrevious: boolean("required_previous").default(false),
   createdAt: timestamp("created_at").defaultNow(),
-});
-
-// lms_enrollments
-export const lmsEnrollments = pgTable("lms_enrollments", {
-  id: text("id").primaryKey().$defaultFn(createId),
-  orgId: text("org_id").notNull(),
-  learnerId: text("learner_id").notNull(),
-  courseId: text("course_id").notNull().references(() => lmsCourses.id),
-  cohortId: text("cohort_id"),
-  status: text("status").notNull().default("pending-payment"),
-  // pending-payment | active | completed | expired | cancelled | refunded
-  paymentId: text("payment_id"),
-  couponCode: text("coupon_code"),
-  pricePaid: numeric("price_paid", { precision: 10, scale: 2 }).default("0"),
-  currency: text("currency").default("USD"),
-  completionPct: integer("completion_pct").default(0),
-  completedAt: timestamp("completed_at"),
-  certificateId: text("certificate_id"),
-  expiresAt: timestamp("expires_at"),
-  lastAccessedAt: timestamp("last_accessed_at"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-// lms_module_progress
-export const lmsModuleProgress = pgTable("lms_module_progress", {
-  id: text("id").primaryKey().$defaultFn(createId),
-  enrollmentId: text("enrollment_id").notNull().references(() => lmsEnrollments.id),
-  moduleId: text("module_id").notNull().references(() => lmsCourseModules.id),
-  learnerId: text("learner_id").notNull(),
-  courseId: text("course_id").notNull(),
-  status: text("status").notNull().default("not-started"),
-  // not-started | in-progress | completed
-  startedAt: timestamp("started_at"),
-  completedAt: timestamp("completed_at"),
-  progressPct: integer("progress_pct").default(0),
-  quizScore: numeric("quiz_score", { precision: 5, scale: 2 }),
-  quizAttempts: integer("quiz_attempts").default(0),
-  timeSpentSec: integer("time_spent_sec").default(0),
 });
 
 // lms_assignments
 export const lmsAssignments = pgTable("lms_assignments", {
   id: text("id").primaryKey().$defaultFn(createId),
-  courseId: text("course_id").notNull().references(() => lmsCourses.id),
-  moduleId: text("module_id").references(() => lmsCourseModules.id),
+  organizationId: text("organization_id").notNull(),
+  moduleId: text("module_id").notNull().references(() => lmsModules.id),
   title: text("title").notNull(),
-  description: text("description"),
-  type: text("type").notNull(),
-  // quiz | file-upload | text-response | peer-review | project
-  dueHoursAfterEnrollment: integer("due_hours_after_enrollment"),
-  absoluteDueDate: timestamp("absolute_due_date"),
+  instructions: text("instructions"),
+  dueOffsetDays: integer("due_offset_days"),
   maxScore: numeric("max_score", { precision: 6, scale: 2 }).default("100"),
-  passingScore: numeric("passing_score", { precision: 6, scale: 2 }).default("60"),
-  allowLateSubmission: boolean("allow_late_submission").default(false),
-  maxAttempts: integer("max_attempts").default(1),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 // lms_submissions
 export const lmsSubmissions = pgTable("lms_submissions", {
   id: text("id").primaryKey().$defaultFn(createId),
+  organizationId: text("organization_id").notNull(),
   assignmentId: text("assignment_id").notNull().references(() => lmsAssignments.id),
-  learnerId: text("learner_id").notNull(),
-  enrollmentId: text("enrollment_id").notNull().references(() => lmsEnrollments.id),
-  attemptNumber: integer("attempt_number").default(1),
-  status: text("status").notNull().default("submitted"),
-  // submitted | grading | graded | returned | late
-  content: text("content"),
-  attachmentIds: jsonb("attachment_ids").$type<string[]>().default([]),
-  score: numeric("score", { precision: 6, scale: 2 }),
-  maxScore: numeric("max_score", { precision: 6, scale: 2 }),
-  feedback: text("feedback"),
-  gradedBy: text("graded_by"),
-  gradedAt: timestamp("graded_at"),
+  personId: text("person_id").notNull(),  // persons.id — student
   submittedAt: timestamp("submitted_at").defaultNow(),
+  content: text("content"),  // text or file url
+  score: numeric("score", { precision: 6, scale: 2 }),
+  gradedAt: timestamp("graded_at"),
+  feedback: text("feedback"),
+});
+
+// lms_quizzes
+export const lmsQuizzes = pgTable("lms_quizzes", {
+  id: text("id").primaryKey().$defaultFn(createId),
+  organizationId: text("organization_id").notNull(),
+  lessonId: text("lesson_id").notNull().references(() => lmsLessons.id),
+  title: text("title").notNull(),
+  passingScore: integer("passing_score").default(70),
+  timeLimitMinutes: integer("time_limit_minutes"),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // lms_quiz_questions
 export const lmsQuizQuestions = pgTable("lms_quiz_questions", {
   id: text("id").primaryKey().$defaultFn(createId),
-  moduleId: text("module_id").notNull().references(() => lmsCourseModules.id),
+  organizationId: text("organization_id").notNull(),
+  quizId: text("quiz_id").notNull().references(() => lmsQuizzes.id),
   question: text("question").notNull(),
-  type: text("type").notNull(),  // mcq | text | true-false
-  options: jsonb("options").$type<{ id: string; text: string }[]>(),
-  correctAnswer: jsonb("correct_answer"),  // string or string[]
-  points: numeric("points", { precision: 5, scale: 2 }).default("1"),
+  type: text("type").notNull(),  // mcq | true_false | short_answer
+  position: integer("position").notNull(),
+  options: jsonb("options").$type<{ text: string; isCorrect: boolean }[]>(),
   explanation: text("explanation"),
-  sortOrder: integer("sort_order").default(0),
-});
-
-// lms_cohorts
-export const lmsCohorts = pgTable("lms_cohorts", {
-  id: text("id").primaryKey().$defaultFn(createId),
-  courseId: text("course_id").notNull().references(() => lmsCourses.id),
-  name: text("name").notNull(),
-  instructorId: text("instructor_id").notNull(),
-  startDate: timestamp("start_date").notNull(),
-  endDate: timestamp("end_date").notNull(),
-  capacity: integer("capacity").notNull(),
-  enrolledCount: integer("enrolled_count").default(0),
-  status: text("status").notNull().default("scheduled"),
-  // scheduled | active | completed | cancelled
-  timezone: text("timezone").default("UTC"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-// lms_live_sessions
-export const lmsLiveSessions = pgTable("lms_live_sessions", {
-  id: text("id").primaryKey().$defaultFn(createId),
-  cohortId: text("cohort_id").notNull().references(() => lmsCohorts.id),
-  courseId: text("course_id").notNull(),
-  instructorId: text("instructor_id").notNull(),
-  title: text("title").notNull(),
-  scheduledAt: timestamp("scheduled_at").notNull(),
-  durationMinutes: integer("duration_minutes").notNull(),
-  meetingUrl: text("meeting_url").notNull(),
-  recordingUrl: text("recording_url"),
-  status: text("status").notNull().default("scheduled"),
-  // scheduled | live | ended | recorded | cancelled
-  attendeeCount: integer("attendee_count").default(0),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-// lms_session_attendance
-export const lmsSessionAttendance = pgTable("lms_session_attendance", {
-  id: text("id").primaryKey().$defaultFn(createId),
-  sessionId: text("session_id").notNull().references(() => lmsLiveSessions.id),
-  learnerId: text("learner_id").notNull(),
-  joinedAt: timestamp("joined_at"),
-  leftAt: timestamp("left_at"),
-  durationMinutes: integer("duration_minutes").default(0),
 });
 
 // lms_certificates
 export const lmsCertificates = pgTable("lms_certificates", {
   id: text("id").primaryKey().$defaultFn(createId),
-  enrollmentId: text("enrollment_id").notNull().references(() => lmsEnrollments.id),
-  learnerId: text("learner_id").notNull(),
-  courseId: text("course_id").notNull(),
-  verificationCode: text("verification_code").notNull().unique(),
+  organizationId: text("organization_id").notNull(),
+  transactionId: text("transaction_id").notNull(),  // transactions.id — the enrollment order
+  personId: text("person_id").notNull(),             // persons.id — student
   issuedAt: timestamp("issued_at").defaultNow(),
+  certificateNo: text("certificate_no").notNull().unique(),
   expiresAt: timestamp("expires_at"),
-  documentId: text("document_id"),
-  revoked: boolean("revoked").default(false),
-  revokedReason: text("revoked_reason"),
-  revokedAt: timestamp("revoked_at"),
+  templateId: text("template_id"),
 });
 
-// lms_reviews
-export const lmsReviews = pgTable("lms_reviews", {
+// lms_cohorts
+export const lmsCohorts = pgTable("lms_cohorts", {
   id: text("id").primaryKey().$defaultFn(createId),
-  courseId: text("course_id").notNull().references(() => lmsCourses.id),
-  learnerId: text("learner_id").notNull(),
-  enrollmentId: text("enrollment_id").notNull(),
-  rating: integer("rating").notNull(),  // 1-5
-  comment: text("comment"),
-  isVerified: boolean("is_verified").default(true),  // purchased enrollment
+  organizationId: text("organization_id").notNull(),
+  itemId: text("item_id").notNull(),  // cat_items.id — the course
+  name: text("name").notNull(),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  maxSize: integer("max_size"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// lms_waitlist
-export const lmsWaitlist = pgTable("lms_waitlist", {
+// lms_cohort_members
+export const lmsCohortMembers = pgTable("lms_cohort_members", {
   id: text("id").primaryKey().$defaultFn(createId),
+  organizationId: text("organization_id").notNull(),
   cohortId: text("cohort_id").notNull().references(() => lmsCohorts.id),
-  learnerId: text("learner_id").notNull(),
-  joinedAt: timestamp("joined_at").defaultNow(),
-  notifiedAt: timestamp("notified_at"),
-  status: text("status").default("waiting"),  // waiting | notified | enrolled | expired
+  personId: text("person_id").notNull(),       // persons.id — student
+  enrolledAt: timestamp("enrolled_at").defaultNow(),
+  transactionId: text("transaction_id"),        // transactions.id — the enrollment order
+});
+
+// lms_progress (lesson-level completion tracking)
+export const lmsProgress = pgTable("lms_progress", {
+  id: text("id").primaryKey().$defaultFn(createId),
+  organizationId: text("organization_id").notNull(),
+  personId: text("person_id").notNull(),    // persons.id — student
+  lessonId: text("lesson_id").notNull().references(() => lmsLessons.id),
+  completedAt: timestamp("completed_at"),
+  watchedSeconds: integer("watched_seconds"),  // for video lessons
+  score: numeric("score", { precision: 5, scale: 2 }),  // for quiz lessons
+}, (t) => ({
+  uniq: uniqueIndex("lms_progress_uniq").on(t.organizationId, t.personId, t.lessonId),
+}));
+
+// lms_discussions
+export const lmsDiscussions = pgTable("lms_discussions", {
+  id: text("id").primaryKey().$defaultFn(createId),
+  organizationId: text("organization_id").notNull(),
+  lessonId: text("lesson_id").notNull().references(() => lmsLessons.id),
+  personId: text("person_id").notNull(),
+  body: text("body").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// lms_discussion_replies
+export const lmsDiscussionReplies = pgTable("lms_discussion_replies", {
+  id: text("id").primaryKey().$defaultFn(createId),
+  organizationId: text("organization_id").notNull(),
+  discussionId: text("discussion_id").notNull().references(() => lmsDiscussions.id),
+  personId: text("person_id").notNull(),
+  body: text("body").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+```
+
+---
+
+## Retained LMS Business Config
+
+These config/operational tables remain lms-owned as they have no equivalent master table:
+
+```typescript
+// lms_org_config
+export const lmsOrgConfig = pgTable("lms_org_config", {
+  orgId: text("org_id").primaryKey(),
+  defaultCompletionThreshold: integer("default_completion_threshold").default(80),
+  refundWindowDays: integer("refund_window_days").default(14),
+  inactivityNudgeDays: integer("inactivity_nudge_days").default(7),
+  maxQuizAttempts: integer("max_quiz_attempts").default(3),
+  certificateExpiresAfterDays: integer("certificate_expires_after_days"),
+  allowLateSubmissionDefault: boolean("allow_late_submission_default").default(false),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // lms_coupons
@@ -257,17 +252,5 @@ export const lmsCoupons = pgTable("lms_coupons", {
   expiresAt: timestamp("expires_at"),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
-});
-
-// lms_org_config
-export const lmsOrgConfig = pgTable("lms_org_config", {
-  orgId: text("org_id").primaryKey(),
-  defaultCompletionThreshold: integer("default_completion_threshold").default(80),
-  refundWindowDays: integer("refund_window_days").default(14),
-  inactivityNudgeDays: integer("inactivity_nudge_days").default(7),
-  maxQuizAttempts: integer("max_quiz_attempts").default(3),
-  certificateExpiresAfterDays: integer("certificate_expires_after_days"),  // null = never
-  allowLateSubmissionDefault: boolean("allow_late_submission_default").default(false),
-  updatedAt: timestamp("updated_at").defaultNow(),
 });
 ```

@@ -83,7 +83,7 @@ Same as CRM admin flow:
 
 Separate flow from platform:
 1. Customer POSTs to `POST /ecommerce/store/auth/login` with `{ email, password }`
-2. Server checks `eco_customers` table, compares bcrypt hash
+2. Server checks `persons` master table (`type = "customer"`), compares bcrypt hash from `meta.passwordHash`
 3. Returns `{ customer: {...}, token: "eco_jwt_..." }`
 4. Frontend: `localStorage.setItem("eco_customer_token", token)`
 5. `EcommerceStoreApiClient` reads `localStorage.getItem("eco_customer_token")`

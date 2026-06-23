@@ -23,6 +23,10 @@ Replace the 4 hardcoded zero-cards with real data. Add activity feed + pipeline 
 
 Load via `crmApi.getAnalytics()` → `GET /crm/analytics/summary`
 
+Counts are sourced from master tables: `contactCount` from `persons` (type=contact),
+`openLeadCount` from `persons` (type=lead) joined `crm_leads` (status≠converted).
+`activeDealCount` and `pipelineValue` from `crm_deals` (status=open).
+
 ```typescript
 const KPI_CARDS = [
   { label: "Total Contacts", key: "contactCount",    icon: Users,        href: "/crm/contacts"  },
@@ -56,7 +60,10 @@ Link to full activities list: "View all →" at bottom.
 
 ## Pipeline Snapshot
 
-Load: same data as kanban — default pipeline stages + deal counts.
+Load:
+1. `crmApi.getPipelines()` → pick `isDefault: true` (server reads `pipelines` master where `entityType = "crm.deal"`)
+2. `crmApi.getPipelineStages(pipelineId)` → stages (server reads `pipeline_stages` master)
+3. `crmApi.getDeals({ pipelineId })` → group by `stage_id` client-side
 
 Render as a vertical list of stages with deal count + total value:
 

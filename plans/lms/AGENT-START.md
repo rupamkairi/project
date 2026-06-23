@@ -73,26 +73,43 @@ Three front-end apps: LearnerApp, InstructorApp, AdminApp.
 
 ---
 
-## DB Tables (19 total)
+## DB Tables
+
+### Master tables (read/filter only — already exist)
+
+These tables are owned by foundation modules. LMS compose never creates or migrates them. Filter by `organizationId` + `type`.
+
+| Master table | Filter | LMS meaning |
+|-------------|--------|-------------|
+| `cat_items` | `type = "course"` | Courses (title, sku/course code, pricing via cat_price_lists) |
+| `persons` | `type = "student"` | Learners |
+| `persons` | `type = "instructor"` | Instructors |
+| `transactions` | `type = "order"` | Enrollments (personId → student, lines → course item) |
+| `activities` | `type = "meeting"` | Live sessions (subject, dueAt, actorId → instructor) |
+| `pipelines` + `pipeline_stages` | `entityType = "lms.enrollment"` | Enrollment pipeline: Enrolled → In Progress → Completed \| Dropped |
+| `pipelines` + `pipeline_stages` | `entityType = "lms.course"` | Course pipeline: Draft → Review → Published \| Archived |
+
+> Never recreate courses/students/instructors as standalone tables; filter cat_items/persons by type. See `docs/master-tables.md`.
+>
+> Use `seedPipeline(orgId, 'lms.enrollment', stages)` from `apps/server/src/infra/db/seed.ts`.
+
+### Detail tables (lms-owned, create these)
 
 | Drizzle | SQL | Key fields |
 |---------|-----|------------|
-| `lmsCourse` | `lms_courses` | id, orgId, slug, instructorId, categoryId, status, type, level, price, completionThreshold, certificateTemplate (jsonb) |
-| `lmsCourseModule` | `lms_course_modules` | id, courseId, title, type, order, contentRef, estimatedMinutes, isFree, isPublished, requiredPrevious |
-| `lmsEnrollment` | `lms_enrollments` | id, learnerId, courseId, cohortId, status, pricePaid, completionPct, completedAt, certificateId, expiresAt |
-| `lmsModuleProgress` | `lms_module_progress` | id, enrollmentId, moduleId, learnerId, courseId, status, startedAt, completedAt, progressPct, quizScore, timeSpentSec |
-| `lmsAssignment` | `lms_assignments` | id, courseId, moduleId, type, dueHoursAfterEnrollment, absoluteDueDate, maxScore, passingScore, allowLateSubmission, maxAttempts |
-| `lmsSubmission` | `lms_submissions` | id, assignmentId, learnerId, enrollmentId, attemptNumber, status, content, attachmentIds, score, feedback, gradedBy, gradedAt |
-| `lmsQuizQuestion` | `lms_quiz_questions` | id, moduleId, question, type (mcq/text/true-false), options (jsonb), correctAnswer, points |
-| `lmsCohort` | `lms_cohorts` | id, courseId, name, instructorId, startDate, endDate, capacity, enrolledCount, status, timezone |
-| `lmsLiveSession` | `lms_live_sessions` | id, cohortId, courseId, instructorId, title, scheduledAt, durationMinutes, meetingUrl, recordingUrl, status, attendeeCount |
-| `lmsSessionAttendance` | `lms_session_attendance` | id, sessionId, learnerId, joinedAt, leftAt, durationMinutes |
-| `lmsCertificate` | `lms_certificates` | id, enrollmentId, learnerId, courseId, verificationCode, issuedAt, expiresAt, documentId, revoked, revokedReason |
-| `lmsReview` | `lms_reviews` | id, courseId, learnerId, enrollmentId, rating, comment, isVerified, createdAt |
-| `lmsCategory` | `lms_categories` | id, orgId, name, slug, parentId, order, isActive |
-| `lmsWaitlist` | `lms_waitlist` | id, cohortId, learnerId, joinedAt, notifiedAt, status |
-| `lmsCoupon` | `lms_coupons` | id, orgId, code, type (pct/fixed), value, maxUses, usedCount, courseIds (jsonb), expiresAt, isActive |
-| `lmsOrgConfig` | `lms_org_config` | orgId, defaultCompletionThreshold, refundWindowDays, inactivityNudgeDays, maxQuizAttempts, certificateExpiresAfterDays |
+| `lmsCourseDetail` | `lms_course_detail` | id, organizationId, itemId (cat_items), instructorId (persons), level, durationHours, language, prerequisites (jsonb), certificateTemplateId, isPublished, publishedAt |
+| `lmsModule` | `lms_modules` | id, organizationId, itemId (cat_items — course), title, position, isPublished |
+| `lmsLesson` | `lms_lessons` | id, organizationId, moduleId, title, position, contentType (video\|text\|pdf\|embed\|quiz), contentUrl, durationMinutes, isFree, isPublished |
+| `lmsAssignment` | `lms_assignments` | id, organizationId, moduleId, title, instructions, dueOffsetDays, maxScore |
+| `lmsSubmission` | `lms_submissions` | id, organizationId, assignmentId, personId (persons — student), submittedAt, content, score, gradedAt, feedback |
+| `lmsQuiz` | `lms_quizzes` | id, organizationId, lessonId, title, passingScore, timeLimitMinutes |
+| `lmsQuizQuestion` | `lms_quiz_questions` | id, organizationId, quizId, question, type (mcq\|true_false\|short_answer), position, options (jsonb), explanation |
+| `lmsCertificate` | `lms_certificates` | id, organizationId, transactionId (transactions — enrollment), personId, issuedAt, certificateNo, expiresAt, templateId |
+| `lmsCohort` | `lms_cohorts` | id, organizationId, itemId (cat_items — course), name, startDate, endDate, maxSize |
+| `lmsCohortMember` | `lms_cohort_members` | id, organizationId, cohortId, personId (persons — student), enrolledAt, transactionId |
+| `lmsProgress` | `lms_progress` | id, organizationId, personId (persons — student), lessonId, completedAt, watchedSeconds, score; unique (organizationId, personId, lessonId) |
+| `lmsDiscussion` | `lms_discussions` | id, organizationId, lessonId, personId, body, createdAt |
+| `lmsDiscussionReply` | `lms_discussion_replies` | id, organizationId, discussionId, personId, body, createdAt |
 
 ---
 
@@ -112,10 +129,33 @@ Three front-end apps: LearnerApp, InstructorApp, AdminApp.
 | Need | Mediator type prefix |
 |------|---------------------|
 | Actor/org/roles | `identity.*` |
-| Course catalog + search | `catalog.*` |
+| Course catalog + search | `catalog.listItems` with `type: "course"` |
+| Student / instructor listing | `party.listPersons` with `type: "student"` or `type: "instructor"` |
+| Enrollment creation | `commerce.createTransaction` with `type: "order"`, lines referencing course item |
+| Live session creation | `activity.log` with `type: "meeting"` |
 | Payments | `ledger.postTransaction` + payment adapter |
 | Approval workflows | `workflow.startProcess` |
 | File storage / PDF gen | `document.generatePDF`, `document.create` |
 | Notifications | `notification.send` |
 | Analytics | `analytics.track`, `analytics.captureMetric` |
 | Scheduling (live sessions) | `scheduling.book`, `scheduling.cancel` |
+
+### Backend route pattern for master reads
+
+```typescript
+// GET /lms/courses
+const result = await mediator.query({
+  type: "catalog.listItems",
+  orgId: actor.orgId, actorId: actor.id,
+  payload: { type: "course", page, limit }
+})
+
+// GET /lms/students
+const result = await mediator.query({
+  type: "party.listPersons",
+  orgId: actor.orgId, actorId: actor.id,
+  payload: { type: "student", page, limit }
+})
+```
+
+Module/lesson/assignment CRUD and progress tracking operate directly on Drizzle lms_ detail tables.

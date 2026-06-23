@@ -9,21 +9,24 @@ and compensating-action patterns for the ecommerce compose.
 
 ## 6.1 FSM Registrations
 
-### Order FSM (already defined — verify alignment)
+Order and fulfillment FSMs run against `pipeline_stages` rows. The `transactions.stage_id` field records the current stage. Use `seedPipeline()` to create these pipelines on first boot.
+
+### Order FSM
+
+Seed: `await seedPipeline(orgId, "eco.order", [{ name: "Draft" }, { name: "Placed" }, { name: "Fulfilling" }, { name: "Shipped" }, { name: "Delivered" }, { name: "Completed" }, { name: "Cancelled" }, { name: "Refunded" }])`
 
 ```
-Machine ID: ecommerce.order
-States: pending | processing | fulfillment | shipped | delivered | completed | cancelled | refunded
+Pipeline entityType: eco.order
+Stages: Draft | Placed | Fulfilling | Shipped | Delivered | Completed | Cancelled | Refunded
 
 Transitions:
-  pending → processing      trigger: payment webhook (onPaymentReceived)
-  pending → cancelled       trigger: payment failure OR timeout (expire-pending-orders job)
-  processing → fulfillment  trigger: inventory allocated + fulfillment created
-  fulfillment → shipped     trigger: fulfillment.status = shipped (carrier webhook or admin update)
-  shipped → delivered       trigger: fulfillment.status = delivered
-  delivered → completed     trigger: auto-complete job (7 days after delivered)
-  completed → refunded      trigger: return fully processed
-  any → cancelled           guard: only pending/processing; admin cancels
+  Draft → Placed          trigger: payment session created (checkout)
+  Placed → Fulfilling     trigger: payment webhook (onPaymentReceived) — inventory allocated
+  Fulfilling → Shipped    trigger: eco_fulfillments.stageId → shipped
+  Shipped → Delivered     trigger: eco_fulfillments.stageId → delivered
+  Delivered → Completed   trigger: auto-complete job (7 days after delivered)
+  Completed → Refunded    trigger: return fully processed
+  Placed | Fulfilling → Cancelled  guard: admin cancels; releases inventory
 ```
 
 ### Return FSM
@@ -42,16 +45,19 @@ Transitions:
 
 ### Fulfillment FSM
 
+Seed: `await seedPipeline(orgId, "eco.fulfillment", [{ name: "Pending" }, { name: "Shipped" }, { name: "In Transit" }, { name: "Delivered" }, { name: "Returned" }])`
+
+`eco_fulfillments.stageId` points to the current `pipeline_stages` row for `entityType = "eco.fulfillment"`.
+
 ```
-Machine ID: ecommerce.fulfillment
-States: pending | created | shipped | in_transit | delivered | cancelled
+Pipeline entityType: eco.fulfillment
+Stages: Pending | Shipped | In Transit | Delivered | Returned
 
 Transitions:
-  pending → created       trigger: fulfillment record created
-  created → shipped       trigger: admin updates with tracking number
-  shipped → in_transit    trigger: carrier webhook (first scan)
-  in_transit → delivered  trigger: carrier webhook (delivery scan)
-  created → cancelled     guard: order cancelled before shipping
+  Pending → Shipped       trigger: admin updates with tracking number
+  Shipped → In Transit    trigger: carrier webhook (first scan)
+  In Transit → Delivered  trigger: carrier webhook (delivery scan)
+  Pending → Returned      guard: order cancelled before shipping
 ```
 
 ### Swap FSM

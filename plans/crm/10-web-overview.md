@@ -23,10 +23,12 @@ Replace all placeholder CRM pages with fully functional, data-connected pages. M
 | Problem | Fix |
 |---|---|
 | `routes/layout.tsx` is bare `<Outlet />` | Add NavBar + AuthGuard |
-| `lib/api.ts` Eden Treaty — types unreliable since routes use `(ctx as any)` | Replace with class-based client |
+| `lib/api.ts` Eden Treaty — types unreliable since routes use `(ctx as any)` | Replace with class-based `CrmApiClient` using `VITE_API_URL` absolute URLs |
 | All 14 route pages are static placeholders | Full implementation per phase plan |
 | `apps/web/src/globals.css` missing CRM `@source` | Add `@source` for CRM web |
-| Stores use wrong Eden Treaty call shape | Rewrite stores to use new class client |
+| Stores use wrong Eden Treaty call shape | Rewrite stores to use `crmApi.*` methods |
+| Pages used TanStack Query | Use `useState + useEffect` instead |
+| API client used relative paths (`/crm/...`) | Use absolute `VITE_API_URL + "/crm/..."` — relative hits Vite (10060), not API server (10050) |
 
 ## Implementation Phases
 

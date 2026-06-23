@@ -75,7 +75,7 @@ Returns daily/weekly/monthly grid:
 }
 ```
 
-Computed from `hspReservations` where status in `['checked-in', 'checked-out']` for historical, and `['confirmed']` for future.
+Computed from `transactions` (type=order) where stageId in Checked In / Checked Out stages for historical, and Confirmed stage for future. Room counts come from `locations` (type=room). Room type filter uses `cat_items.id` (type=room_type) matched via `meta.roomTypeId` on the transaction.
 
 ---
 
@@ -120,7 +120,10 @@ Syncs `hspChannelInventory` with each OTA:
 
 ```typescript
 async function syncChannelInventory(orgId: string, channels: string[]): Promise<void> {
-  const roomTypes = await db.query.hspRoomTypes.findMany({ where: eq(hspRoomTypes.orgId, orgId) });
+  // Room types are cat_items (type=room_type) — not an hsp table
+  const roomTypes = await db.query.catItems.findMany({
+    where: and(eq(catItems.organizationId, orgId), eq(catItems.type, "room_type")),
+  });
 
   for (const channel of channels) {
     for (const roomType of roomTypes) {
@@ -194,35 +197,42 @@ scheduler.register({
 - `ota-booking`, `ota-expedia`, `ota-airbnb`
 - `gds`, `corporate`, `group`
 
-Revenue attribution comes from `hspReservations.source`.
+Revenue attribution comes from `transaction.meta.source` (reservation = transaction type=order).
 
 ---
 
 ## 8.8 Revenue Analytics Queries
 
+Charges are `transaction_lines` on folio transactions (type=bill). Reservations are `transactions` (type=order).
+
 ```typescript
-// ADR for a date range
+// ADR for a date range — sum room charge lines across all open/settled folios
 const roomRevenue = await db
-  .select({ total: sum(hspFolioCharges.amount) })
-  .from(hspFolioCharges)
-  .innerJoin(hspFolios, eq(hspFolioCharges.folioId, hspFolios.id))
+  .select({ total: sum(transactionLines.unitPrice) })
+  .from(transactionLines)
+  .innerJoin(transactions, eq(transactionLines.transactionId, transactions.id))
   .where(and(
-    eq(hspFolioCharges.type, "room"),
-    eq(hspFolioCharges.reversed, false),
-    gte(hspFolioCharges.date, dateFrom),
-    lte(hspFolioCharges.date, dateTo)
+    eq(transactions.organizationId, orgId),
+    eq(transactions.type, "bill"),
+    sql`${transactionLines}.meta->>'type' = 'room'`,
+    sql`coalesce((${transactionLines}.meta->>'reversed')::boolean, false) = false`,
+    sql`${transactionLines}.meta->>'date' >= ${dateFrom}`,
+    sql`${transactionLines}.meta->>'date' <= ${dateTo}`,
   ));
 
+const historicalStageIds = await getStageIds(orgId, "hsp.reservation", ["Checked In", "Checked Out"]);
 const roomsSold = await db
   .select({ count: count() })
-  .from(hspReservations)
+  .from(transactions)
   .where(and(
-    inArray(hspReservations.status, ["checked-in", "checked-out"]),
-    lte(hspReservations.checkInDate, dateTo),
-    gte(hspReservations.checkOutDate, dateFrom)
+    eq(transactions.organizationId, orgId),
+    eq(transactions.type, "order"),
+    inArray(transactions.stageId, historicalStageIds),
+    sql`meta->>'checkIn' <= ${dateTo}`,
+    sql`meta->>'checkOut' >= ${dateFrom}`,
   ));
 
 const adr = roomsSold[0].count > 0
-  ? parseFloat(roomRevenue[0].total) / roomsSold[0].count
+  ? parseFloat(roomRevenue[0].total ?? "0") / roomsSold[0].count
   : 0;
 ```

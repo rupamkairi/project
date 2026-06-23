@@ -33,43 +33,47 @@ app.use(erp);
 **File:** `composes/erp/server/src/schema/index.ts`
 
 ```typescript
-export * from "./erp-vendors";
+// ERP-owned detail tables only.
+// Master tables (parties, persons, cat_items, locations, transactions, pipelines, activities)
+// are owned by foundation modules — do not export from here.
+
+// Procurement detail tables
 export * from "./erp-purchase-requisitions";
-export * from "./erp-purchase-orders";
-export * from "./erp-purchase-order-items";
 export * from "./erp-grns";
 export * from "./erp-grn-items";
-export * from "./erp-vendor-invoices";
-export * from "./erp-vendor-invoice-items";
-export * from "./erp-payment-vouchers";
-export * from "./erp-customers-erp";
-export * from "./erp-quotations";
-export * from "./erp-sales-orders";
+
+// Sales detail tables
 export * from "./erp-delivery-notes";
-export * from "./erp-sales-invoices";
-export * from "./erp-items";
-export * from "./erp-warehouses";
+
+// Inventory detail tables
 export * from "./erp-stock-ledger";
 export * from "./erp-stock-entries";
+
+// Finance detail tables
 export * from "./erp-accounts";
 export * from "./erp-fiscal-years";
 export * from "./erp-journal-entries";
 export * from "./erp-journal-lines";
 export * from "./erp-bank-accounts";
 export * from "./erp-bank-transactions";
+
+// Manufacturing detail tables
 export * from "./erp-boms";
 export * from "./erp-bom-items";
 export * from "./erp-work-orders";
 export * from "./erp-fixed-assets";
+
+// HR & Payroll detail tables
 export * from "./erp-departments";
-export * from "./erp-employees";
 export * from "./erp-leave-types";
 export * from "./erp-leave-allocations";
 export * from "./erp-leave-applications";
 export * from "./erp-attendance";
 export * from "./erp-salary-structures";
 export * from "./erp-salary-slips";
-export * from "./erp-payroll-entries";
+export * from "./erp-payroll-runs";   // renamed from erp-payroll-entries
+
+// Tax detail tables
 export * from "./erp-gst-templates";
 export * from "./erp-gst-returns";
 ```

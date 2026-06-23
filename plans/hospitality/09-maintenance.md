@@ -20,12 +20,13 @@ GET    /hospitality/maintenance/board        maintenance:create
 
 ## 9.2 Create Maintenance Request
 
+Maintenance requests are stored in `hsp_maintenance_requests` (hsp-owned). Room references use `locationId` (locations.id where type=room). Room blocking updates `location.status`.
+
 Body:
 ```typescript
 {
-  roomId?: string;         // null for common areas
-  location: string;        // "Room 203" | "Lobby Elevator" | "Pool Area"
-  category: "plumbing" | "electrical" | "hvac" | "furniture" | "it" | "cleaning";
+  locationId?: string;     // locations.id (type=room or common area) — null for non-room areas
+  category: "plumbing" | "electrical" | "hvac" | "furniture" | "it" | "cleaning" | "other";
   description: string;
   priority: "low" | "medium" | "high" | "urgent";
   roomBlockRequired: boolean;   // block room from new assignments?
@@ -33,8 +34,8 @@ Body:
 ```
 
 On create:
-1. Insert `hspMaintenanceRequests` with `status = 'open'`
-2. If `roomBlockRequired = true`: set `room.isBlocked = true`, `room.blockReason = request.id`
+1. Insert `hspMaintenanceRequests` with `status = 'open'`, `locationId`, `reportedById`
+2. If `roomBlockRequired = true` and `locationId` is a room: update `locations.status = 'maintenance'`
 3. If `priority = 'urgent'`: emit `hsp.maintenance.urgent` → notify maintenance manager + hotel-admin
 4. Emit `hsp.maintenance.created`
 
@@ -72,35 +73,33 @@ open | assigned ──[maintenance.reassign]──► assigned (new assignee)
 
 When a maintenance request with `roomBlockRequired = true` is created:
 
+Rooms are `locations` (type=room). Blocking sets `location.status = 'maintenance'`.
+
 ```typescript
-if (body.roomBlockRequired && body.roomId) {
-  const room = await db.query.hspRooms.findFirst({ where: eq(hspRooms.id, body.roomId) });
+if (body.roomBlockRequired && body.locationId) {
+  const room = await db.query.locations.findFirst({ where: eq(locations.id, body.locationId) });
 
   // Cannot block occupied room
   if (room.status === "occupied") {
     throw new ConflictError("ROOM_OCCUPIED", "Cannot block an occupied room. Relocate guest first.");
   }
 
-  await db.update(hspRooms).set({
-    isBlocked: true,
-    blockReason: `Maintenance: ${body.description}`,
-  }).where(eq(hspRooms.id, body.roomId));
+  await db.update(locations).set({
+    status: "maintenance",
+    meta: sql`meta || '{"blockReason": ${`Maintenance: ${body.description}`}}'::jsonb`,
+  }).where(eq(locations.id, body.locationId));
 
-  bus.emit("hsp.room.blocked", { roomId: body.roomId, reason: "maintenance" });
+  bus.emit("hsp.room.blocked", { locationId: body.locationId, reason: "maintenance" });
 }
 ```
 
-On `maintenance.close`: if request had `roomBlockRequired` and room still blocked by this request:
+On `maintenance.close`: if request had `roomBlockRequired` and room blocked for this maintenance:
 ```typescript
-if (request.roomBlockRequired && request.roomId) {
-  await db.update(hspRooms).set({
-    isBlocked: false,
-    blockReason: null,
-    housekeepingStatus: "dirty",  // needs cleaning before re-occupation
-  }).where(and(
-    eq(hspRooms.id, request.roomId),
-    like(hspRooms.blockReason, `Maintenance: %`)
-  ));
+if (request.roomBlockRequired && request.locationId) {
+  await db.update(locations).set({
+    status: "available",      // or "housekeeping" if cleaning needed
+    meta: sql`meta - 'blockReason'`,
+  }).where(eq(locations.id, request.locationId));
 }
 ```
 
@@ -183,12 +182,12 @@ POST   /hospitality/service-requests/:id/complete  front-desk | housekeeping
 ```
 
 On create:
-1. Insert `hspServiceRequests` with `status = 'pending'`
+1. Insert `activities` (type=service_request) with `entityId = reservationId`, `entityType = "hsp.reservation"`
 2. Route by type:
-   - `housekeeping` → create `hspHousekeepingTasks` for room
-   - `maintenance` → create `hspMaintenanceRequests`
+   - `housekeeping` → create `hsp_housekeeping_assignments` for the room (location)
+   - `maintenance` → create `hsp_maintenance_requests`
    - `fnb` → emit `hsp.fnb.order-requested` (for restaurant module if present)
-   - `concierge` → notify front desk
+   - `concierge` → notify front desk via notification module
 
 ---
 
@@ -202,7 +201,14 @@ scheduler.register({
   name: "hsp.preventive-maintenance",
   cron: "0 9 1 * *",   // 9AM on the 1st of each month
   fn: async () => {
-    const rooms = await db.query.hspRooms.findMany({ where: eq(hspRooms.isBlocked, false) });
+    // Rooms are locations (type=room) with status not in maintenance/out_of_order
+    const rooms = await db.query.locations.findMany({
+      where: and(
+        eq(locations.organizationId, orgId),
+        eq(locations.type, "room"),
+        notInArray(locations.status, ["maintenance", "out_of_order"])
+      ),
+    });
     for (const room of rooms) {
       // Only create if no recent deep-clean in last 25 days
       const recent = await db.query.hspMaintenanceRequests.findFirst({

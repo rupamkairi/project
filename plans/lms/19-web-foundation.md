@@ -146,7 +146,68 @@ export function StatusBadge({ status }: { status: string }) {
 
 ---
 
-## 19.5 React Query Setup
+## 19.5 LMS API Client
+
+**File:** `packages/lms-web/src/api/lms-client.ts`
+
+```typescript
+export class LmsApiClient {
+  constructor(private base: string) {}
+
+  private request(path: string, opts?: RequestInit) {
+    return fetch(`${this.base}${path}`, opts).then(r => r.json());
+  }
+
+  // Master table reads — routed through mediator on the server side
+  getCourses(params?: Record<string, string>) {
+    return this.request("/lms/courses?" + new URLSearchParams(params));
+  }  // → catalog.listItems type=course
+
+  getStudents(params?: Record<string, string>) {
+    return this.request("/lms/students?" + new URLSearchParams(params));
+  }  // → party.listPersons type=student
+
+  getInstructors(params?: Record<string, string>) {
+    return this.request("/lms/instructors?" + new URLSearchParams(params));
+  }  // → party.listPersons type=instructor
+
+  getEnrollments(params?: Record<string, string>) {
+    return this.request("/lms/enrollments?" + new URLSearchParams(params));
+  }  // → transactions type=order
+
+  getLiveSessions(params?: Record<string, string>) {
+    return this.request("/lms/live-sessions?" + new URLSearchParams(params));
+  }  // → activities type=meeting
+
+  // Detail table reads — direct Drizzle on lms_ tables
+  getCourseDetail(itemId: string) {
+    return this.request(`/lms/courses/${itemId}/detail`);
+  }  // lms_course_detail + lms_modules + lms_lessons
+
+  getProgress(lessonId: string) {
+    return this.request(`/lms/lessons/${lessonId}/progress`);
+  }  // lms_progress
+
+  getCertificates(params?: Record<string, string>) {
+    return this.request("/lms/certificates?" + new URLSearchParams(params));
+  }  // lms_certificates
+
+  // Mutations
+  createEnrollment(body: { courseId: string; cohortId?: string; couponCode?: string }) {
+    return this.request("/lms/enrollments", { method: "POST", body: JSON.stringify(body) });
+  }
+
+  markLessonComplete(lessonId: string) {
+    return this.request(`/lms/lessons/${lessonId}/complete`, { method: "POST" });
+  }
+}
+```
+
+Pages use `useState` + `useEffect` (or React Query) against this client. Course progress page reads `lms_progress`. Certificate page reads `lms_certificates`.
+
+---
+
+## 19.6 React Query Setup
 
 **File:** `packages/lms-web/src/index.ts`
 

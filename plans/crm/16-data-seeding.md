@@ -38,20 +38,20 @@ export default defineConfig({
 
 ### Verify Tables Exist
 
-After push, confirm CRM tables are present:
+After push, confirm CRM detail tables are present:
 ```
-crm_contacts
-crm_accounts
 crm_leads
 crm_deals
-crm_pipeline_stages
-crm_pipelines
-crm_activities
 crm_segments
 crm_campaigns
 crm_campaign_contacts
-crm_custom_fields
+crm_email_threads
+crm_email_messages
 ```
+
+Master tables (`persons`, `parties`, `pipelines`, `pipeline_stages`, `activities`, `geo_addresses`)
+are provisioned by foundation modules — they will already exist and must NOT be recreated.
+`crm_contacts`, `crm_accounts`, `crm_pipelines`, `crm_pipeline_stages`, `crm_activities` do not exist.
 
 ---
 
@@ -88,14 +88,37 @@ Seed is **idempotent** — safe to re-run. Uses `onConflictDoNothing` for roles;
 
 ## 16.3 Default Pipeline Seed
 
-File: `composes/crm/server/src/db/seed/roles.seed.ts` — `seedCrm(mediator)` function.
+File: `composes/crm/server/src/db/seed/roles.seed.ts` — `seedCrm(orgId)` function.
 
-Called from `apps/server/src/index.ts` at boot (if wired) or manually. Creates:
+Called from `apps/server/src/index.ts` at boot (if wired) or manually via `bun run db:seed:crm`.
 
-- Pipeline: `Sales Pipeline` (isDefault: true, currency: USD)
-- Stages: Lead In (10%), Meeting (30%), Proposal (50%), Negotiation (70%), Closed Won (100%)
+Uses `seedPipeline()` from `apps/server/src/infra/db/seed.ts` to insert into the
+`pipelines` + `pipeline_stages` master tables — not into any `crm_pipelines` table (which does not exist).
 
-**Note:** This seed dispatches `crm.createPipeline` and `crm.createPipelineStage` through the mediator. Handlers **must be registered first** (`registerCrmHandlers` called in `createCrmCompose`). If called before compose setup, pipeline seed silently fails — wrap in try/catch, check pipeline exists before creating deals.
+```typescript
+import { seedPipeline } from "apps/server/src/infra/db/seed";
+
+export async function seedCrm(orgId: string) {
+  // Deal pipeline — inserted into pipelines master (entityType = "crm.deal")
+  await seedPipeline(orgId, "crm.deal", [
+    { name: "Prospecting",   meta: { probability: 10 } },
+    { name: "Qualification", meta: { probability: 30 } },
+    { name: "Proposal",      meta: { probability: 60 } },
+    { name: "Closed Won",    meta: { probability: 100 } },
+    { name: "Closed Lost",   meta: { probability: 0 } },
+  ]);
+
+  // Lead pipeline — inserted into pipelines master (entityType = "crm.lead")
+  await seedPipeline(orgId, "crm.lead", [
+    { name: "New" }, { name: "Contacted" }, { name: "Qualified" }, { name: "Converted" },
+  ]);
+}
+```
+
+Seed contacts/accounts by inserting directly into `persons` (type=`contact`) and `parties`
+(type=`company`) master tables via Drizzle — not through the mediator at seed time.
+
+**Note:** `seedPipeline` is idempotent — safe to re-run. It uses `onConflictDoNothing` on the pipeline name + orgId composite.
 
 ---
 
@@ -123,7 +146,8 @@ bun run dev
 |-----------|---------|-----|
 | `db:push` hangs waiting for input | Process doesn't exit | Set `strict: false` in drizzle.config.ts |
 | `db:migrate` fails on Neon URL | `@neondatabase/serverless can only connect via websocket` | Use `db:push` instead |
-| Pipeline seed silently fails | `GET /crm/pipelines` returns `[]` | Ensure `registerCrmHandlers` runs before `seedCrm`; check server logs for mediator errors |
+| Pipeline seed silently fails | `GET /crm/pipelines` returns `[]` | Check that `seedPipeline()` ran and inserted into `pipelines` master, not a `crm_pipelines` table |
 | CRM users can't log in | 401 on all `/crm/*` routes | Run `db:seed:crm`; confirm `actor_crm_admin` row exists in `actors` table |
 | Seed re-run resets password | Old hash replaced | By design — `onConflictDoUpdate` refreshes `passwordHash` |
-| CRM tables missing after push | 404 on all routes | CRM schema not in barrel — check `apps/server/src/infra/db/schema/index.ts` imports from `@projectx/crm-server/db/schema` |
+| CRM detail tables missing after push | 404 on all routes | CRM schema not in barrel — check `apps/server/src/infra/db/schema/index.ts` exports CRM detail tables |
+| Code tries to query `crm_contacts` or `crm_accounts` | DB error: relation does not exist | These tables do not exist. Use `persons` (type=contact) and `parties` (type=company) master tables via mediator |

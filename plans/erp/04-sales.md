@@ -10,6 +10,10 @@ Customer Master → Quotation → Sales Order → Delivery Note → Sales Invoic
 
 ## 4.1 Customer Routes
 
+> **MTA note:** Customers are stored in the `parties` table with `type = "customer"`. There is no `erp_customers` table.
+> - Read: `mediator.dispatch({ type: "party.listParties", filter: { type: "customer" } })`
+> - Create: `mediator.dispatch({ type: "party.createParty", data: { type: "customer", ... } })` — `type: "customer"` is set automatically by the route handler.
+
 ```
 GET    /erp/customers                erp:sales-order:read
 POST   /erp/customers                erp:sales-order:create
@@ -40,6 +44,8 @@ GET    /erp/customers/:id/ledger     erp:ledger:read   ← customer outstanding 
 
 ## 4.2 Quotation Routes
 
+> **MTA note:** Quotations are stored in the `transactions` table with `type = "quote"`. Line items go in `transaction_lines`.
+
 ```
 GET    /erp/quotations               erp:sales-order:read
 POST   /erp/quotations               erp:sales-order:create
@@ -56,6 +62,8 @@ Convert to SO: creates `erpSalesOrder` with items from quotation. Returns SO ID.
 ---
 
 ## 4.3 Sales Order Routes
+
+> **MTA note:** Sales orders are stored in the `transactions` table with `type = "sales_order"`. Line items go in `transaction_lines`. SO approval pipeline: `pipelines` + `pipeline_stages` with `entityType = "erp.so"`.
 
 ```
 GET    /erp/sales-orders             erp:sales-order:read
@@ -88,8 +96,8 @@ POST   /erp/delivery-notes/:id/cancel  erp:goods-receipt:approve
 **Create DN body:**
 ```typescript
 {
-  soId: string;
-  warehouseId: string;
+  soId: string;        // transactions.id of the sales_order
+  locationId: string;  // locations.id with type="warehouse" (replaces warehouseId)
   date: string;
   shippingAddress?: Address;
   items: Array<{
@@ -114,6 +122,8 @@ On submit:
 ---
 
 ## 4.5 Sales Invoice Routes
+
+> **MTA note:** Sales invoices are stored in the `transactions` table with `type = "invoice"` and `meta.direction = "outbound"`. Line items go in `transaction_lines`. There is no `erp_sales_invoices` table.
 
 ```
 GET    /erp/sales-invoices                     erp:invoice:read

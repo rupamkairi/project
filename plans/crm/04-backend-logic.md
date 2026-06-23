@@ -67,24 +67,30 @@ Hooks subscribe to EventBus events and dispatch commands via Mediator.
 
 ```typescript
 bus.on("activity.created", async (event) => {
-  const { actorId, contactId, dealId, type } = event.payload;
+  const { actorId, entityId, entityType, type } = event.payload;
+  // entityType = "person" means a contact; entityType = "crm_deal" means a deal
 
-  // 1. Update contact.lastContactedAt
-  if (contactId) {
-    await mediator.send({ type: "crm.updateContact", id: contactId, lastContactedAt: event.occurredAt });
+  // 1. Update contact.lastContactedAt — contact is a person in master table
+  if (entityType === "person") {
+    await mediator.dispatch({
+      type: "party.updatePerson",
+      orgId: event.orgId, actorId,
+      payload: { id: entityId, meta: { lastContactedAt: event.occurredAt } }
+    });
   }
 
-  // 2. Lead score increase on meaningful activity
+  // 2. Lead score increase on meaningful activity — stored in persons.meta
   const scoreDeltas: Record<string, number> = {
     call: 10, meeting: 15, demo: 20, email: 5, note: 2,
   };
   const delta = scoreDeltas[type] ?? 0;
-  if (delta > 0 && contactId) {
-    await mediator.send({ type: "crm.incrementLeadScore", contactId, delta });
+  if (delta > 0 && entityType === "person") {
+    await mediator.dispatch({ type: "party.incrementPersonMeta", orgId: event.orgId, actorId,
+      payload: { id: entityId, field: "leadScore", delta } });
   }
 
-  // 3. Auto-log as Activity on Deal if dealId present
-  // (already done — activity has dealId)
+  // 3. Auto-log as Activity on Deal if entityType = crm_deal
+  // (already done — activity row carries entityId + entityType)
 });
 ```
 
@@ -93,11 +99,12 @@ bus.on("activity.created", async (event) => {
 ```typescript
 bus.on("crm.deal.stageChanged", async (event) => {
   const { dealId, stageId } = event.payload;
-  // Reset rottingAt: now + stage.rotPeriodDays
-  const stage = await getStage(stageId);
-  if (stage.rotPeriodDays) {
-    const rottingAt = addDays(new Date(), stage.rotPeriodDays);
-    await mediator.send({ type: "crm.updateDeal", id: dealId, rottingAt });
+  // Reset rottingAt: now + stage.meta.rotPeriodDays (from pipeline_stages master table)
+  const stage = await mediator.query({ type: "pipeline.getStage", payload: { stageId } });
+  if (stage?.meta?.rotPeriodDays) {
+    const rottingAt = addDays(new Date(), stage.meta.rotPeriodDays);
+    // crm_deals is CRM-owned — update directly via Drizzle
+    await db.update(crmDeals).set({ rottingAt }).where(eq(crmDeals.id, dealId));
   }
 });
 ```
@@ -285,25 +292,34 @@ File: `composes/crm/server/src/hooks/lead-convert.ts`
 
 When `POST /crm/leads/:id/convert` is called:
 
-1. Validate lead is in `qualified` state
-2. Create Deal: `{ title: lead.interest || "New Deal", contactId: lead.contactId, accountId: lead.accountId, pipelineId: defaultPipeline.id, stageId: defaultPipeline.stages[0].id, value: lead.estimatedValue }`
-3. FSM: lead → `converted`; set `lead.dealId = deal.id`, `lead.convertedAt = now`
-4. Emit `crm.lead.converted` event
-5. Return `{ lead, deal }`
+1. Fetch `crm_leads` detail row (to get `person_id`, `party_id`, `estimatedValue`, etc.)
+2. Validate `crm_leads.status === "qualified"` (FSM guard)
+3. Look up default `crm.deal` pipeline via `mediator.query({ type: "pipeline.getDefault", payload: { entityType: "crm.deal", orgId } })`
+4. Create Deal in `crm_deals`: `{ title: lead.interest || "New Deal", person_id: lead.person_id, party_id: lead.party_id, pipelineId: pipeline.id, stage_id: pipeline.stages[0].id, value: lead.estimatedValue }`
+5. FSM: update `crm_leads.status = "converted"`, set `crm_leads.dealId = deal.id`, `crm_leads.convertedAt = now`
+6. Flip the `persons` row type from `lead` → `contact` via `mediator.dispatch({ type: "party.updatePerson", payload: { id: lead.person_id, type: "contact" } })`
+7. Emit `crm.lead.converted` event
+8. Return `{ lead, deal }`
 
 ---
 
 ## 4.7 Search Index Registration
 
-At compose boot, register search sync for Contact and Deal:
+At compose boot, register search sync. Contacts and accounts are master-table-backed — listen to
+`party.*` events from the party module. Deals are CRM-owned — listen to `crm.deal.*` events.
 
 ```typescript
-bus.on("crm.contact.created", e => searchAdapter.sync("Contact", e));
-bus.on("crm.contact.updated", e => searchAdapter.sync("Contact", e));
-bus.on("crm.contact.deleted", e => searchAdapter.sync("Contact", e));
-bus.on("crm.deal.created",   e => searchAdapter.sync("Deal", e));
-bus.on("crm.deal.updated",   e => searchAdapter.sync("Deal", e));
-bus.on("crm.deal.deleted",   e => searchAdapter.sync("Deal", e));
-bus.on("crm.account.created", e => searchAdapter.sync("Account", e));
-bus.on("crm.account.updated", e => searchAdapter.sync("Account", e));
+// Contacts (persons type=contact) — emitted by party module
+bus.on("party.person.created", e => { if (e.payload.type === "contact") searchAdapter.sync("Contact", e); });
+bus.on("party.person.updated", e => { if (e.payload.type === "contact") searchAdapter.sync("Contact", e); });
+bus.on("party.person.deleted", e => { if (e.payload.type === "contact") searchAdapter.sync("Contact", e); });
+
+// Accounts (parties type=company) — emitted by party module
+bus.on("party.party.created", e => { if (e.payload.type === "company") searchAdapter.sync("Account", e); });
+bus.on("party.party.updated", e => { if (e.payload.type === "company") searchAdapter.sync("Account", e); });
+
+// Deals — CRM-owned, emitted by CRM compose
+bus.on("crm.deal.created", e => searchAdapter.sync("Deal", e));
+bus.on("crm.deal.updated", e => searchAdapter.sync("Deal", e));
+bus.on("crm.deal.deleted", e => searchAdapter.sync("Deal", e));
 ```

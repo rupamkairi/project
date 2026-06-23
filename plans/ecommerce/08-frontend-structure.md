@@ -225,21 +225,47 @@ export const storefrontRoutes = [storefrontLayoutRoute.addChildren([
 
 ### Admin API client
 
+Class-based (not Eden Treaty). Reads `platform_token` from auth store.
+
 ```typescript
 // admin/src/lib/api.ts
-import { treaty } from "@elysiajs/eden";
-import type { EcommerceApp } from "@projectx/compose-ecommerce-server";
+const ADMIN_BASE = (import.meta.env.VITE_API_URL || "http://localhost:3000") + "/ecommerce/admin";
 
-export const adminApi = treaty<EcommerceApp>(window.location.origin);
-// Usage: adminApi.ecommerce.admin.orders.get({ query: { status: "processing" } })
+class EcommerceAdminApiClient {
+  // Server returns cat_items filtered by type=product
+  getProducts(params?: Record<string, any>) { return this.request("/products", { params }) }
+  // Server returns transactions filtered by type=order
+  getOrders(params?: Record<string, any>) { return this.request("/orders", { params }) }
+  // Server returns persons filtered by type=customer
+  getCustomers(params?: Record<string, any>) { return this.request("/customers", { params }) }
+  // Server returns locations filtered by type=warehouse
+  getWarehouses(params?: Record<string, any>) { return this.request("/warehouses", { params }) }
+  // Detail table CRUD stays direct (eco_ tables)
+  getReturns(params?: Record<string, any>) { return this.request("/returns", { params }) }
+  getRegions() { return this.request("/regions") }
+  getShippingOptions() { return this.request("/shipping") }
+}
+export const adminApi = new EcommerceAdminApiClient();
 ```
 
 ### Storefront API client
 
+Class-based. Uses `eco_customer_token` from localStorage (not platform token).
+
 ```typescript
 // storefront/src/lib/api.ts
-export const storeApi = treaty<EcommerceApp>(window.location.origin);
-// Usage: storeApi.ecommerce.store.products.get({ query: { page: 1 } })
+const STORE_BASE = (import.meta.env.VITE_API_URL || "http://localhost:3000") + "/ecommerce/store";
+
+class EcommerceStoreApiClient {
+  // Server returns cat_items filtered by type=product + status=published
+  getProducts(params?: Record<string, any>) { return this.request("/products", { params }) }
+  // Cart → transactions (type=order) in draft stage
+  createCart() { return this.request("/carts", { method: "POST" }) }
+  addCartItem(cartId: string, body: any) { return this.request(`/carts/${cartId}/items`, { method: "POST", body }) }
+  // Store orders → transactions filtered by type=order + personId
+  getOrders() { return this.request("/orders") }
+}
+export const storeApi = new EcommerceStoreApiClient();
 ```
 
 ---

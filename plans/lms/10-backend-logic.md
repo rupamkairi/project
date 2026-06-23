@@ -4,14 +4,16 @@
 
 ## 10.1 All FSMs Summary
 
-| Entity | States |
-|--------|--------|
-| Course | `draft → under-review → published → archived → draft` |
-| Enrollment | `pending-payment → active → completed / expired / cancelled → refunded` |
-| Module Progress | `not-started → in-progress → completed` |
-| Submission | `submitted / late → grading → graded / returned` |
-| Cohort | `scheduled → active → completed / cancelled` |
-| Live Session | `scheduled → live → ended → recorded / cancelled` |
+FSMs for master table entities (course, enrollment) operate via pipeline stage transitions. Stages live in `pipelines` + `pipeline_stages` master tables, filtered by `entityType`.
+
+| Entity | Pipeline entityType / table | Stages |
+|--------|-----------------------------|--------|
+| Course | `pipelines` (entityType=lms.course) | `Draft → In Review → Published \| Archived` |
+| Enrollment | `pipelines` (entityType=lms.enrollment) | `Enrolled → In Progress → Completed \| Dropped` |
+| Lesson Progress | `lms_progress` (detail table) | `null completedAt = incomplete; not null = complete` |
+| Submission | `lms_submissions` (detail table) | `submitted → grading → graded → returned` |
+| Cohort | `lms_cohorts` (detail table) | `scheduled → active → completed \| cancelled` |
+| Live Session | `activities` master (type=meeting) | `scheduled → live → ended → recorded \| cancelled` via activity status field |
 
 ---
 
@@ -20,61 +22,52 @@
 ```typescript
 export function registerLmsHooks(bus: EventBus, mediator: Mediator): void {
 
-  // Enrollment activated → seed progress records
-  bus.on("lms.enrollment.activated", async ({ enrollmentId, learnerId, courseId }) => {
-    await seedModuleProgress(enrollmentId, courseId, learnerId);
+  // Enrollment activated → no need to seed progress records;
+  // progress is written on first lesson interaction via lms_progress detail table
+  bus.on("lms.enrollment.activated", async ({ transactionId, personId, itemId }) => {
+    await mediator.dispatch({ type: "notification.send", personId, template: "enrollment-confirmed", data: { itemId } });
   });
 
-  // All module progress completed → complete enrollment
-  bus.on("lms.module.completed", async ({ enrollmentId, courseId }) => {
-    const enrollment = await getEnrollment(enrollmentId);
-    const course = await getCourse(courseId);
-    if (enrollment.completionPct >= course.completionThreshold) {
-      await completeEnrollment(enrollmentId);
+  // Lesson completed → check if course is fully complete
+  bus.on("lms.lesson.completed", async ({ personId, lessonId, itemId /* courseItemId */ }) => {
+    const detail = await db.query.lmsCourseDetail.findFirst({ where: eq(lmsCourseDetail.itemId, itemId) });
+    const allLessons = await getAllCourseLessons(itemId);
+    const completedCount = await db.select({ count: count() }).from(lmsProgress)
+      .where(and(eq(lmsProgress.personId, personId), inArray(lmsProgress.lessonId, allLessons.map(l => l.id)), isNotNull(lmsProgress.completedAt)));
+    const pct = Math.round((completedCount[0].count / allLessons.length) * 100);
+    if (pct >= (detail?.completionThreshold ?? 80)) {
+      // Advance enrollment transaction to Completed stage
+      await mediator.dispatch({ type: "commerce.advanceTransactionStage", itemId, personId, stageId: completedStageId });
+      bus.emit("lms.enrollment.completed", { personId, itemId });
     }
-    await unlockNextModule(enrollmentId, /* completedModuleId */ , courseId);
   });
 
   // Enrollment completed → issue certificate
-  bus.on("lms.enrollment.completed", async ({ enrollmentId, learnerId, courseId }) => {
-    await issueCertificate(enrollmentId, learnerId, courseId);
-    // Recognize remaining deferred revenue
-    await mediator.dispatch({ type: "accounting.recognizeAllDeferredRevenue", enrollmentId });
-    // Update instructor payout if applicable
-    await mediator.dispatch({ type: "payout.triggerInstructor", courseId, enrollmentId });
+  bus.on("lms.enrollment.completed", async ({ personId, itemId, transactionId }) => {
+    await issueCertificate(transactionId, personId, itemId);
+    await mediator.dispatch({ type: "accounting.recognizeAllDeferredRevenue", transactionId });
+    await mediator.dispatch({ type: "payout.triggerInstructor", itemId, transactionId });
   });
 
-  // Cohort cancelled → cancel all active enrollments
+  // Cohort cancelled → drop all active enrollment transactions
   bus.on("lms.cohort.cancelled", async ({ cohortId }) => {
-    const enrollments = await getActiveCohortEnrollments(cohortId);
-    for (const enr of enrollments) {
-      await cancelEnrollment(enr.id, "Cohort cancelled");
-      if (parseFloat(enr.pricePaid) > 0) {
-        await mediator.dispatch({ type: "payment.refund", paymentId: enr.paymentId, amount: enr.pricePaid });
-      }
+    const members = await db.query.lmsCohortMembers.findMany({ where: eq(lmsCohortMembers.cohortId, cohortId) });
+    for (const member of members) {
+      await mediator.dispatch({ type: "commerce.advanceTransactionStage", transactionId: member.transactionId, stageId: droppedStageId });
+      await mediator.dispatch({ type: "payment.refund", transactionId: member.transactionId });
     }
   });
 
-  // Course published → notify waitlist learners (if self-paced, they can now enroll)
-  bus.on("lms.course.published", async ({ courseId }) => {
-    await mediator.dispatch({ type: "notify.broadcastInterested", courseId });
+  // Course pipeline moved to Published stage → notify interested learners
+  bus.on("lms.course.published", async ({ itemId }) => {
+    await mediator.dispatch({ type: "notify.broadcastInterested", itemId });
   });
 
-  // Review submitted → update course aggregate rating
-  bus.on("lms.review.submitted", async ({ courseId }) => {
-    const avg = await db.select({ avg: avg(lmsReviews.rating), count: count() })
-      .from(lmsReviews)
-      .where(eq(lmsReviews.courseId, courseId));
-    await db.update(lmsCourses).set({
-      rating: avg[0].avg?.toString() ?? "0",
-      reviewCount: avg[0].count,
-    }).where(eq(lmsCourses.id, courseId));
-  });
-
-  // Payment succeeded → activate enrollment
+  // Payment succeeded → advance enrollment transaction to In Progress stage
   bus.on("payment.succeeded", async ({ metadata }) => {
-    if (metadata?.enrollmentId) {
-      await activateEnrollment(metadata.enrollmentId, metadata.paymentId, metadata.amount);
+    if (metadata?.transactionId) {
+      await mediator.dispatch({ type: "commerce.advanceTransactionStage", transactionId: metadata.transactionId, stageId: inProgressStageId });
+      bus.emit("lms.enrollment.activated", { transactionId: metadata.transactionId, personId: metadata.personId, itemId: metadata.itemId });
     }
   });
 }
@@ -88,25 +81,22 @@ export function registerLmsHooks(bus: EventBus, mediator: Mediator): void {
 export function registerLmsJobs(scheduler: Scheduler, mediator: Mediator): void {
 
   // Expire enrollments daily at midnight
+  // Enrollments live in `transactions` master table. Advance expired ones to "Dropped" stage.
   scheduler.register({
     name: "lms.expire-enrollments",
     cron: "0 0 * * *",
     fn: async () => {
-      const expired = await db.update(lmsEnrollments)
-        .set({ status: "expired" })
-        .where(and(
-          eq(lmsEnrollments.status, "active"),
-          lt(lmsEnrollments.expiresAt, new Date())
-        ))
-        .returning({ id: lmsEnrollments.id, learnerId: lmsEnrollments.learnerId });
-
-      for (const enr of expired) {
-        bus.emit("lms.enrollment.expired", enr);
+      // Query transactions with entityType context stored in meta.expiresAt
+      // Compose reads transactions filtered by type=order and checks meta.expiresAt < now
+      const expired = await getExpiredEnrollmentTransactions();
+      for (const txn of expired) {
+        await mediator.dispatch({ type: "commerce.advanceTransactionStage", transactionId: txn.id, stageId: droppedStageId });
+        bus.emit("lms.enrollment.expired", { transactionId: txn.id, personId: txn.personId });
       }
     },
   });
 
-  // Inactivity nudge — learners with no activity in N days
+  // Inactivity nudge — learners with no lms_progress activity in N days
   scheduler.register({
     name: "lms.inactivity-nudge",
     cron: "0 9 * * *",   // 9AM daily
@@ -114,18 +104,14 @@ export function registerLmsJobs(scheduler: Scheduler, mediator: Mediator): void 
       const orgConfigs = await db.query.lmsOrgConfig.findMany();
       for (const config of orgConfigs) {
         const cutoff = new Date(Date.now() - config.inactivityNudgeDays * 86400000);
-        const inactive = await db.query.lmsEnrollments.findMany({
-          where: and(
-            eq(lmsEnrollments.status, "active"),
-            lt(lmsEnrollments.lastAccessedAt, cutoff)
-          ),
-        });
+        // Find active enrollment transactions with no lms_progress updates since cutoff
+        const inactive = await getInactiveEnrollments(config.orgId, cutoff);
         for (const enr of inactive) {
           await mediator.dispatch({
-            type: "notify.sendEmail",
-            to: enr.learnerId,
+            type: "notification.send",
+            personId: enr.personId,
             template: "inactivity-nudge",
-            data: { enrollmentId: enr.id, courseId: enr.courseId },
+            data: { transactionId: enr.id, itemId: enr.itemId },
           });
         }
       }
@@ -133,42 +119,23 @@ export function registerLmsJobs(scheduler: Scheduler, mediator: Mediator): void 
   });
 
   // Live session reminder — 15 min before start
+  // Live sessions are activities (type=meeting). Query via mediator or direct Drizzle on activities.
   scheduler.register({
     name: "lms.session-reminders",
     cron: "*/5 * * * *",   // every 5 min
     fn: async () => {
       const in15Min = new Date(Date.now() + 15 * 60 * 1000);
       const window = new Date(Date.now() + 14 * 60 * 1000);
-      const upcoming = await db.query.lmsLiveSessions.findMany({
+      const upcoming = await db.query.activities.findMany({
         where: and(
-          eq(lmsLiveSessions.status, "scheduled"),
-          gte(lmsLiveSessions.scheduledAt, window),
-          lte(lmsLiveSessions.scheduledAt, in15Min)
+          eq(activities.type, "meeting"),
+          eq(activities.status, "scheduled"),
+          gte(activities.dueAt, window),
+          lte(activities.dueAt, in15Min)
         ),
       });
       for (const session of upcoming) {
-        await mediator.dispatch({ type: "notify.broadcastSession", sessionId: session.id });
-      }
-    },
-  });
-
-  // Waitlist expiry — 24h after notification, re-open slot
-  scheduler.register({
-    name: "lms.waitlist-expiry",
-    cron: "*/30 * * * *",
-    fn: async () => {
-      const expired = await db.update(lmsWaitlist)
-        .set({ status: "expired" })
-        .where(and(
-          eq(lmsWaitlist.status, "notified"),
-          lt(lmsWaitlist.notifiedAt, new Date(Date.now() - 24 * 3600000))
-        ))
-        .returning({ cohortId: lmsWaitlist.cohortId });
-
-      // Notify next in queue for each affected cohort
-      const cohortIds = [...new Set(expired.map(e => e.cohortId))];
-      for (const cohortId of cohortIds) {
-        await notifyNextWaitlisted(cohortId);
+        await mediator.dispatch({ type: "notify.broadcastSession", activityId: session.id });
       }
     },
   });
@@ -192,43 +159,43 @@ export function registerLmsJobs(scheduler: Scheduler, mediator: Mediator): void 
 export const LMS_RULES = [
   {
     id: "free-course-bypass",
-    rule: "Free course (price=0 after coupon) goes directly to active — skip payment gate",
+    rule: "Free course (price=0 after coupon) creates transaction directly in 'In Progress' stage — skip payment gate",
   },
   {
     id: "duplicate-enrollment-guard",
-    rule: "Same learner + same course + non-cancelled status → ConflictError, checked atomically in transaction",
+    rule: "Same person + same course item + non-dropped/cancelled transaction → ConflictError, checked atomically",
   },
   {
     id: "quiz-attempts-server-side",
-    rule: "Max quiz attempts enforced at submission-create, not on client. Client never decides.",
+    rule: "Max quiz attempts enforced at submission-create, not on client. Count via lms_submissions.",
   },
   {
     id: "certificate-threshold",
-    rule: "Certificate issued only when completionPct >= course.completionThreshold (never issue early)",
+    rule: "Certificate issued only when completed lesson count / total lessons >= lms_course_detail.completionThreshold",
   },
   {
     id: "sequential-unlock",
-    rule: "requiredPrevious = true → previous module must be completed before access; checked in assertModuleAccess",
+    rule: "Previous lesson in module must have lms_progress.completedAt set before next lesson is accessible; checked in assertLessonAccess",
   },
   {
     id: "deferred-revenue",
-    rule: "Revenue recognized proportionally per module completion, not at enrollment time",
+    rule: "Revenue recognized proportionally per lesson completion, not at enrollment time",
   },
   {
     id: "heartbeat-debounce",
-    rule: "Video heartbeat: max 1 DB write per 10s per enrollment+module; excess dropped in-memory",
+    rule: "Video heartbeat: max 1 lms_progress update per 10s per person+lesson; excess dropped in-memory",
   },
   {
-    id: "verification-code-unique",
-    rule: "Certificate verificationCode = LMS-{ulid().slice(-8).toUpperCase()}. DB UNIQUE constraint is final guard.",
+    id: "certificate-no-unique",
+    rule: "Certificate certificateNo = LMS-{ulid().slice(-8).toUpperCase()}. DB UNIQUE constraint is final guard.",
   },
   {
     id: "cancellation-window",
-    rule: "Learner can cancel within orgConfig.refundWindowDays; outside window only lms-admin can cancel",
+    rule: "Learner can drop enrollment within orgConfig.refundWindowDays; outside window only lms-admin can drop",
   },
   {
     id: "cohort-capacity-atomic",
-    rule: "Cohort capacity check uses WHERE enrolled_count < capacity in UPDATE — no row lock needed",
+    rule: "Cohort capacity check: count lms_cohort_members before insert; wrap in DB transaction",
   },
 ] as const;
 ```

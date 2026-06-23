@@ -4,6 +4,9 @@
 
 ## 5.1 Item Routes
 
+> **MTA note:** Items are in the `cat_items` table with `type` in `('product', 'stock_item', 'asset')`. There is no `erp_items` table.
+> - Read: `mediator.dispatch({ type: "catalog.getItem", itemId })` or direct Drizzle on `cat_items` filtered by type.
+
 ```
 GET    /erp/items                   erp:inventory:read
 POST   /erp/items                   erp:inventory:read (any ERP user can create items)
@@ -32,6 +35,9 @@ GET    /erp/items/reorder           erp:inventory:read   ← items below reorder
 ---
 
 ## 5.2 Warehouse Routes
+
+> **MTA note:** Warehouses are in the `locations` table with `type = "warehouse"`. There is no `erp_warehouses` table.
+> - Read: direct Drizzle on `locations` filtered by `type = "warehouse"`.
 
 ```
 GET    /erp/warehouses              erp:inventory:read
@@ -93,14 +99,15 @@ On every stock movement, insert an `erpStockLedger` row:
 
 ```typescript
 async function postStockLedger(db: DB, {
-  itemId, warehouseId, date, qty, valuationRate, entryId
+  itemId, locationId, date, qty, valuationRate, entryId
+  // itemId = cat_items.id; locationId = locations.id (type="warehouse")
 }: StockLedgerPost) {
   // Get previous balance
   const prev = await db.select({ balance: erpStockLedger.balance })
     .from(erpStockLedger)
     .where(and(
       eq(erpStockLedger.itemId, itemId),
-      eq(erpStockLedger.warehouseId, warehouseId),
+      eq(erpStockLedger.locationId, locationId),
     ))
     .orderBy(desc(erpStockLedger.date))
     .limit(1);
@@ -109,11 +116,11 @@ async function postStockLedger(db: DB, {
   const newBalance = Number(prevBalance) + qty;  // qty is negative for issues
 
   if (newBalance < 0 && !ALLOW_NEGATIVE_STOCK) {
-    throw new BusinessError(`Insufficient stock for item ${itemId} in warehouse ${warehouseId}`);
+    throw new BusinessError(`Insufficient stock for item ${itemId} in location ${locationId}`);
   }
 
   await db.insert(erpStockLedger).values({
-    itemId, warehouseId, date, qty,
+    itemId, locationId, date, qty,
     valuationRate, stockValue: qty * valuationRate,
     balance: newBalance,
     entryId,

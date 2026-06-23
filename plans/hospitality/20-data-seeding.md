@@ -6,16 +6,22 @@
 
 **File:** `packages/hospitality/src/seed.ts`
 
+Master tables (`cat_items`, `locations`, `persons`, `transactions`, `pipelines`) are seeded via their foundation module seeders. The hospitality seeder calls those first, then seeds hsp-owned detail tables.
+
 ```typescript
 import { db } from "@projectx/core/db";
-import { createId } from "@paralleldrive/cuid2";
+import { generateId } from "@projectx/core/id";
+import { seedPipeline } from "apps/server/src/infra/db/seed";
+import { catItems, locations, persons } from "@projectx/catalog/schema";  // foundation imports
 
 export async function seedHospitality(orgId: string) {
   await seedOrgConfig(orgId);
-  const roomTypeIds = await seedRoomTypes(orgId);
-  const roomIds = await seedRooms(orgId, roomTypeIds);
+  await seedReservationPipeline(orgId);
+  const roomTypeIds = await seedRoomTypes(orgId);     // seeds cat_items type=room_type
+  const locationIds = await seedProperty(orgId);       // seeds locations (property + floors + rooms)
+  const roomIds = await seedRooms(orgId, locationIds.floorId, roomTypeIds);
   const ratePlanIds = await seedRatePlans(orgId, roomTypeIds);
-  const guestIds = await seedGuestProfiles(orgId);
+  const guestIds = await seedGuests(orgId);            // seeds persons type=guest
   await seedReservations(orgId, guestIds, roomTypeIds, ratePlanIds, roomIds);
   console.log("[hospitality] seed complete");
 }
@@ -47,55 +53,46 @@ async function seedOrgConfig(orgId: string) {
 
 ---
 
-## 20.3 Room Types
+## 20.3 Reservation Pipeline
+
+```typescript
+async function seedReservationPipeline(orgId: string) {
+  await seedPipeline(orgId, "hsp.reservation", [
+    { name: "Inquiry" },
+    { name: "Confirmed" },
+    { name: "Checked In" },
+    { name: "Checked Out" },
+    { name: "Cancelled" },
+    { name: "No Show" },
+  ]);
+}
+```
+
+---
+
+## 20.4 Room Types (seeds cat_items, type=room_type)
 
 ```typescript
 async function seedRoomTypes(orgId: string) {
   const types = [
-    {
-      name: "Standard Room",
-      code: "STD",
-      description: "Comfortable standard room with city view.",
-      maxOccupancy: 2,
-      baseAdults: 2,
-      totalRooms: 10,
-      amenities: ["WiFi", "AC", "TV", "Mini Fridge"],
-    },
-    {
-      name: "Deluxe Room",
-      code: "DLX",
-      description: "Spacious deluxe room with pool view.",
-      maxOccupancy: 2,
-      baseAdults: 2,
-      totalRooms: 6,
-      amenities: ["WiFi", "AC", "TV", "Mini Bar", "Bathtub"],
-    },
-    {
-      name: "Suite",
-      code: "STE",
-      description: "Luxury suite with separate living area.",
-      maxOccupancy: 4,
-      baseAdults: 2,
-      totalRooms: 4,
-      amenities: ["WiFi", "AC", "TV", "Kitchen", "Jacuzzi", "Butler Service"],
-    },
+    { name: "Standard Room", sku: "STD", capacity: 2, meta: { bedType: "queen", amenities: ["WiFi", "AC", "TV", "Mini Fridge"] } },
+    { name: "Deluxe Room",   sku: "DLX", capacity: 2, meta: { bedType: "king",  amenities: ["WiFi", "AC", "TV", "Mini Bar", "Bathtub"] } },
+    { name: "Suite",         sku: "STE", capacity: 4, meta: { bedType: "king",  amenities: ["WiFi", "AC", "TV", "Kitchen", "Jacuzzi", "Butler Service"] } },
   ];
 
   const ids: Record<string, string> = {};
   for (const t of types) {
-    const id = createId();
-    await db.insert(hspRoomTypes).values({
-      id, orgId,
+    const id = generateId();
+    await db.insert(catItems).values({
+      id, organizationId: orgId,
+      type: "room_type",
       name: t.name,
-      code: t.code,
-      description: t.description,
-      maxOccupancy: t.maxOccupancy,
-      baseAdults: t.baseAdults,
-      totalRooms: t.totalRooms,
-      amenities: t.amenities,
-      isActive: true,
+      sku: t.sku,
+      capacity: t.capacity,
+      version: 1,
+      meta: t.meta,
     }).onConflictDoNothing();
-    ids[t.code] = id;
+    ids[t.sku] = id;
   }
   return ids;
 }
@@ -103,52 +100,62 @@ async function seedRoomTypes(orgId: string) {
 
 ---
 
-## 20.4 Rooms
+## 20.5 Property and Rooms (seeds locations)
 
 ```typescript
-async function seedRooms(orgId: string, roomTypeIds: Record<string, string>) {
+async function seedProperty(orgId: string) {
+  // Property (building)
+  const propertyId = generateId();
+  await db.insert(locations).values({
+    id: propertyId, organizationId: orgId,
+    type: "building", name: "The Grand Hotel", code: "PROP-001",
+    status: "active", version: 1, meta: {},
+  }).onConflictDoNothing();
+
+  // Floors
+  const floors: Record<number, string> = {};
+  for (const floor of [1, 2, 3]) {
+    const id = generateId();
+    await db.insert(locations).values({
+      id, organizationId: orgId,
+      type: "floor", name: `Floor ${floor}`, code: `FL-${floor}`,
+      parentId: propertyId, status: "active", version: 1, meta: {},
+    }).onConflictDoNothing();
+    floors[floor] = id;
+  }
+  return { propertyId, floorIds: floors };
+}
+
+async function seedRooms(orgId: string, floorIds: Record<number, string>, roomTypeIds: Record<string, string>) {
   const roomDefs = [
-    // Standard rooms: 101-110
-    ...Array.from({ length: 10 }, (_, i) => ({
-      roomNumber: `${101 + i}`,
-      floor: 1,
-      typeCode: "STD",
-    })),
-    // Deluxe rooms: 201-206
-    ...Array.from({ length: 6 }, (_, i) => ({
-      roomNumber: `${201 + i}`,
-      floor: 2,
-      typeCode: "DLX",
-    })),
-    // Suites: 301-304
-    ...Array.from({ length: 4 }, (_, i) => ({
-      roomNumber: `${301 + i}`,
-      floor: 3,
-      typeCode: "STE",
-    })),
+    // Standard rooms: 101-110, floor 1
+    ...Array.from({ length: 10 }, (_, i) => ({ name: `${101 + i}`, floor: 1, typeCode: "STD" })),
+    // Deluxe rooms: 201-206, floor 2
+    ...Array.from({ length: 6 }, (_, i) => ({ name: `${201 + i}`, floor: 2, typeCode: "DLX" })),
+    // Suites: 301-304, floor 3
+    ...Array.from({ length: 4 }, (_, i) => ({ name: `${301 + i}`, floor: 3, typeCode: "STE" })),
   ];
 
   const ids: string[] = [];
   for (const r of roomDefs) {
-    const id = createId();
-    await db.insert(hspRooms).values({
-      id, orgId,
-      roomNumber: r.roomNumber,
-      floor: r.floor,
-      roomTypeId: roomTypeIds[r.typeCode],
+    const id = generateId();
+    await db.insert(locations).values({
+      id, organizationId: orgId,
+      type: "room", name: r.name, code: `RM-${r.name}`,
+      parentId: floorIds[r.floor],
+      capacity: r.typeCode === "STE" ? 4 : 2,
       status: "available",
-      housekeepingStatus: "inspected",
-      isBlocked: false,
+      version: 1,
+      meta: { floor: r.floor, roomTypeId: roomTypeIds[r.typeCode] },
     }).onConflictDoNothing();
     ids.push(id);
   }
   return ids;
 }
-```
 
 ---
 
-## 20.5 Rate Plans with Prices
+## 20.6 Rate Plans with Seasons
 
 ```typescript
 async function seedRatePlans(orgId: string, roomTypeIds: Record<string, string>) {
@@ -156,55 +163,46 @@ async function seedRatePlans(orgId: string, roomTypeIds: Record<string, string>)
     {
       name: "Bed & Breakfast",
       code: "BB",
-      description: "Room with breakfast included.",
-      mealPlan: "BB" as const,
-      cancellationPolicy: { freeCancellationHours: 48, penaltyPct: 100 },
-      prices: {
-        STD: { baseRate: "120.00", extraAdult: "30.00", extraChild: "15.00", weekendSurcharge: "20.00" },
-        DLX: { baseRate: "180.00", extraAdult: "40.00", extraChild: "20.00", weekendSurcharge: "30.00" },
-        STE: { baseRate: "350.00", extraAdult: "60.00", extraChild: "30.00", weekendSurcharge: "50.00" },
+      mealPlan: "breakfast",
+      cancellationPolicy: { type: "moderate", freeCancellationHours: 48, penaltyPct: 100 },
+      seasons: {
+        STD: "120.00", DLX: "180.00", STE: "350.00",
       },
     },
     {
       name: "Room Only",
       code: "RO",
-      description: "Room only, no meals.",
-      mealPlan: "RO" as const,
-      cancellationPolicy: { freeCancellationHours: 24, penaltyPct: 50 },
-      prices: {
-        STD: { baseRate: "99.00", extraAdult: "25.00", extraChild: "10.00", weekendSurcharge: "15.00" },
-        DLX: { baseRate: "149.00", extraAdult: "35.00", extraChild: "15.00", weekendSurcharge: "25.00" },
-        STE: { baseRate: "299.00", extraAdult: "50.00", extraChild: "25.00", weekendSurcharge: "40.00" },
+      mealPlan: "room_only",
+      cancellationPolicy: { type: "flexible", freeCancellationHours: 24, penaltyPct: 50 },
+      seasons: {
+        STD: "99.00", DLX: "149.00", STE: "299.00",
       },
     },
   ];
 
   const ids: string[] = [];
   for (const plan of plans) {
-    const planId = createId();
+    const planId = generateId();
     await db.insert(hspRatePlans).values({
-      id: planId, orgId,
+      id: planId, organizationId: orgId,
       name: plan.name,
       code: plan.code,
-      description: plan.description,
       mealPlan: plan.mealPlan,
       cancellationPolicy: plan.cancellationPolicy,
       isActive: true,
-      isPublic: true,
-      minStay: 1,
-      maxStay: null,
-      validFrom: null,
-      validTo: null,
     }).onConflictDoNothing();
 
-    for (const [typeCode, price] of Object.entries(plan.prices)) {
-      await db.insert(hspRatePlanPrices).values({
-        id: createId(), ratePlanId: planId,
-        roomTypeId: roomTypeIds[typeCode],
-        baseRate: price.baseRate,
-        extraAdultRate: price.extraAdult,
-        extraChildRate: price.extraChild,
-        weekendSurcharge: price.weekendSurcharge,
+    // Seed a year-round season per room type
+    for (const [typeCode, price] of Object.entries(plan.seasons)) {
+      await db.insert(hspRatePlanSeasons).values({
+        id: generateId(), organizationId: orgId,
+        ratePlanId: planId,
+        roomTypeId: roomTypeIds[typeCode],  // cat_items.id where type = 'room_type'
+        startDate: "2026-01-01",
+        endDate: "2026-12-31",
+        pricePerNight: price,
+        currency: "USD",
+        minNights: 1,
       }).onConflictDoNothing();
     }
     ids.push(planId);
@@ -215,54 +213,40 @@ async function seedRatePlans(orgId: string, roomTypeIds: Record<string, string>)
 
 ---
 
-## 20.6 Guest Profiles
+## 20.7 Guest Profiles (seeds persons, type=guest)
 
 ```typescript
-async function seedGuestProfiles(orgId: string) {
+async function seedGuests(orgId: string) {
   const guests = [
     {
-      firstName: "James",
-      lastName: "Wilson",
-      email: "james.wilson@example.com",
-      phone: "+1-555-0101",
-      nationality: "US",
-      vipStatus: "gold" as const,
-      preferences: { roomFloor: "high", pillowType: "soft", dietaryRestrictions: [] },
+      firstName: "James", lastName: "Wilson",
+      email: "james.wilson@example.com", phone: "+1-555-0101",
+      meta: { nationality: "US", loyaltyTier: "gold", preferences: { pillowType: "soft" } },
     },
     {
-      firstName: "Priya",
-      lastName: "Sharma",
-      email: "priya.sharma@example.com",
-      phone: "+91-98765-43210",
-      nationality: "IN",
-      vipStatus: "standard" as const,
-      preferences: { roomFloor: "any", pillowType: "firm", dietaryRestrictions: ["vegetarian"] },
+      firstName: "Priya", lastName: "Sharma",
+      email: "priya.sharma@example.com", phone: "+91-98765-43210",
+      meta: { nationality: "IN", loyaltyTier: "standard", preferences: { pillowType: "firm" } },
     },
     {
-      firstName: "Hans",
-      lastName: "Mueller",
-      email: "hans.mueller@example.com",
-      phone: "+49-30-123456",
-      nationality: "DE",
-      vipStatus: "platinum" as const,
-      preferences: { roomFloor: "high", pillowType: "soft", dietaryRestrictions: [] },
+      firstName: "Hans", lastName: "Mueller",
+      email: "hans.mueller@example.com", phone: "+49-30-123456",
+      meta: { nationality: "DE", loyaltyTier: "platinum", preferences: { pillowType: "soft" } },
     },
   ];
 
   const ids: string[] = [];
   for (const g of guests) {
-    const id = createId();
-    await db.insert(hspGuestProfiles).values({
-      id, orgId,
+    const id = generateId();
+    await db.insert(persons).values({
+      id, organizationId: orgId,
+      type: "guest",
       firstName: g.firstName,
       lastName: g.lastName,
       email: g.email,
       phone: g.phone,
-      nationality: g.nationality,
-      vipStatus: g.vipStatus,
-      preferences: g.preferences,
-      totalStays: 0,
-      totalSpend: "0.00",
+      version: 1,
+      meta: g.meta,
     }).onConflictDoNothing();
     ids.push(id);
   }
@@ -272,7 +256,7 @@ async function seedGuestProfiles(orgId: string) {
 
 ---
 
-## 20.7 Reservations
+## 20.8 Reservations (seeds transactions, type=order)
 
 ```typescript
 async function seedReservations(
@@ -282,85 +266,68 @@ async function seedReservations(
   ratePlanIds: string[],
   roomIds: string[],
 ) {
+  // Look up the pipeline stages for hsp.reservation
+  const pipeline = await db.query.pipelines.findFirst({
+    where: and(eq(pipelines.organizationId, orgId), eq(pipelines.entityType, "hsp.reservation")),
+    with: { stages: true },
+  });
+  const stageMap = Object.fromEntries(pipeline!.stages.map(s => [s.name, s.id]));
+
   const today = new Date();
   const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
   const inThreeDays = new Date(today); inThreeDays.setDate(today.getDate() + 3);
   const inFiveDays = new Date(today); inFiveDays.setDate(today.getDate() + 5);
-  const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
 
-  const reservations = [
+  const reservationDefs = [
     {
-      guestId: guestIds[0],
-      roomTypeId: roomTypeIds["DLX"],
-      ratePlanId: ratePlanIds[0],
-      roomId: roomIds[11],  // room 201
-      checkInDate: today.toISOString().slice(0, 10),
-      checkOutDate: inThreeDays.toISOString().slice(0, 10),
-      adults: 2,
-      children: 0,
-      status: "checked-in" as const,
-      confirmationNumber: "HTL-2026-00001",
-      totalAmount: "540.00",
-      source: "direct" as const,
+      personId: guestIds[0],
+      stageId: stageMap["Checked In"],
+      meta: { checkIn: today.toISOString().slice(0, 10), checkOut: inThreeDays.toISOString().slice(0, 10), roomId: roomIds[10], adults: 2, children: 0, ratePlanId: ratePlanIds[0], confirmationNumber: "HTL-2026-00001", source: "direct" },
+      lineItemId: roomTypeIds["DLX"], nights: 3, rate: "180.00",
     },
     {
-      guestId: guestIds[1],
-      roomTypeId: roomTypeIds["STD"],
-      ratePlanId: ratePlanIds[1],
-      roomId: null,
-      checkInDate: tomorrow.toISOString().slice(0, 10),
-      checkOutDate: inFiveDays.toISOString().slice(0, 10),
-      adults: 1,
-      children: 0,
-      status: "confirmed" as const,
-      confirmationNumber: "HTL-2026-00002",
-      totalAmount: "396.00",
-      source: "ota" as const,
+      personId: guestIds[1],
+      stageId: stageMap["Confirmed"],
+      meta: { checkIn: tomorrow.toISOString().slice(0, 10), checkOut: inFiveDays.toISOString().slice(0, 10), roomId: null, adults: 1, children: 0, ratePlanId: ratePlanIds[1], confirmationNumber: "HTL-2026-00002", source: "ota" },
+      lineItemId: roomTypeIds["STD"], nights: 4, rate: "99.00",
     },
     {
-      guestId: guestIds[2],
-      roomTypeId: roomTypeIds["STE"],
-      ratePlanId: ratePlanIds[0],
-      roomId: null,
-      checkInDate: inThreeDays.toISOString().slice(0, 10),
-      checkOutDate: inFiveDays.toISOString().slice(0, 10),
-      adults: 2,
-      children: 0,
-      status: "confirmed" as const,
-      confirmationNumber: "HTL-2026-00003",
-      totalAmount: "700.00",
-      source: "direct" as const,
+      personId: guestIds[2],
+      stageId: stageMap["Confirmed"],
+      meta: { checkIn: inThreeDays.toISOString().slice(0, 10), checkOut: inFiveDays.toISOString().slice(0, 10), roomId: null, adults: 2, children: 0, ratePlanId: ratePlanIds[0], confirmationNumber: "HTL-2026-00003", source: "direct" },
+      lineItemId: roomTypeIds["STE"], nights: 2, rate: "350.00",
     },
   ];
 
-  for (const r of reservations) {
-    const reservationId = createId();
-    await db.insert(hspReservations).values({
-      id: reservationId, orgId,
-      guestProfileId: r.guestId,
-      roomTypeId: r.roomTypeId,
-      ratePlanId: r.ratePlanId,
-      roomId: r.roomId,
-      checkInDate: r.checkInDate,
-      checkOutDate: r.checkOutDate,
-      adults: r.adults,
-      children: r.children,
-      status: r.status,
-      confirmationNumber: r.confirmationNumber,
-      totalAmount: r.totalAmount,
-      source: r.source,
+  for (const r of reservationDefs) {
+    // Reservation = transaction type=order
+    const reservationId = generateId();
+    await db.insert(transactions).values({
+      id: reservationId, organizationId: orgId,
+      type: "order",
+      personId: r.personId,
+      stageId: r.stageId,
+      version: 1,
+      meta: r.meta,
     }).onConflictDoNothing();
 
-    // Create folio for checked-in reservation
-    if (r.status === "checked-in") {
-      await db.insert(hspFolios).values({
-        id: createId(), orgId,
-        reservationId,
-        guestProfileId: r.guestId,
-        status: "open",
-        balance: "0.00",
-        totalCharges: "0.00",
-        totalPayments: "0.00",
+    // Room charge line
+    await db.insert(transactionLines).values({
+      id: generateId(), organizationId: orgId,
+      transactionId: reservationId,
+      itemId: r.lineItemId,  // cat_items.id (room_type)
+      qty: r.nights,
+      unitPrice: r.rate,
+    }).onConflictDoNothing();
+
+    // Folio = transaction type=bill for checked-in reservations
+    if (r.stageId === stageMap["Checked In"]) {
+      await db.insert(transactions).values({
+        id: generateId(), organizationId: orgId,
+        type: "bill",
+        personId: r.personId,
+        version: 1,
+        meta: { reservationId, status: "open", balance: "0.00", totalCharges: "0.00", totalPayments: "0.00" },
       }).onConflictDoNothing();
     }
   }
@@ -369,7 +336,7 @@ async function seedReservations(
 
 ---
 
-## 20.8 Run Script
+## 20.9 Run Script
 
 ```typescript
 // packages/hospitality/src/seed-run.ts

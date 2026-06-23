@@ -110,12 +110,12 @@ bus.on("email-sync.message.received", async (event) => {
   // 1. Find contact by sender email
   let contact = await findContactByEmail(message.from);
 
-  // 2. Auto-create contact if not found
+  // 2. Auto-create contact if not found — insert into persons master table
   if (!contact) {
-    contact = await mediator.send({
-      type: "crm.createContact",
-      email: message.from,
-      source: "email-sync",
+    contact = await mediator.dispatch({
+      type: "party.createPerson",
+      orgId: event.orgId, actorId: event.actorId, correlationId: generateId(),
+      payload: { type: "contact", email: message.from, source: "email-sync" }
     });
   }
 
@@ -128,13 +128,17 @@ bus.on("email-sync.message.received", async (event) => {
   // 4. Insert email message
   await insertEmailMessage({ threadId: thread.id, ...message });
 
-  // 5. Log as CRM Activity
-  await mediator.send({
-    type: "crm.createActivity",
-    type: "email",
-    subject: message.subject,
-    contactId: contact.id,
-    direction: "inbound",
+  // 5. Log as Activity via activity module
+  await mediator.dispatch({
+    type: "activity.log",
+    orgId: event.orgId, actorId: event.actorId, correlationId: generateId(),
+    payload: {
+      type: "email",
+      subject: message.subject,
+      entityId: contact.id,
+      entityType: "person",
+      meta: { direction: "inbound" }
+    }
   });
 });
 ```
@@ -178,15 +182,19 @@ bus.on("calendar-sync.event.received", async (event) => {
   // Match attendees to CRM contacts by email
   const contacts = await findContactsByEmails(calEvent.attendees);
 
-  // Create Activity of type=meeting linked to matched contacts
+  // Create Activity of type=meeting linked to matched contacts (persons master table)
   for (const contact of contacts) {
-    await mediator.send({
-      type: "crm.createActivity",
-      activityType: "meeting",
-      subject: calEvent.title,
-      contactId: contact.id,
-      dueAt: new Date(calEvent.startAt),
-      durationSeconds: (calEvent.endAt - calEvent.startAt) / 1000,
+    await mediator.dispatch({
+      type: "activity.log",
+      orgId: event.orgId, actorId: event.actorId, correlationId: generateId(),
+      payload: {
+        type: "meeting",
+        subject: calEvent.title,
+        entityId: contact.id,
+        entityType: "person",
+        dueAt: new Date(calEvent.startAt),
+        meta: { durationSeconds: (calEvent.endAt - calEvent.startAt) / 1000 }
+      }
     });
   }
 });
@@ -232,16 +240,22 @@ bus.on("telephony.call.completed", async (event) => {
   // Find contact by phone number
   const contact = await findContactByPhone(record.to);
 
-  // Create Activity of type=call
-  await mediator.send({
-    type: "crm.createActivity",
-    activityType: "call",
-    subject: `Call with ${contact?.firstName ?? record.to}`,
-    contactId: contact?.id,
-    direction: record.direction,
-    durationSeconds: record.durationSeconds,
-    callSid: record.id,
-    callRecordingUrl: record.recordingUrl,
+  // Create Activity of type=call via activity module
+  await mediator.dispatch({
+    type: "activity.log",
+    orgId: event.orgId, actorId: event.actorId, correlationId: generateId(),
+    payload: {
+      type: "call",
+      subject: `Call with ${contact?.firstName ?? record.to}`,
+      entityId: contact?.id,
+      entityType: "person",
+      meta: {
+        direction: record.direction,
+        durationSeconds: record.durationSeconds,
+        callSid: record.id,
+        callRecordingUrl: record.recordingUrl,
+      }
+    }
   });
 });
 ```

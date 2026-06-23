@@ -23,21 +23,36 @@ PATCH  /lms/admin/enrollments/:id              enrollment:manage
 Body:
 ```typescript
 {
-  courseId: string;
-  cohortId?: string;
+  courseId: string;      // cat_items.id (type=course)
+  cohortId?: string;     // lms_cohorts.id
   couponCode?: string;
   paymentMethodId?: string;  // required for paid courses
 }
 ```
 
+Enrollment is created via:
+```typescript
+await mediator.dispatch({
+  type: "commerce.createTransaction",
+  orgId: actor.orgId, actorId: actor.id,
+  payload: {
+    type: "order",
+    personId: actor.personId,    // persons.id of the student
+    lines: [{ itemId: courseId, qty: 1 }],
+    stageId: enrolledStageId,    // from lms.enrollment pipeline
+    meta: { cohortId, couponCode },
+  }
+})
+```
+
 **Duplicate guard** (most common bug — must be atomic):
 ```typescript
-// Run inside DB transaction
-const existing = await db.query.lmsEnrollments.findFirst({
+// Run inside DB transaction — check transactions table
+const existing = await db.query.transactions.findFirst({
   where: and(
-    eq(lmsEnrollments.learnerId, learnerId),
-    eq(lmsEnrollments.courseId, courseId),
-    notInArray(lmsEnrollments.status, ["cancelled", "refunded"])
+    eq(transactions.personId, actor.personId),
+    // check transaction_lines for courseId
+    notInArray(transactions.stageId, [droppedStageId, cancelledStageId])
   ),
 });
 if (existing) throw new ConflictError("ALREADY_ENROLLED", "Learner already enrolled in this course");
@@ -73,15 +88,20 @@ if (coupon) {
 **Free course bypass:**
 ```typescript
 if (finalPrice === 0) {
-  // Straight to active — skip payment gate entirely
-  await db.insert(lmsEnrollments).values({
-    ...enrollmentData,
-    status: "active",
-    pricePaid: "0",
-  });
-  await db.update(lmsCourses).set({ enrolledCount: sql`enrolled_count + 1` }).where(eq(lmsCourses.id, courseId));
-  bus.emit("lms.enrollment.activated", { enrollmentId, learnerId, courseId });
-  return enrollment;
+  // Straight to In Progress stage — skip payment gate
+  await mediator.dispatch({
+    type: "commerce.createTransaction",
+    orgId: actor.orgId, actorId: actor.id,
+    payload: {
+      type: "order",
+      personId: actor.personId,
+      lines: [{ itemId: courseId, qty: 1 }],
+      stageId: inProgressStageId,   // lms.enrollment pipeline "In Progress" stage
+      meta: { cohortId, couponCode },
+    }
+  })
+  bus.emit("lms.enrollment.activated", { transactionId, personId: actor.personId, itemId: courseId });
+  return transaction;
 }
 ```
 
@@ -140,46 +160,44 @@ pending-payment ──[payment.failed]──► cancelled
 
 ---
 
-## 4.5 Access Control on Module Content
+## 4.5 Access Control on Lesson Content
 
-Before returning module content:
+Before returning lesson content:
 
 ```typescript
-async function assertModuleAccess(learnerId: string, moduleId: string, courseId: string): Promise<void> {
-  const module = await db.query.lmsCourseModules.findFirst({ where: eq(lmsCourseModules.id, moduleId) });
-  if (!module) throw new NotFoundError("MODULE_NOT_FOUND");
+async function assertLessonAccess(personId: string, lessonId: string, courseItemId: string): Promise<void> {
+  const lesson = await db.query.lmsLessons.findFirst({ where: eq(lmsLessons.id, lessonId) });
+  if (!lesson) throw new NotFoundError("LESSON_NOT_FOUND");
 
-  // Free preview modules — always accessible
-  if (module.isFree) return;
+  // Free preview lessons — always accessible
+  if (lesson.isFree) return;
 
-  // Must have active enrollment
-  const enrollment = await db.query.lmsEnrollments.findFirst({
+  // Must have an active enrollment transaction for this course
+  const enrollment = await db.query.transactions.findFirst({
     where: and(
-      eq(lmsEnrollments.learnerId, learnerId),
-      eq(lmsEnrollments.courseId, courseId),
-      eq(lmsEnrollments.status, "active")
+      eq(transactions.personId, personId),
+      // joined to transaction_lines where itemId = courseItemId
+      notInArray(transactions.stageId, [droppedStageId, cancelledStageId])
     ),
   });
   if (!enrollment) throw new ForbiddenError("NOT_ENROLLED");
 
-  // Sequential unlock check
-  if (module.requiredPrevious) {
-    const modules = await db.query.lmsCourseModules.findMany({
-      where: eq(lmsCourseModules.courseId, courseId),
-      orderBy: [asc(lmsCourseModules.sortOrder)],
+  // Sequential unlock check: previous lesson in same module must be completed
+  const lessons = await db.query.lmsLessons.findMany({
+    where: eq(lmsLessons.moduleId, lesson.moduleId),
+    orderBy: [asc(lmsLessons.position)],
+  });
+  const lessonIndex = lessons.findIndex((l) => l.id === lessonId);
+  if (lessonIndex > 0) {
+    const prevLesson = lessons[lessonIndex - 1];
+    const prevProgress = await db.query.lmsProgress.findFirst({
+      where: and(
+        eq(lmsProgress.personId, personId),
+        eq(lmsProgress.lessonId, prevLesson.id),
+        isNotNull(lmsProgress.completedAt)
+      ),
     });
-    const moduleIndex = modules.findIndex((m) => m.id === moduleId);
-    if (moduleIndex > 0) {
-      const prevModule = modules[moduleIndex - 1];
-      const prevProgress = await db.query.lmsModuleProgress.findFirst({
-        where: and(
-          eq(lmsModuleProgress.enrollmentId, enrollment.id),
-          eq(lmsModuleProgress.moduleId, prevModule.id),
-          eq(lmsModuleProgress.status, "completed")
-        ),
-      });
-      if (!prevProgress) throw new ForbiddenError("PREVIOUS_MODULE_INCOMPLETE");
-    }
+    if (!prevProgress) throw new ForbiddenError("PREVIOUS_LESSON_INCOMPLETE");
   }
 }
 ```

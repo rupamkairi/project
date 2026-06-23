@@ -60,6 +60,18 @@ export class HospitalityApiClient {
   post = <T>(path: string, body?: unknown) => this.request<T>("POST", path, body);
   patch = <T>(path: string, body?: unknown) => this.request<T>("PATCH", path, body);
   delete = <T>(path: string) => this.request<T>("DELETE", path);
+
+  // Master table accessors (filtered views via backend routes)
+  getRoomTypes(params?: Record<string, string>) { return this.get("/room-types") }  // cat_items?type=room_type
+  getRooms(params?: Record<string, string>) { return this.get("/rooms") }            // locations?type=room
+  getGuests(params?: Record<string, string>) { return this.get("/guests") }          // persons?type=guest
+  getReservations(params?: Record<string, string>) { return this.get("/reservations") } // transactions?type=order
+
+  // hsp-owned table accessors
+  getHousekeepingAssignments(params?: Record<string, string>) { return this.get("/housekeeping/assignments") }
+  getRatePlans(params?: Record<string, string>) { return this.get("/rate-plans") }
+  getChannelInventory(params?: Record<string, string>) { return this.get("/channel-inventory") }
+  getMaintenanceRequests(params?: Record<string, string>) { return this.get("/maintenance") }
 }
 
 export const hspApi = new HospitalityApiClient();

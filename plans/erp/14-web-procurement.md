@@ -1,5 +1,7 @@
 # Phase 14 — Web: Procurement
 
+> **MTA:** Vendor data comes from `parties` table (`type="vendor"`). The `/erp/vendors` route is unchanged — only the server-side data source differs. PO data comes from `transactions` table (`type="purchase_order"`).
+
 ---
 
 ## 14.1 VendorsPage
@@ -19,7 +21,7 @@ const columns: ColumnDef<Vendor>[] = [
   { accessorKey: "gstin", header: "GSTIN", cell: ({ getValue }) => (
     <span className="font-mono text-xs">{getValue() as string ?? "—"}</span>
   )},
-  { accessorKey: "vendorType", header: "Type" },
+  { accessorKey: "vendorType", header: "Type" }, // from parties.type or parties.meta.vendorType
   { accessorKey: "rating", header: "Rating", cell: ({ getValue }) => (
     <span>{getValue() ? `${getValue()}/5` : "—"}</span>
   )},

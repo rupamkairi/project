@@ -8,13 +8,14 @@
 
 **Guard — check before posting:**
 ```typescript
+// Charges are transaction_lines on folio (transaction type=bill). Check meta for idempotency.
 const existing = await db.select()
-  .from(hspFolioCharges)
+  .from(transactionLines)
   .where(and(
-    eq(hspFolioCharges.folioId, folioId),
-    eq(hspFolioCharges.chargeDate, today),
-    eq(hspFolioCharges.type, "room"),
-    eq(hspFolioCharges.reversed, false),
+    eq(transactionLines.transactionId, folioId),  // transactions.id where type=bill
+    sql`meta->>'date' = ${today}`,
+    sql`meta->>'type' = 'room'`,
+    sql`coalesce((meta->>'reversed')::boolean, false) = false`,
   ))
   .limit(1);
 
@@ -44,14 +45,14 @@ await db.transaction(async (tx) => {
     excludeReservationId: reservationId,  // Exclude self
   });
 
+  // Reservations are transactions (type=order); stages tracked via stageId
   if (!available) {
-    await tx.update(hspReservations)
-      .set({ status: "waitlisted" })
-      .where(eq(hspReservations.id, reservationId));
+    // Move to a "Waitlisted" stage or throw — no hspReservations table
     throw new ConflictError("NO_ROOMS_AVAILABLE");
   }
 
-  await tx.update(hspReservations).set({ status: "confirmed" }).where(eq(hspReservations.id, reservationId));
+  // Move reservation to Confirmed stage
+  await tx.update(transactions).set({ stageId: confirmedStageId }).where(eq(transactions.id, reservationId));
 });
 ```
 
@@ -61,17 +62,21 @@ await db.transaction(async (tx) => {
 
 **Pitfall:** Allowing check-in for rooms marked `done` (cleaned) but not `inspected` → guest arrives to unchecked room.
 
+Rooms are `locations` (type=room). Housekeeping readiness is tracked via `hsp_housekeeping_assignments` status, not a column on the room itself.
+
 **Guard:**
 ```typescript
-if (room.housekeepingStatus !== "inspected") {
-  throw new ConflictError("ROOM_NOT_INSPECTED", {
-    roomNumber: room.roomNumber,
-    currentStatus: room.housekeepingStatus,
+// Room is ready if it has a completed+inspected housekeeping assignment, or status = 'available'
+const room = await db.query.locations.findFirst({ where: eq(locations.id, locationId) });
+if (room.status !== "available") {
+  throw new ConflictError("ROOM_NOT_READY", {
+    roomName: room.name,
+    currentStatus: room.status,
   });
 }
 ```
 
-`done` → supervisor inspects → `inspected` → front desk can check in.
+Housekeeping assignment: `pending` → `in_progress` → `completed` → supervisor marks inspected → `location.status = 'available'`.
 
 ---
 
@@ -79,10 +84,12 @@ if (room.housekeepingStatus !== "inspected") {
 
 **Pitfall:** Guest checks out with outstanding balance → revenue lost.
 
+Folio is a `transaction` (type=bill) with balance tracked in `meta.balance`.
+
 **Guard:**
 ```typescript
-const folio = await getFolioByReservation(reservationId);
-const balance = parseFloat(folio.balance);
+const folio = await getFolioByReservation(reservationId);  // transaction type=bill
+const balance = parseFloat(folio.meta?.balance ?? "0");
 
 if (balance > 0) {
   throw new ConflictError("OUTSTANDING_BALANCE", { balance: folio.balance });
@@ -109,11 +116,11 @@ app.post("/hospitality/reservations/:id/cancel", async ({ params }) => {
   // Server computes penalty from policy
   const penalty = computeCancellationPenalty(reservation, ratePlan.cancellationPolicy);
 
-  await db.update(hspReservations).set({
-    status: "cancelled",
-    cancellationPenalty: penalty.toString(),
-    cancelledAt: new Date(),
-  }).where(eq(hspReservations.id, params.id));
+  // Reservation is a transaction (type=order); move to Cancelled stage
+  await db.update(transactions).set({
+    stageId: cancelledStageId,  // hsp.reservation "Cancelled" stage
+    meta: sql`meta || '{"cancellationPenalty": ${penalty.toString()}, "cancelledAt": ${new Date().toISOString()}}'::jsonb`,
+  }).where(eq(transactions.id, params.id));
 
   return { reservation: await getReservation(params.id), penalty };
 });
@@ -134,11 +141,15 @@ app.post("/hospitality/reservations/:id/cancel", async ({ params }) => {
 // Find reservations with checkInDate = yesterday, status = confirmed
 const yesterday = getLocalDate(hspConfig.timezone, -1);
 
+// Reservations are transactions (type=order); Confirmed stage = not yet checked in
+const confirmedStageId = await getStageId(orgId, "hsp.reservation", "Confirmed");
 const noShows = await db.select()
-  .from(hspReservations)
+  .from(transactions)
   .where(and(
-    eq(hspReservations.checkInDate, yesterday),
-    eq(hspReservations.status, "confirmed"),
+    eq(transactions.organizationId, orgId),
+    eq(transactions.type, "order"),
+    sql`meta->>'checkIn' = ${yesterday}`,
+    eq(transactions.stageId, confirmedStageId),
   ));
 ```
 
@@ -255,15 +266,22 @@ bus.on("hospitality.reservation.checked-out", async ({ reservationId, roomId }) 
 
 **Guard:**
 ```typescript
-const charge = await getCharge(chargeId);
+// Charges are transaction_lines; check meta.reversed for double-reverse guard
+const line = await db.query.transactionLines.findFirst({ where: eq(transactionLines.id, chargeId) });
 
-if (charge.reversed) {
+if (line?.meta?.reversed) {
   throw new ConflictError("CHARGE_ALREADY_REVERSED");
 }
 
 await db.transaction(async (tx) => {
-  await tx.update(hspFolioCharges).set({ reversed: true, reversedAt: new Date() }).where(eq(hspFolioCharges.id, chargeId));
-  await tx.update(hspFolios).set({ balance: sql`balance - ${charge.amount}` }).where(eq(hspFolios.id, charge.folioId));
+  // Mark line reversed in meta
+  await tx.update(transactionLines).set({
+    meta: sql`meta || '{"reversed": true, "reversedAt": ${new Date().toISOString()}}'::jsonb`,
+  }).where(eq(transactionLines.id, chargeId));
+  // Update folio balance (transaction type=bill meta)
+  await tx.update(transactions).set({
+    meta: sql`jsonb_set(meta, '{balance}', to_jsonb((meta->>'balance')::numeric - ${line.unitPrice}))`,
+  }).where(eq(transactions.id, line.transactionId));
 });
 ```
 

@@ -24,11 +24,11 @@ routes/store/
 
 ## 5.1 Catalog — `/store/products`
 
-All public. No auth required.
+All public. No auth required. Server queries `cat_items` (`type = "product"`) via mediator — never a separate `eco_products` table.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/store/products` | List published products. Filters: `categoryId`, `tags`, `minPrice`, `maxPrice`, `inStock`, `sort`. Pagination. |
+| `GET` | `/store/products` | List published products. Server filters `cat_items` by `type="product"` + `orgId` + `status="published"`. Filters: `categoryId`, `tags`, `minPrice`, `maxPrice`, `inStock`, `sort`. Pagination. |
 | `GET` | `/store/products/:id` | Product detail with variants, images, stock availability |
 | `GET` | `/store/products/:handle` | By URL handle (SEO-friendly slug) |
 | `GET` | `/store/categories` | Category tree |
@@ -55,14 +55,13 @@ Search is powered by `PgSearchAdapter`. Catalog items sync on `item.published` e
 
 ## 5.3 Cart — `/store/carts`
 
-Cart is session-based. Guest carts identified by `cartId` (UUID stored client-side).
-Authenticated customers associate cart with their account on login.
+Cart is a `transactions` row (`type = "order"`) in a draft pipeline stage. Cart lines are `transaction_lines` rows. Guest carts identified by `cartId` (UUID stored client-side — maps to `transactions.id`). Authenticated customers associate the cart transaction with their `persons` record on login.
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `POST` | `/store/carts` | none | Create new cart. Returns `{ cartId, items: [], total }`. |
+| `POST` | `/store/carts` | none | Create new cart. Inserts into `transactions` (type="order", draft stage) via mediator. Returns `{ cartId, items: [], total }`. |
 | `GET` | `/store/carts/:id` | none | Get cart with items, totals, applied coupon |
-| `POST` | `/store/carts/:id/items` | none | Add item. Body: `{ variantId, quantity }`. Validates stock. |
+| `POST` | `/store/carts/:id/items` | none | Add item. Body: `{ variantId, quantity }`. Inserts into `transaction_lines` via mediator. Validates stock. |
 | `PATCH` | `/store/carts/:id/items/:itemId` | none | Update quantity |
 | `DELETE` | `/store/carts/:id/items/:itemId` | none | Remove item |
 | `POST` | `/store/carts/:id/coupon` | none | Apply coupon code |
@@ -107,11 +106,11 @@ All require `eco:customer` JWT.
 
 ## 5.6 Orders — `/store/orders`
 
-Customer views their own order history and tracking.
+Customer views their own order history and tracking. Server queries `transactions` (`type = "order"`) filtered by `person_id = customerId` via mediator.
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `GET` | `/store/orders` | customer | Order list (own only). Filters: `status`. |
+| `GET` | `/store/orders` | customer | Order list (own only). Server filters `transactions` by `type="order"` + `personId`. Filters: `stageId` (maps to status). |
 | `GET` | `/store/orders/:id` | customer | Order detail with items, fulfillments, timeline |
 | `GET` | `/store/orders/:id/track` | customer | Fulfillment tracking info (carrier + events) |
 | `POST` | `/store/orders/lookup` | none | Guest order lookup by `email + orderNumber`. Returns order summary. |

@@ -87,21 +87,20 @@ composes/crm/
 
 New Drizzle file: `composes/crm/server/src/db/schema/index.ts`
 
-All CRM tables use prefix `crm_`. All include `baseColumns` (id, organizationId, createdAt, updatedAt, deletedAt, version, meta).
+All CRM detail tables use prefix `crm_`. All include `baseColumns` (id, organizationId, createdAt, updatedAt, deletedAt, version, meta).
 
-Tables created in this phase (stubs — full field specs in Phase 2):
+**Master tables are NOT created here.** `persons`, `parties`, `pipelines`, `pipeline_stages`, `activities`, and `geo_addresses` are owned by foundation modules and provisioned at server boot. Run `bun db:push` from project root to ensure master tables exist before running CRM migrations.
+
+Detail tables created in this phase (stubs — full field specs in Phase 2):
 
 ```
-crm_accounts         Account (company/org)
-crm_contacts         Contact (person)
-crm_leads            Lead
-crm_deals            Deal
-crm_pipelines        Pipeline
-crm_pipeline_stages  PipelineStage
-crm_activities       Activity
-crm_campaigns        Campaign
-crm_campaign_contacts Campaign-Contact join
-crm_segments         Segment
+crm_leads            Lead sequencing/qualification detail (extends persons type=lead)
+crm_deals            Deal opportunity
+crm_campaigns        Marketing campaign
+crm_campaign_contacts Campaign-Contact delivery join
+crm_segments         Audience segment (filter expression)
+crm_email_threads    P1 — inbound/outbound email threads
+crm_email_messages   P1 — individual emails within a thread
 ```
 
 Each table file: `composes/crm/server/src/db/schema/{name}.ts`
@@ -187,8 +186,27 @@ File: `composes/crm/server/src/db/seed/roles.seed.ts`
 
 Seeds:
 - 4 roles (crm:admin, crm:sales-manager, crm:sales-rep, crm:viewer) into identity `roles` table
-- Default pipeline: "Sales Pipeline" with 5 stages (New, Contacted, Qualified, Proposal, Won)
+- Default pipelines via `seedPipeline()` from `apps/server/src/infra/db/seed.ts`:
+  - `crm.deal` pipeline: Prospecting → Qualification → Proposal → Closed Won → Closed Lost
+  - `crm.lead` pipeline: New → Contacted → Qualified → Converted
 - Default lead score thresholds in compose config
+
+Pipeline seed pattern:
+```typescript
+import { seedPipeline } from "apps/server/src/infra/db/seed"
+await seedPipeline(orgId, "crm.deal", [
+  { name: "Prospecting",   meta: { probability: 10 } },
+  { name: "Qualification", meta: { probability: 30 } },
+  { name: "Proposal",      meta: { probability: 60 } },
+  { name: "Closed Won",    meta: { probability: 100 } },
+  { name: "Closed Lost",   meta: { probability: 0 } },
+])
+await seedPipeline(orgId, "crm.lead", [
+  { name: "New" }, { name: "Contacted" }, { name: "Qualified" }, { name: "Converted" },
+])
+```
+
+Seed contacts/accounts by inserting directly into `persons` (type=`contact`) and `parties` (type=`company`) master tables.
 
 ---
 

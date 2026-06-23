@@ -22,33 +22,39 @@ GET    /hospitality/guest/reservations             guest (own)
 
 Called before every reservation confirm. Must also be re-checked at check-in.
 
+Rooms are `locations` (type=room). Reservations are `transactions` (type=order) with `meta.checkIn`, `meta.checkOut`, `meta.roomTypeId`.
+
 ```typescript
 async function checkAvailability(
-  roomTypeId: string,
+  roomTypeId: string,   // cat_items.id where type = 'room_type'
   checkInDate: string,  // YYYY-MM-DD
   checkOutDate: string,
   orgId: string
 ): Promise<{ available: boolean; roomsAvailable: number }> {
-  // Count rooms of this type
+  // Count rooms of this type (locations where type=room and meta.roomTypeId matches)
   const totalRooms = await db
     .select({ count: count() })
-    .from(hspRooms)
+    .from(locations)
     .where(and(
-      eq(hspRooms.orgId, orgId),
-      eq(hspRooms.roomTypeId, roomTypeId),
-      eq(hspRooms.isBlocked, false)
+      eq(locations.organizationId, orgId),
+      eq(locations.type, "room"),
+      sql`meta->>'roomTypeId' = ${roomTypeId}`,
+      notInArray(locations.status, ["maintenance", "out_of_order"])
     ));
 
   // Count confirmed/checked-in reservations overlapping date range
+  // Active stages = Confirmed + Checked In stage IDs for hsp.reservation pipeline
+  const activeStageIds = await getStageIds(orgId, "hsp.reservation", ["Confirmed", "Checked In"]);
   const overlapping = await db
     .select({ count: count() })
-    .from(hspReservations)
+    .from(transactions)
     .where(and(
-      eq(hspReservations.orgId, orgId),
-      eq(hspReservations.roomTypeId, roomTypeId),
-      inArray(hspReservations.status, ["confirmed", "checked-in"]),
-      lt(hspReservations.checkInDate, checkOutDate),
-      gt(hspReservations.checkOutDate, checkInDate)
+      eq(transactions.organizationId, orgId),
+      eq(transactions.type, "order"),
+      sql`meta->>'roomTypeId' = ${roomTypeId}`,
+      inArray(transactions.stageId, activeStageIds),
+      sql`meta->>'checkIn' < ${checkOutDate}`,
+      sql`meta->>'checkOut' > ${checkInDate}`
     ));
 
   const available = totalRooms[0].count - overlapping[0].count;
@@ -90,16 +96,45 @@ Body:
 ```
 
 On create:
-1. Validate `checkOutDate > checkInDate`
-2. `nights = daysBetween(checkInDate, checkOutDate)`
-3. Check availability — throw `ROOM_NOT_AVAILABLE` if none
-4. If `guest` provided and no `guestId`: upsert guest profile by email or phone
-5. Lookup rate: `ratePlanPrices[ratePlanId][roomTypeId].baseRate`
-6. Check rate override for each night — use override rate if `stopSell = false`
-7. `totalRate = sum of nightly rates`
-8. Generate confirmation number: `HTL-{YYYY}-{SEQ5}` — atomic increment on `hspOrgConfig.lastConfirmationSeq`
-9. Insert reservation with `status = 'tentative'`
-10. Emit `reservation.created`
+MTA flow — reservations are created as `transactions` (type=order) via mediator:
+
+```typescript
+// 1. Check availability
+const avail = await checkAvailability(roomTypeId, checkInDate, checkOutDate, orgId);
+if (!avail.available) throw new Error("ROOM_NOT_AVAILABLE");
+
+// 2. Upsert guest (persons, type=guest) if new
+let personId = body.guestId;
+if (!personId && body.guest) {
+  const result = await mediator.send({ type: "party.upsertPerson", organizationId: orgId,
+    payload: { type: "guest", ...body.guest } });
+  personId = result.id;
+}
+
+// 3. Look up nightly rate from hsp_rate_plan_seasons
+const rate = await getNightlyRate(ratePlanId, roomTypeId, checkInDate, checkOutDate);
+
+// 4. Generate confirmation number
+const confirmationNumber = await nextConfirmationNumber(orgId);
+
+// 5. Create reservation transaction
+const reservation = await mediator.send({
+  type: "commerce.createTransaction", organizationId: orgId,
+  payload: {
+    type: "order",
+    personId,
+    stageId: inquiryStageId,  // from hsp.reservation pipeline
+    meta: { checkIn: checkInDate, checkOut: checkOutDate, roomTypeId, adults, children, ratePlanId, confirmationNumber, source },
+  }
+});
+
+// 6. Add room charge line (nights × nightly rate)
+await mediator.send({ type: "commerce.addLine", organizationId: orgId,
+  payload: { transactionId: reservation.id, itemId: roomTypeId, qty: nights, unitPrice: rate.pricePerNight } });
+
+// 7. Emit event
+bus.emit("hsp.reservation.created", { reservationId: reservation.id, personId, confirmationNumber });
+```
 
 ---
 
@@ -116,10 +151,11 @@ Guards:
 4. If advance booking limit: `checkInDate <= today + maxAdvanceBookingDays`
 
 On confirm:
-1. Status → `confirmed`
-2. If deposit: create folio + add deposit payment record
-3. Emit `reservation.confirmed`
-4. `mediator.dispatch({ type: "notify.sendEmail", to: guest.email, template: "reservation-confirmed", data: { confirmationNumber, checkInDate, ... } })`
+1. Move transaction `stageId` → Confirmed stage (pipeline stage transition)
+2. Re-check availability (idempotent guard)
+3. If deposit: insert `hsp_payment_records` record + create folio transaction (type=bill)
+4. Emit `hsp.reservation.confirmed`
+5. `mediator.send({ type: "notification.send", ... })`
 
 ---
 
@@ -206,20 +242,20 @@ PATCH  /hospitality/group-bookings/:id       reservation:modify
 POST   /hospitality/group-bookings/:id/link-reservation  reservation:modify
 ```
 
-Group booking creates a `hspGroupBookings` record. Individual reservations reference `groupId`.
-
-`/link-reservation` body: `{ reservationId: string }`. Sets `reservations.groupId = groupBooking.id`.
+Group bookings are managed via a lightweight hsp-owned table or as a tagged set of transactions. Individual reservations (transactions) reference `meta.groupId`. Group coordination is organizational only — each reservation has its own folio.
 
 ---
 
 ## 3.9 Guest Profile Routes
 
+Guest profiles are `persons` (type=guest) from the party foundation module. Hospitality routes proxy to `party.*` mediator commands.
+
 ```
-GET    /hospitality/guest-profiles           reservation:read
-GET    /hospitality/guest-profiles/:id       reservation:read
-POST   /hospitality/guest-profiles           reservation:create
-PATCH  /hospitality/guest-profiles/:id       reservation:modify
-GET    /hospitality/guest-profiles/:id/history  reservation:read
+GET    /hospitality/guests           reservation:read    → party.listPersons type=guest
+GET    /hospitality/guests/:id       reservation:read    → party.getPerson
+POST   /hospitality/guests           reservation:create  → party.upsertPerson type=guest
+PATCH  /hospitality/guests/:id       reservation:modify  → party.updatePerson
+GET    /hospitality/guests/:id/history  reservation:read → lists transactions where personId=id, type=order
 ```
 
 Guest history: previous reservations sorted by checkInDate desc, with folio total spent.

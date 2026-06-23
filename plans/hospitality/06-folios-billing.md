@@ -36,32 +36,28 @@ Guards:
 2. Reservation `status = 'checked-in'` (cannot charge a future or past reservation)
 3. `amount > 0` (use `/reverse` for credits)
 
-On post:
+Folios are `transactions` (type=bill). Charges are `transaction_lines`. Payments are `hsp_payment_records`.
+
+On post charge — add a `transaction_line` to the folio (bill) transaction:
 ```typescript
 await db.transaction(async (tx) => {
-  const today = todayStr();  // YYYY-MM-DD
   const taxRate = orgConfig.taxRate ? parseFloat(orgConfig.taxRate) / 100 : 0;
-  const taxAmount = type !== "tax" && type !== "city-tax"
-    ? amount * taxRate
-    : 0;
+  const taxAmount = type !== "tax" && type !== "city-tax" ? amount * taxRate : 0;
 
-  await tx.insert(hspFolioCharges).values({
-    folioId,
-    type,
-    description,
-    amount: amount.toString(),
-    taxAmount: taxAmount.toString(),
-    postedBy: actorId,
-    referenceId,
-    date: today,
+  // Add charge as a transaction_line on the folio (bill) transaction
+  await tx.insert(transactionLines).values({
+    id: generateId(), organizationId: orgId,
+    transactionId: folioId,  // transactions.id where type=bill
+    itemId: referenceId ?? null,
+    qty: 1,
+    unitPrice: amount.toString(),
+    meta: { type, description, taxAmount: taxAmount.toString(), postedBy: actorId, date: todayStr() },
   });
 
-  await tx.update(hspFolios)
-    .set({
-      totalCharges: sql`total_charges + ${amount + taxAmount}`,
-      balance: sql`balance + ${amount + taxAmount}`,
-    })
-    .where(eq(hspFolios.id, folioId));
+  // Update folio meta totals
+  await tx.update(transactions).set({
+    meta: sql`jsonb_set(jsonb_set(meta, '{totalCharges}', to_jsonb((meta->>'totalCharges')::numeric + ${amount + taxAmount})), '{balance}', to_jsonb((meta->>'balance')::numeric + ${amount + taxAmount}))`,
+  }).where(eq(transactions.id, folioId));
 });
 ```
 
@@ -84,23 +80,26 @@ Guards:
 1. Folio `status = 'open'`
 2. `amount > 0`
 
+Payments are recorded in `hsp_payment_records` (hsp-owned). Folio balance tracked in `transaction.meta`.
+
 On payment:
 ```typescript
 await db.transaction(async (tx) => {
-  await tx.insert(hspFolioPayments).values({
-    folioId,
+  // Insert payment record (hsp-owned detail table)
+  await tx.insert(hspPaymentRecords).values({
+    id: generateId(), organizationId: orgId,
+    transactionId: folioId,  // transactions.id where type=bill
     method,
     amount: amount.toString(),
     gatewayRef,
-    processedBy: actorId,
+    paidAt: new Date(),
+    status: "completed",
   });
 
-  await tx.update(hspFolios)
-    .set({
-      totalPayments: sql`total_payments + ${amount}`,
-      balance: sql`balance - ${amount}`,
-    })
-    .where(eq(hspFolios.id, folioId));
+  // Update folio meta totals
+  await tx.update(transactions).set({
+    meta: sql`jsonb_set(jsonb_set(meta, '{totalPayments}', to_jsonb((meta->>'totalPayments')::numeric + ${amount})), '{balance}', to_jsonb((meta->>'balance')::numeric - ${amount}))`,
+  }).where(eq(transactions.id, folioId));
 });
 ```
 
@@ -118,24 +117,27 @@ Guards:
 3. Charge not already reversed
 4. Role = `folio:post-charge`
 
+Charges are `transaction_lines`. Reversal marks the line in `meta.reversed` and adds a credit line.
+
 On reverse:
 ```typescript
 await db.transaction(async (tx) => {
-  const charge = await tx.query.hspFolioCharges.findFirst({
-    where: and(eq(hspFolioCharges.id, chargeId), eq(hspFolioCharges.folioId, folioId))
+  const line = await tx.query.transactionLines.findFirst({
+    where: and(eq(transactionLines.id, chargeId), eq(transactionLines.transactionId, folioId))
   });
 
-  await tx.update(hspFolioCharges).set({
-    reversed: true,
-    reversedAt: new Date(),
-    reversedBy: actorId,
-  }).where(eq(hspFolioCharges.id, chargeId));
+  // Mark line as reversed in meta
+  await tx.update(transactionLines).set({
+    meta: sql`meta || '{"reversed": true, "reversedBy": ${actorId}, "reversedAt": ${new Date().toISOString()}}'::jsonb`,
+  }).where(eq(transactionLines.id, chargeId));
 
-  const reverseAmount = parseFloat(charge.amount) + parseFloat(charge.taxAmount);
-  await tx.update(hspFolios).set({
-    totalCharges: sql`total_charges - ${reverseAmount}`,
-    balance: sql`balance - ${reverseAmount}`,
-  }).where(eq(hspFolios.id, folioId));
+  const taxAmount = parseFloat(line.meta?.taxAmount ?? "0");
+  const reverseAmount = parseFloat(line.unitPrice as string) + taxAmount;
+
+  // Update folio balance
+  await tx.update(transactions).set({
+    meta: sql`jsonb_set(jsonb_set(meta, '{totalCharges}', to_jsonb((meta->>'totalCharges')::numeric - ${reverseAmount})), '{balance}', to_jsonb((meta->>'balance')::numeric - ${reverseAmount}))`,
+  }).where(eq(transactions.id, folioId));
 });
 ```
 
@@ -165,42 +167,54 @@ Cron: daily 11PM.
 
 For each open folio with active (checked-in) reservation:
 
+Folios are `transactions` (type=bill). Charges are `transaction_lines`. Check idempotency via `transaction_lines.meta.date + meta.type`.
+
 ```typescript
 async function postNightlyRoomCharges(orgId: string): Promise<void> {
   const tonight = todayStr();  // YYYY-MM-DD
 
-  const openFolios = await db.query.hspFolios.findMany({
-    where: and(eq(hspFolios.status, "open")),
-    with: { reservation: { with: { ratePlan: true } } },
+  // Open folios = transactions (type=bill) with meta.status=open, for this org
+  const openFolios = await db.query.transactions.findMany({
+    where: and(
+      eq(transactions.organizationId, orgId),
+      eq(transactions.type, "bill"),
+      sql`meta->>'status' = 'open'`,
+    ),
   });
 
   for (const folio of openFolios) {
-    const reservation = folio.reservation;
-    if (reservation.status !== "checked-in") continue;
+    const reservationId = folio.meta?.reservationId;
+    if (!reservationId) continue;
+    const reservation = await db.query.transactions.findFirst({
+      where: and(eq(transactions.id, reservationId), eq(transactions.type, "order")),
+    });
+    // Only charge if reservation is in Checked In stage
+    const checkedInStageId = await getStageId(orgId, "hsp.reservation", "Checked In");
+    if (reservation?.stageId !== checkedInStageId) continue;
 
-    // Idempotency: skip if room charge already posted for tonight
-    const existing = await db.query.hspFolioCharges.findFirst({
+    // Idempotency: skip if room charge line already posted for tonight
+    const existing = await db.query.transactionLines.findFirst({
       where: and(
-        eq(hspFolioCharges.folioId, folio.id),
-        eq(hspFolioCharges.type, "room"),
-        eq(hspFolioCharges.date, tonight),
-        eq(hspFolioCharges.reversed, false)
+        eq(transactionLines.transactionId, folio.id),
+        sql`meta->>'type' = 'room'`,
+        sql`meta->>'date' = ${tonight}`,
+        sql`coalesce((meta->>'reversed')::boolean, false) = false`,
       ),
     });
-    if (existing) continue;  // already charged, skip
+    if (existing) continue;
 
-    // Look up rate override for tonight
-    const override = await db.query.hspRateOverrides.findFirst({
+    // Look up rate from hsp_rate_plan_seasons for tonight
+    const ratePlanId = reservation.meta?.ratePlanId;
+    const roomTypeId = reservation.meta?.roomTypeId;
+    const season = await db.query.hspRatePlanSeasons.findFirst({
       where: and(
-        eq(hspRateOverrides.ratePlanId, reservation.ratePlanId),
-        eq(hspRateOverrides.roomTypeId, reservation.roomTypeId),
-        eq(hspRateOverrides.date, tonight)
+        eq(hspRatePlanSeasons.ratePlanId, ratePlanId),
+        eq(hspRatePlanSeasons.roomTypeId, roomTypeId),
+        lte(hspRatePlanSeasons.startDate, tonight),
+        gte(hspRatePlanSeasons.endDate, tonight),
       ),
     });
-
-    const nightlyRate = override?.rate
-      ? parseFloat(override.rate)
-      : parseFloat(reservation.ratePerNight);
+    const nightlyRate = season ? parseFloat(season.pricePerNight as string) : 0;
 
     await postChargeToFolio(folio.id, {
       type: "room",

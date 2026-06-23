@@ -222,23 +222,98 @@ Errors use the Core error hierarchy → `getHttpStatus()`.
 
 ---
 
-## Route File Structure (example: contacts.ts)
+## Route Handler Patterns
+
+### Master reads — use mediator queries
+
+Contacts, accounts, leads, pipelines, and activities are backed by master tables. Route handlers
+delegate to the mediator — never query `crm_contacts` or `crm_accounts` directly.
+
+```typescript
+// GET /crm/contacts
+const result = await mediator.query({
+  type: "party.listPersons",
+  orgId: actor.orgId, actorId: actor.id,
+  payload: { type: "contact", page, limit }
+})
+return { data: result.items, pagination: { total: result.total } }
+
+// GET /crm/accounts
+const result = await mediator.query({
+  type: "party.listParties",
+  orgId: actor.orgId, actorId: actor.id,
+  payload: { type: "company", page, limit }
+})
+
+// GET /crm/leads
+const result = await mediator.query({
+  type: "party.listPersons",
+  orgId: actor.orgId, actorId: actor.id,
+  payload: { type: "lead", page, limit }
+})
+
+// GET /crm/pipelines/:id/stages
+const result = await mediator.query({
+  type: "pipeline.listStages",
+  orgId: actor.orgId, actorId: actor.id,
+  payload: { pipelineId: params.id }
+})
+```
+
+### Master writes — use mediator commands
+
+```typescript
+// POST /crm/contacts
+const person = await mediator.dispatch({
+  type: "party.createPerson",
+  orgId: actor.orgId, actorId: actor.id, correlationId: generateId(),
+  payload: { type: "contact", firstName, lastName, email, phone }
+})
+
+// POST /crm/accounts
+const party = await mediator.dispatch({
+  type: "party.createParty",
+  orgId: actor.orgId, actorId: actor.id, correlationId: generateId(),
+  payload: { type: "company", name, domain, industry }
+})
+```
+
+### Detail table CRUD — direct Drizzle
+
+Deals, segments, campaigns, campaign_contacts, email_threads, email_messages are CRM-owned.
+Use Drizzle directly against `crm_deals`, `crm_segments`, etc. — no mediator needed.
+
+### Route file structure (example: contacts.ts)
 
 ```typescript
 // composes/crm/server/src/routes/contacts.ts
 import { Elysia, t } from "elysia";
-import { db } from "@db/client";
-import { crmContacts } from "../db/schema";
 import { requirePermission } from "../permissions";
 
-export const contactsRoutes = new Elysia()
-  .get("/contacts", async ({ query, actor }) => {
-    requirePermission(actor, "contact:read");
-    // db query with filters
-  }, { query: t.Object({ ... }) })
-  .post("/contacts", async ({ body, actor }) => {
-    requirePermission(actor, "contact:create");
-    // insert
-  }, { body: t.Object({ ... }) })
-  // ...
+export function createContactsRoutes(mediator: Mediator) {
+  return new Elysia()
+    .get("/contacts", async (ctx) => {
+      const actor = (ctx as any).actor;
+      requirePermission(actor, "contact:read");
+      const { query } = ctx as any;
+      return mediator.query({
+        type: "party.listPersons",
+        orgId: actor.orgId, actorId: actor.id,
+        payload: { type: "contact", page: query.page, limit: query.limit }
+      });
+    })
+    .post("/contacts", async (ctx) => {
+      const actor = (ctx as any).actor;
+      requirePermission(actor, "contact:create");
+      const body = (ctx as any).body;
+      return mediator.dispatch({
+        type: "party.createPerson",
+        orgId: actor.orgId, actorId: actor.id, correlationId: generateId(),
+        payload: { type: "contact", ...body }
+      });
+    })
+    // ...
+}
 ```
+
+Note: table names `crm_contacts` and `crm_accounts` do not exist — do not import or reference them.

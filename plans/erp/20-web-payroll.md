@@ -1,5 +1,7 @@
 # Phase 20 — Web: Payroll
 
+> **MTA:** Employee references in salary slips use `personId` (persons.id, type="employee"). Payroll runs stored in `erp_payroll_runs` (renamed from `erp_payroll_entries`). Routes are unchanged.
+
 ---
 
 ## 20.1 SalaryStructuresPage

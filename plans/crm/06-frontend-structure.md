@@ -167,29 +167,92 @@ const NAV_ITEMS = [
 
 File: `composes/crm/web/src/lib/api.ts`
 
-Uses Elysia Eden Treaty for end-to-end type safety:
+Class-based client (no Eden Treaty — routes use `ctx as any` which breaks inference). All
+paths are absolute using `VITE_API_URL` — relative paths hit Vite (port 10060), not the API
+server (port 10050).
 
 ```typescript
-import { treaty } from "@elysiajs/eden";
-import type { CrmApp } from "@projectx/compose-crm-server";
+import { useAuthStore } from "@projectx/platform-web";
 
-export const crmApi = treaty<CrmApp>(window.location.origin);
+const BASE = (import.meta.env.VITE_API_URL || "http://localhost:3000") + "/crm";
 
-// Usage:
-const { data: contacts } = await crmApi.crm.contacts.get({ query: { page: 1 } });
-const { data: deal } = await crmApi.crm.deals({ id: "deal-123" }).get();
+class CrmApiClient {
+  private get token() { return useAuthStore.getState().token; }
+
+  private async request<T>(path: string, init: RequestInit = {}): Promise<{ data?: T; error?: string }> {
+    const res = await fetch(`${BASE}${path}`, {
+      ...init,
+      headers: {
+        "Content-Type": "application/json",
+        ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
+        ...init.headers,
+      },
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) return { error: body.error ?? `HTTP ${res.status}` };
+    return { data: body as T };
+  }
+
+  // Contacts — server filters persons by type=contact
+  getContacts(params?: Record<string, any>) { return this.request("/contacts", { method: "GET" }); }
+  getContact(id: string) { return this.request(`/contacts/${id}`); }
+  createContact(body: any) { return this.request("/contacts", { method: "POST", body: JSON.stringify(body) }); }
+  updateContact(id: string, body: any) { return this.request(`/contacts/${id}`, { method: "PATCH", body: JSON.stringify(body) }); }
+  deleteContact(id: string) { return this.request(`/contacts/${id}`, { method: "DELETE" }); }
+
+  // Accounts — server filters parties by type=company
+  getAccounts(params?: Record<string, any>) { return this.request("/parties", { method: "GET" }); }
+  getAccount(id: string) { return this.request(`/parties/${id}`); }
+  createAccount(body: any) { return this.request("/parties", { method: "POST", body: JSON.stringify(body) }); }
+  updateAccount(id: string, body: any) { return this.request(`/parties/${id}`, { method: "PATCH", body: JSON.stringify(body) }); }
+
+  // Leads — server filters persons by type=lead
+  getLeads(params?: Record<string, any>) { return this.request("/leads", { method: "GET" }); }
+  getLead(id: string) { return this.request(`/leads/${id}`); }
+  createLead(body: any) { return this.request("/leads", { method: "POST", body: JSON.stringify(body) }); }
+  convertLead(id: string) { return this.request(`/leads/${id}/convert`, { method: "POST" }); }
+
+  // Deals — crm_deals (CRM-owned)
+  getDeals(params?: Record<string, any>) { return this.request("/deals", { method: "GET" }); }
+  getDeal(id: string) { return this.request(`/deals/${id}`); }
+  createDeal(body: any) { return this.request("/deals", { method: "POST", body: JSON.stringify(body) }); }
+  updateDeal(id: string, body: any) { return this.request(`/deals/${id}`, { method: "PATCH", body: JSON.stringify(body) }); }
+  moveDeal(id: string, stageId: string) { return this.request(`/deals/${id}/move`, { method: "POST", body: JSON.stringify({ stageId }) }); }
+
+  // Pipelines — server reads from pipelines master (entityType=crm.deal)
+  getPipelines(params?: Record<string, any>) { return this.request("/pipelines", { method: "GET" }); }
+  getPipeline(id: string) { return this.request(`/pipelines/${id}`); }
+  getPipelineStages(id: string) { return this.request(`/pipelines/${id}/stages`); }
+
+  // Activities — server reads from activities master
+  getActivities(params?: Record<string, any>) { return this.request("/activities", { method: "GET" }); }
+  createActivity(body: any) { return this.request("/activities", { method: "POST", body: JSON.stringify(body) }); }
+
+  // Campaigns, Segments (CRM-owned tables)
+  getCampaigns(params?: Record<string, any>) { return this.request("/campaigns", { method: "GET" }); }
+  getSegments(params?: Record<string, any>) { return this.request("/segments", { method: "GET" }); }
+  getSegmentContacts(id: string) { return this.request(`/segments/${id}/contacts`); }
+
+  // Analytics
+  getAnalytics(params?: Record<string, any>) { return this.request("/analytics/summary", { method: "GET" }); }
+}
+
+export const crmApi = new CrmApiClient();
 ```
 
-Combined with TanStack Query for caching:
+Pages use `useState + useEffect` (no TanStack Query):
 
 ```typescript
-// hooks/use-crm-contacts.ts
-export function useCrmContacts(filters: ContactFilters) {
-  return useQuery({
-    queryKey: ["crm", "contacts", filters],
-    queryFn: () => crmApi.crm.contacts.get({ query: filters }),
+// Example in contacts/index.tsx
+const [contacts, setContacts] = useState([]);
+const [loading, setLoading] = useState(true);
+
+useEffect(() => {
+  crmApi.getContacts({ page, search, status }).then(({ data }) => {
+    setContacts(data?.data ?? []);
+    setLoading(false);
   });
-}
+}, [page, search, status]);
 ```
 
 ---

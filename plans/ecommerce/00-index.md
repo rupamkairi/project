@@ -21,8 +21,8 @@ architecture. Includes both admin server API and customer-facing storefront web,
 
 | File | Scope |
 |------|-------|
-| [01-foundation.md](./01-foundation.md) | Package scaffolding, DB schema, compose skeleton, roles/permissions |
-| [02-entities.md](./02-entities.md) | All new compose-owned entities: ShippingOption, TaxRegion, Return, Swap, Claim, Region, CustomerGroup, DraftOrder, OrderEdit, GiftCard |
+| [01-foundation.md](./01-foundation.md) | Package scaffolding, DB schema migration (eco_ detail tables only), compose skeleton, roles/permissions. Master tables provisioned by foundation modules — run `bun db:push` from project root. |
+| [02-entities.md](./02-entities.md) | eco_ detail tables only: Region, TaxProfile/Rate, ShippingOption, CustomerGroup, Return, Claim, Swap, DraftOrder, OrderEdit, GiftCard, Fulfillment. Master tables (persons / cat_items / transactions / locations) are NOT defined here. |
 | [03-backend-checkout.md](./03-backend-checkout.md) | Cart → ShippingOption → TaxCalculation → PaymentSession → Order — full checkout flow with compensating actions |
 | [04-backend-admin-api.md](./04-backend-admin-api.md) | Admin REST routes: products, orders, fulfillment, returns, customers, analytics |
 | [05-backend-store-api.md](./05-backend-store-api.md) | Store REST routes: catalog search, cart, checkout, customer account, orders |
@@ -154,6 +154,7 @@ composes/ecommerce/
 | `PgSearchAdapter` | Done — previous session |
 | `ShippingOption` entity | Phase 2 of this plan |
 | `TaxRegion` entity | Phase 2 of this plan |
+| Master tables (persons / cat_items / transactions / locations / pipelines) | Already exist — compose creates eco_ detail tables only |
 
 ---
 

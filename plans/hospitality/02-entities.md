@@ -2,286 +2,231 @@
 
 ---
 
+## Master Table Architecture
+
+Hospitality does not create its own tables for rooms, room types, guests, reservations, or folios. These are owned by foundation modules and filtered by `type` + `organizationId`.
+
+See `docs/master-tables.md` for full foundation table schemas.
+
+---
+
+## Master Tables (read/filter only — already exist)
+
+### cat_items (room types)
+
+- `type = "room_type"`
+- `name`: Deluxe, Suite, Standard, etc.
+- `sku`: room type code (DLX, STE, STD)
+- `capacity`, `bedType`, `amenities` stored in `meta` (jsonb)
+- `baseRate` in `meta` or via `cat_price_lists`
+- Hospitality reads: `where type = 'room_type' and organizationId = orgId`
+
+### locations (rooms)
+
+- `type = "room"`
+- `name`: room number (e.g. "201")
+- `code`: room code
+- `capacity`: max occupancy
+- `parentId`: floor or wing `location.id` (hierarchy: property → floor → room)
+- `status`: available | occupied | housekeeping | maintenance | out_of_order
+- `meta`: `{ floor, view, smoking, accessible, roomTypeId }` — `roomTypeId` points to `cat_items.id`
+
+### persons (guests)
+
+- `type = "guest"`
+- `firstName`, `lastName`, `email`, `phone`
+- `actorId`: nullable — links to platform login if guest has account
+- `meta`: `{ nationality, passportNo, loyaltyTier, loyaltyPoints, preferences }`
+
+### transactions + transaction_lines (reservations and folios)
+
+**Reservation** (`type = "order"`):
+- `personId` = guest `persons.id`
+- `stageId` → `hsp.reservation` pipeline stage (Confirmed, Checked In, etc.)
+- `meta`: `{ checkIn, checkOut, roomId (locations.id), adults, children, ratePlanId, channelId, confirmationNumber, source }`
+- `transaction_lines`: `itemId` → `cat_items` (room_type), `qty` = nights, `unitPrice` = nightly rate
+
+**Folio/Bill** (`type = "bill"`):
+- Linked to reservation transaction via `meta.reservationId`
+- `transaction_lines`: each charge (room charge, restaurant, spa, minibar) as a line item
+
+### pipelines + pipeline_stages
+
+- `entityType = "hsp.reservation"`
+- Stages: Inquiry → Confirmed → Checked In → Checked Out | Cancelled | No Show
+- Seeded via `seedPipeline(orgId, "hsp.reservation", stages)` from `apps/server/src/infra/db/seed.ts`
+
+### activities (housekeeping / maintenance / guest services)
+
+- `type = "service_request"` — housekeeping requests, amenity requests, guest service requests
+- `type = "log"` — maintenance logs, incident reports
+- `entityId` + `entityType`: `"hsp.reservation"` or `"locations"` (room)
+- `actorId` → staff member assigned
+
+---
+
+## Detail Tables (Hospitality-owned, hsp_ prefixed)
+
+These tables are created and owned by the Hospitality compose. They reference master tables by ID.
+
+### hsp_rate_plans
+
 ```typescript
-// hsp_room_types
-export const hspRoomTypes = pgTable("hsp_room_types", {
-  id: text("id").primaryKey().$defaultFn(createId),
-  orgId: text("org_id").notNull(),
-  name: text("name").notNull(),
-  code: text("code").notNull(),  // 'STD', 'DLX', 'SUT', 'PENT'
-  description: text("description"),
-  maxOccupancy: integer("max_occupancy").notNull(),
-  bedType: text("bed_type"),  // king | queen | twin | double
-  amenities: jsonb("amenities").$type<string[]>().default([]),
-  baseRate: numeric("base_rate", { precision: 10, scale: 2 }).notNull(),
-  squareFeet: integer("square_feet"),
-  thumbnailUrl: text("thumbnail_url"),
-  sortOrder: integer("sort_order").default(0),
-  isActive: boolean("is_active").default(true),
-});
-
-// hsp_rooms
-export const hspRooms = pgTable("hsp_rooms", {
-  id: text("id").primaryKey().$defaultFn(createId),
-  orgId: text("org_id").notNull(),
-  roomNumber: text("room_number").notNull().unique(),
-  roomTypeId: text("room_type_id").notNull().references(() => hspRoomTypes.id),
-  floor: integer("floor").notNull(),
-  status: text("status").notNull().default("available"),
-  // available | occupied | reserved | blocked | out-of-service
-  housekeepingStatus: text("housekeeping_status").notNull().default("clean"),
-  // clean | dirty | cleaning-in-progress | inspected | touch-up
-  isBlocked: boolean("is_blocked").default(false),
-  blockReason: text("block_reason"),
-  currentReservationId: text("current_reservation_id"),
-  lastCleanedAt: timestamp("last_cleaned_at"),
-  lastInspectedAt: timestamp("last_inspected_at"),
-  features: jsonb("features").$type<string[]>().default([]),
-  // sea-view | balcony | smoking | connecting
-  maintenanceNotes: text("maintenance_notes"),
-});
-
-// hsp_guest_profiles
-export const hspGuestProfiles = pgTable("hsp_guest_profiles", {
-  id: text("id").primaryKey().$defaultFn(createId),
-  orgId: text("org_id").notNull(),
-  actorId: text("actor_id"),  // linked platform actor (optional)
-  firstName: text("first_name").notNull(),
-  lastName: text("last_name").notNull(),
-  email: text("email"),
-  phone: text("phone"),
-  nationality: text("nationality"),
-  idType: text("id_type"),  // passport | national-id | driving-license
-  idNumber: text("id_number"),  // stored encrypted
-  preferences: jsonb("preferences").$type<{
-    floorPreference?: string;
-    pillowType?: string;
-    allergies?: string[];
-    notes?: string;
-  }>(),
-  totalStays: integer("total_stays").default(0),
-  totalSpend: numeric("total_spend", { precision: 12, scale: 2 }).default("0"),
-  vipStatus: text("vip_status").default("standard"),
-  // standard | silver | gold | platinum
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-// hsp_reservations
-export const hspReservations = pgTable("hsp_reservations", {
-  id: text("id").primaryKey().$defaultFn(createId),
-  orgId: text("org_id").notNull(),
-  confirmationNumber: text("confirmation_number").notNull().unique(),
-  guestId: text("guest_id").notNull().references(() => hspGuestProfiles.id),
-  roomId: text("room_id"),  // null until check-in
-  roomTypeId: text("room_type_id").notNull().references(() => hspRoomTypes.id),
-  ratePlanId: text("rate_plan_id").notNull(),
-  status: text("status").notNull().default("tentative"),
-  // tentative | confirmed | checked-in | checked-out | no-show | cancelled
-  source: text("source").notNull().default("direct-web"),
-  // direct-web | direct-phone | walk-in | ota-booking | ota-expedia | ota-airbnb | gds | corporate | group
-  checkInDate: text("check_in_date").notNull(),  // YYYY-MM-DD
-  checkOutDate: text("check_out_date").notNull(),
-  nights: integer("nights").notNull(),
-  adults: integer("adults").notNull().default(1),
-  children: integer("children").default(0),
-  ratePerNight: numeric("rate_per_night", { precision: 10, scale: 2 }).notNull(),
-  totalRate: numeric("total_rate", { precision: 10, scale: 2 }).notNull(),
-  depositPaid: numeric("deposit_paid", { precision: 10, scale: 2 }).default("0"),
-  specialRequests: text("special_requests"),
-  arrivalTime: text("arrival_time"),
-  corporateId: text("corporate_id"),
-  groupId: text("group_id"),
-  folioId: text("folio_id"),
-  channelReference: text("channel_reference"),  // OTA booking ref
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-// hsp_folios
-export const hspFolios = pgTable("hsp_folios", {
-  id: text("id").primaryKey().$defaultFn(createId),
-  reservationId: text("reservation_id").notNull().references(() => hspReservations.id),
-  guestId: text("guest_id").notNull(),
-  status: text("status").notNull().default("open"),
-  // open | settled | city-ledger
-  totalCharges: numeric("total_charges", { precision: 12, scale: 2 }).default("0"),
-  totalPayments: numeric("total_payments", { precision: 12, scale: 2 }).default("0"),
-  balance: numeric("balance", { precision: 12, scale: 2 }).default("0"),
-  currency: text("currency").default("USD"),
-  settledAt: timestamp("settled_at"),
-  ledgerTransactionId: text("ledger_transaction_id"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-// hsp_folio_charges
-export const hspFolioCharges = pgTable("hsp_folio_charges", {
-  id: text("id").primaryKey().$defaultFn(createId),
-  folioId: text("folio_id").notNull().references(() => hspFolios.id),
-  type: text("type").notNull(),
-  // room | fnb | minibar | laundry | spa | tax | city-tax | misc
-  description: text("description").notNull(),
-  amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
-  taxAmount: numeric("tax_amount", { precision: 10, scale: 2 }).default("0"),
-  currency: text("currency").default("USD"),
-  postedAt: timestamp("posted_at").defaultNow(),
-  postedBy: text("posted_by").notNull(),
-  referenceId: text("reference_id"),  // order id, service req id
-  reversed: boolean("reversed").default(false),
-  reversedAt: timestamp("reversed_at"),
-  reversedBy: text("reversed_by"),
-  date: text("date").notNull(),  // YYYY-MM-DD — which night this charge is for
-});
-
-// hsp_folio_payments
-export const hspFolioPayments = pgTable("hsp_folio_payments", {
-  id: text("id").primaryKey().$defaultFn(createId),
-  folioId: text("folio_id").notNull().references(() => hspFolios.id),
-  method: text("method").notNull(),
-  // cash | card | upi | corporate | city-ledger
-  amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
-  currency: text("currency").default("USD"),
-  receivedAt: timestamp("received_at").defaultNow(),
-  gatewayRef: text("gateway_ref"),
-  processedBy: text("processed_by").notNull(),
-});
-
-// hsp_rate_plans
 export const hspRatePlans = pgTable("hsp_rate_plans", {
   id: text("id").primaryKey().$defaultFn(createId),
-  orgId: text("org_id").notNull(),
+  organizationId: text("organization_id").notNull(),
   name: text("name").notNull(),
   code: text("code").notNull(),
-  type: text("type").notNull(),
-  // public | corporate | package | ota | promotion
-  mealPlan: text("meal_plan").default("ep"),
-  // ep (room only) | cp (+ breakfast) | map (+ breakfast + dinner) | ap (all meals)
-  minStay: integer("min_stay").default(1),
-  maxAdvanceBookingDays: integer("max_advance_booking_days"),
+  description: text("description"),
+  mealPlan: text("meal_plan").default("room_only"),
+  // room_only | breakfast | half_board | full_board
   cancellationPolicy: jsonb("cancellation_policy").$type<{
     type: string;
     freeCancellationHours: number;
     penaltyPct: number;
   }>().notNull(),
-  validFrom: timestamp("valid_from").notNull(),
-  validTo: timestamp("valid_to"),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });
+```
 
-// hsp_rate_plan_prices
-export const hspRatePlanPrices = pgTable("hsp_rate_plan_prices", {
+### hsp_rate_plan_seasons
+
+```typescript
+export const hspRatePlanSeasons = pgTable("hsp_rate_plan_seasons", {
   id: text("id").primaryKey().$defaultFn(createId),
+  organizationId: text("organization_id").notNull(),
   ratePlanId: text("rate_plan_id").notNull().references(() => hspRatePlans.id),
-  roomTypeId: text("room_type_id").notNull().references(() => hspRoomTypes.id),
-  baseRate: numeric("base_rate", { precision: 10, scale: 2 }).notNull(),
-  extraAdultRate: numeric("extra_adult_rate", { precision: 10, scale: 2 }).default("0"),
-  extraChildRate: numeric("extra_child_rate", { precision: 10, scale: 2 }).default("0"),
-  weekendSurcharge: numeric("weekend_surcharge", { precision: 10, scale: 2 }).default("0"),
+  roomTypeId: text("room_type_id").notNull(), // cat_items.id where type = 'room_type'
+  startDate: text("start_date").notNull(),    // YYYY-MM-DD
+  endDate: text("end_date").notNull(),        // YYYY-MM-DD
+  pricePerNight: numeric("price_per_night", { precision: 10, scale: 2 }).notNull(),
+  currency: text("currency").default("USD"),
+  minNights: integer("min_nights").default(1),
+  maxNights: integer("max_nights"),
+  conditions: jsonb("conditions").$type<Record<string, unknown>>().default({}), // RuleExpr jsonb
 });
+```
 
-// hsp_rate_overrides (seasonal or date-specific overrides)
-export const hspRateOverrides = pgTable("hsp_rate_overrides", {
+### hsp_channel_inventory
+
+```typescript
+export const hspChannelInventory = pgTable("hsp_channel_inventory", {
   id: text("id").primaryKey().$defaultFn(createId),
-  ratePlanId: text("rate_plan_id").notNull().references(() => hspRatePlans.id),
-  roomTypeId: text("room_type_id").notNull().references(() => hspRoomTypes.id),
-  date: text("date").notNull(),  // YYYY-MM-DD
+  organizationId: text("organization_id").notNull(),
+  channelId: text("channel_id").notNull(), // ota | direct | walk_in | booking-com | expedia
+  roomTypeId: text("room_type_id").notNull(), // cat_items.id where type = 'room_type'
+  date: text("date").notNull(),            // YYYY-MM-DD
+  totalRooms: integer("total_rooms").default(0),
+  allocatedRooms: integer("allocated_rooms").default(0),
+  blockedRooms: integer("blocked_rooms").default(0),
   rate: numeric("rate", { precision: 10, scale: 2 }),
-  minStay: integer("min_stay"),
-  stopSell: boolean("stop_sell").default(false),
-  closeToArrival: boolean("close_to_arrival").default(false),
+  lastSyncAt: timestamp("last_sync_at"),
 });
+```
 
-// hsp_housekeeping_tasks
-export const hspHousekeepingTasks = pgTable("hsp_housekeeping_tasks", {
+### hsp_payment_records
+
+```typescript
+export const hspPaymentRecords = pgTable("hsp_payment_records", {
   id: text("id").primaryKey().$defaultFn(createId),
-  roomId: text("room_id").notNull().references(() => hspRooms.id),
-  type: text("type").notNull(),
-  // departure-clean | stay-over | turndown | deep-clean | inspection | touch-up
+  organizationId: text("organization_id").notNull(),
+  transactionId: text("transaction_id").notNull(), // transactions.id (reservation or folio bill)
+  method: text("method").notNull(),
+  // cash | card | bank_transfer | ota
+  gateway: text("gateway"),
+  gatewayRef: text("gateway_ref"),
+  amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
+  currency: text("currency").default("USD"),
+  paidAt: timestamp("paid_at").defaultNow(),
+  status: text("status").notNull().default("completed"),
+  // pending | completed | failed | refunded
+});
+```
+
+### hsp_housekeeping_assignments
+
+```typescript
+export const hspHousekeepingAssignments = pgTable("hsp_housekeeping_assignments", {
+  id: text("id").primaryKey().$defaultFn(createId),
+  organizationId: text("organization_id").notNull(),
+  locationId: text("location_id").notNull(), // locations.id where type = 'room'
+  actorId: text("actor_id").notNull(),        // staff actor id
+  date: text("date").notNull(),               // YYYY-MM-DD
+  shift: text("shift").default("morning"),    // morning | afternoon | evening
   status: text("status").notNull().default("pending"),
-  // pending | assigned | in-progress | done | inspected | failed
-  assignedTo: text("assigned_to"),
-  assignedBy: text("assigned_by"),
-  priority: text("priority").default("normal"),  // normal | rush | vip
-  scheduledFor: timestamp("scheduled_for"),
-  startedAt: timestamp("started_at"),
+  // pending | in_progress | completed
   completedAt: timestamp("completed_at"),
+  notes: text("notes"),
+  checklistResults: jsonb("checklist_results").$type<Record<string, boolean>>().default({}),
+  priority: text("priority").default("normal"), // normal | rush | vip
+  taskType: text("task_type").notNull(),
+  // departure-clean | stay-over | turndown | deep-clean | inspection | touch-up
   inspectedBy: text("inspected_by"),
   inspectionNotes: text("inspection_notes"),
   inspectionPassed: boolean("inspection_passed"),
-  checklistResults: jsonb("checklist_results").$type<Record<string, boolean>>().default({}),
   createdAt: timestamp("created_at").defaultNow(),
 });
+```
 
-// hsp_maintenance_requests
+### hsp_maintenance_requests
+
+```typescript
 export const hspMaintenanceRequests = pgTable("hsp_maintenance_requests", {
   id: text("id").primaryKey().$defaultFn(createId),
-  roomId: text("room_id"),  // null for common areas
-  location: text("location").notNull(),
+  organizationId: text("organization_id").notNull(),
+  locationId: text("location_id"), // locations.id — room or common area (nullable for non-room areas)
+  reportedById: text("reported_by_id"), // persons.id or actorId
   category: text("category").notNull(),
-  // plumbing | electrical | hvac | furniture | it | cleaning
-  description: text("description").notNull(),
+  // plumbing | electrical | hvac | furniture | it | cleaning | other
   priority: text("priority").notNull().default("medium"),
   // low | medium | high | urgent
+  description: text("description").notNull(),
   status: text("status").notNull().default("open"),
-  // open | assigned | in-progress | resolved | closed
-  reportedBy: text("reported_by").notNull(),
-  assignedTo: text("assigned_to"),
+  // open | assigned | in_progress | resolved | closed
+  assignedTo: text("assigned_to"),  // actorId of maintenance staff
   resolvedAt: timestamp("resolved_at"),
   resolution: text("resolution"),
   partsUsed: jsonb("parts_used").$type<{ itemId: string; qty: number; name: string }[]>().default([]),
   roomBlockRequired: boolean("room_block_required").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
+```
 
-// hsp_channel_inventory
-export const hspChannelInventory = pgTable("hsp_channel_inventory", {
-  id: text("id").primaryKey().$defaultFn(createId),
-  roomTypeId: text("room_type_id").notNull().references(() => hspRoomTypes.id),
-  channel: text("channel").notNull(),  // booking-com | expedia | airbnb | direct
-  date: text("date").notNull(),  // YYYY-MM-DD
-  allotment: integer("allotment").default(0),
-  booked: integer("booked").default(0),
-  available: integer("available").default(0),
-  rate: numeric("rate", { precision: 10, scale: 2 }),
-  lastSyncAt: timestamp("last_sync_at"),
-});
+### hsp_packages
 
-// hsp_service_requests
-export const hspServiceRequests = pgTable("hsp_service_requests", {
+```typescript
+export const hspPackages = pgTable("hsp_packages", {
   id: text("id").primaryKey().$defaultFn(createId),
-  reservationId: text("reservation_id").notNull().references(() => hspReservations.id),
-  guestId: text("guest_id").notNull(),
-  roomId: text("room_id"),
-  type: text("type").notNull(),
-  // housekeeping | fnb | concierge | maintenance | other
-  description: text("description").notNull(),
-  status: text("status").notNull().default("pending"),
-  // pending | assigned | in-progress | completed | cancelled
-  priority: text("priority").default("normal"),
-  requestedAt: timestamp("requested_at").defaultNow(),
-  completedAt: timestamp("completed_at"),
-  assignedTo: text("assigned_to"),
-  notes: text("notes"),
-});
-
-// hsp_group_bookings
-export const hspGroupBookings = pgTable("hsp_group_bookings", {
-  id: text("id").primaryKey().$defaultFn(createId),
-  orgId: text("org_id").notNull(),
+  organizationId: text("organization_id").notNull(),
   name: text("name").notNull(),
-  companyName: text("company_name"),
-  contactId: text("contact_id"),
-  checkInDate: text("check_in_date").notNull(),
-  checkOutDate: text("check_out_date").notNull(),
-  roomCount: integer("room_count").notNull(),
-  status: text("status").default("tentative"),
-  // tentative | confirmed | checked-in | completed | cancelled
-  contractDocId: text("contract_doc_id"),
-  notes: text("notes"),
+  description: text("description"),
+  isActive: boolean("is_active").default(true),
+  roomTypeId: text("room_type_id"), // cat_items.id — nullable if applies to all room types
+  ratePlanId: text("rate_plan_id").references(() => hspRatePlans.id),
+  inclusions: jsonb("inclusions").$type<{ type: string; description: string; value: number }[]>().default([]),
   createdAt: timestamp("created_at").defaultNow(),
 });
+```
 
-// hsp_org_config
+### hsp_package_inclusions
+
+```typescript
+export const hspPackageInclusions = pgTable("hsp_package_inclusions", {
+  id: text("id").primaryKey().$defaultFn(createId),
+  organizationId: text("organization_id").notNull(),
+  packageId: text("package_id").notNull().references(() => hspPackages.id),
+  inclusionType: text("inclusion_type").notNull(),
+  // service | item | activity
+  name: text("name").notNull(),
+  qty: integer("qty").default(1),
+  value: numeric("value", { precision: 10, scale: 2 }).default("0"),
+});
+```
+
+### hsp_org_config (unchanged — Hospitality-owned config)
+
+```typescript
 export const hspOrgConfig = pgTable("hsp_org_config", {
   orgId: text("org_id").primaryKey(),
   propertyName: text("property_name"),
@@ -295,7 +240,6 @@ export const hspOrgConfig = pgTable("hsp_org_config", {
   }>().default({ chargeNights: 1, chargeFromDeposit: true }),
   taxRate: numeric("tax_rate", { precision: 5, scale: 2 }).default("18"),
   cityTaxPerNight: numeric("city_tax_per_night", { precision: 8, scale: 2 }).default("0"),
-  lastConfirmationSeq: integer("last_confirmation_seq").default(0),
   wifiPassword: text("wifi_password"),
   currency: text("currency").default("USD"),
   updatedAt: timestamp("updated_at").defaultNow(),

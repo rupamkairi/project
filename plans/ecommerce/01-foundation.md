@@ -72,21 +72,33 @@ composes/ecommerce/
 
 ---
 
-## 1.3 DB Schema — Existing Tables (already defined in compose)
+## 1.3 DB Schema — Master Table Architecture
 
-From `docs/composes/ecommerce.md` — tables already scoped in the compose:
+**Master tables are owned by foundation modules. Do NOT define them here.**
+The schema migration in this phase creates only the `eco_` detail tables (Phase 2).
 
-```
-eco_orders         Order
-eco_order_items    OrderItem
-eco_carts          Cart
-eco_cart_items     CartItem
-eco_coupons        Coupon
-eco_reviews        Review
-eco_stores         Store
-```
+Master tables used by ecommerce (read/filter only):
 
-All use prefix `eco_`. New tables added in Phase 2.
+| Master table | Filter | Role |
+|-------------|--------|------|
+| `persons` | `type = "customer"` | Customers |
+| `cat_items` | `type = "product"` | Products |
+| `cat_variants` | child of `cat_items` | Variants |
+| `transactions` | `type = "order"` | Orders (and carts in draft stage) |
+| `transaction_lines` | child of `transactions` | Line items |
+| `locations` | `type = "warehouse"` | Warehouses |
+| `pipelines` + `pipeline_stages` | `entityType = "eco.order"` / `"eco.fulfillment"` | Status flows |
+| `geo_addresses` | polymorphic | Billing / shipping addresses |
+
+Detail tables created by ecommerce in Phase 2 (all `eco_` prefixed):
+`eco_regions`, `eco_tax_profiles`, `eco_tax_rates`, `eco_shipping_options`,
+`eco_customer_groups`, `eco_customer_group_members`, `eco_returns`, `eco_return_items`,
+`eco_claims`, `eco_swaps`, `eco_swap_items`, `eco_gift_cards`, `eco_fulfillments`,
+`eco_fulfillment_items`, `eco_draft_orders`, `eco_order_edits`.
+
+Run `bun db:push` from the project root after schema changes (not `db:migrate` — Neon requires WebSocket).
+
+See `plans/ecommerce/02-entities.md` for full column specs.
 
 ---
 

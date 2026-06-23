@@ -79,6 +79,8 @@ Expenses (5xxx)
 
 ## 6.3 Journal Entry Routes
 
+> **MTA note:** ERP uses its own `erp_journal_entries` table (not the ledger module's journal) for ERP-specific accounting. This is an ERP-owned detail table — no MTA change needed here.
+
 ```
 GET    /erp/journal-entries          erp:ledger:read
 POST   /erp/journal-entries          erp:ledger:post
@@ -172,7 +174,7 @@ GET    /erp/bank-reconciliation/:bankAccountId    erp:ledger:read
 POST   /erp/bank-reconciliation/:bankAccountId/match  erp:ledger:post
 ```
 
-Match: link an unmatched `erpBankTransaction` to an `erpPaymentVoucher`. Updates `bankTransaction.status` → `matched` and sets `matchedVoucherId`.
+Match: link an unmatched `erpBankTransaction` to a payment transaction. Updates `bankTransaction.status` → `matched` and sets `matchedVoucherId` — which now references `transactions.id` (a `receipt` or `payment` type transaction).
 
 Unmatched bank transactions: `erpBankTransaction` rows with `status = "unmatched"` represent timing differences or missing vouchers.
 

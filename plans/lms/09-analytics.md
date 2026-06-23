@@ -186,4 +186,4 @@ Query: `?dateFrom=&dateTo=&granularity=day|week|month`
 }
 ```
 
-Streak computed from `lmsModuleProgress.completedAt` + `lmsEnrollments.lastAccessedAt` — count consecutive calendar days with any activity.
+Streak computed from `lms_progress.completedAt` — count consecutive calendar days where the person completed at least one lesson.

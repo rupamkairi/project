@@ -13,6 +13,8 @@ Implement a full-stack ERP compose modeled on ERPNext India — covering Procure
 Order-to-Cash (O2C), multi-warehouse inventory, double-entry finance, manufacturing, HR/payroll,
 fixed assets, and India GST/TDS/GSTR compliance — fully respecting the ProjectX architecture.
 
+> **Master Table Architecture (MTA):** ERP reads vendors, customers, employees, items, and warehouses from foundation master tables (`parties`, `persons`, `cat_items`, `locations`) filtered by `type` + `organizationId`. ERP owns only its detail tables (prefixed `erp_`). Transactions (POs, SOs, invoices, payments, quotes) use the `transactions` + `transaction_lines` master tables. Approval flows use `pipelines` + `pipeline_stages`. See `AGENT-START.md` for the full mapping.
+
 ---
 
 ## Plan Files
@@ -22,7 +24,7 @@ fixed assets, and India GST/TDS/GSTR compliance — fully respecting the Project
 | File | Scope |
 |------|-------|
 | [01-foundation.md](./01-foundation.md) | Package scaffolding, compose skeleton, permissions matrix, roles seed |
-| [02-entities.md](./02-entities.md) | All 38 DB tables with full field specs across all ERP domains |
+| [02-entities.md](./02-entities.md) | All erp_ detail tables (MTA) — master tables are read-only from foundation modules |
 | [03-procurement.md](./03-procurement.md) | P2P flow: Vendor master, PR, PO, GRN, Vendor Invoice, Payment Voucher |
 | [04-sales.md](./04-sales.md) | O2C flow: Customer master, Quotation, Sales Order, Delivery Note, Sales Invoice |
 | [05-inventory.md](./05-inventory.md) | Item master, Warehouse, Stock Entry, Stock Ledger, valuation |
@@ -62,7 +64,7 @@ fixed assets, and India GST/TDS/GSTR compliance — fully respecting the Project
 
 ```
 Phase  1 — Foundation          Packages, skeleton compose, roles, permissions
-Phase  2 — Entities            All 38 DB tables across procurement/sales/inventory/finance/mfg/hr/payroll/tax
+Phase  2 — Entities            erp_ detail tables only (MTA — master tables read from foundation)
 Phase  3 — Procurement         Vendor → PR → PO → GRN → Vendor Invoice → Payment (P2P)
 Phase  4 — Sales               Customer → Quotation → SO → Delivery → Sales Invoice (O2C)
 Phase  5 — Inventory           Item master, warehouses, stock entries, stock ledger, valuation

@@ -7,6 +7,13 @@
 **File:** `packages/erp-web/src/api/erp-client.ts`
 
 ```typescript
+/**
+ * ERP API Client
+ * Routes match /erp/* endpoints on the server.
+ * Master table entities (vendors, customers, employees, items, warehouses)
+ * are served from foundation tables filtered by type — client API is unchanged.
+ * Approval stages come from pipeline_stages (entityType: erp.po / erp.so / erp.pr).
+ */
 export class ErpApiClient {
   private baseUrl: string;
 
@@ -37,6 +44,36 @@ export class ErpApiClient {
       throw new Error(err.message ?? `HTTP ${res.status}`);
     }
     return res.json();
+  }
+
+  // Master table entities — routes stay the same, server filters by type
+  getVendors(params?: Record<string, string>) {
+    const q = params ? "?" + new URLSearchParams(params).toString() : "";
+    return this.request<Vendor[]>(`/vendors${q}`);   // parties?type=vendor
+  }
+  getCustomers(params?: Record<string, string>) {
+    const q = params ? "?" + new URLSearchParams(params).toString() : "";
+    return this.request<Customer[]>(`/customers${q}`); // parties?type=customer
+  }
+  getEmployees(params?: Record<string, string>) {
+    const q = params ? "?" + new URLSearchParams(params).toString() : "";
+    return this.request<Employee[]>(`/employees${q}`); // persons?type=employee
+  }
+  getItems(params?: Record<string, string>) {
+    const q = params ? "?" + new URLSearchParams(params).toString() : "";
+    return this.request<Item[]>(`/items${q}`);         // cat_items filtered by type
+  }
+  getWarehouses(params?: Record<string, string>) {
+    const q = params ? "?" + new URLSearchParams(params).toString() : "";
+    return this.request<Warehouse[]>(`/warehouses${q}`); // locations?type=warehouse
+  }
+  getPurchaseOrders(params?: Record<string, string>) {
+    const q = params ? "?" + new URLSearchParams(params).toString() : "";
+    return this.request<Transaction[]>(`/purchase-orders${q}`); // transactions?type=purchase_order
+  }
+  getSalesOrders(params?: Record<string, string>) {
+    const q = params ? "?" + new URLSearchParams(params).toString() : "";
+    return this.request<Transaction[]>(`/sales-orders${q}`);    // transactions?type=sales_order
   }
 
   get<T>(path: string) { return this.request<T>(path); }

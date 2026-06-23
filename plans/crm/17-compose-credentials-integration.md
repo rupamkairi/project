@@ -196,11 +196,14 @@ Also add the compose's tsconfig path to `apps/server/tsconfig.json`:
 
 And its DB schema re-export to `apps/server/src/infra/db/schema/index.ts`:
 ```typescript
-import { crmContacts, crmDeals, ... } from "@projectx/crm-server/db/schema";
-export { crmContacts, crmDeals, ... };
+// CRM detail tables only — masters (persons, parties, pipelines, etc.) are in foundation modules
+import { crmLeads, crmDeals, crmSegments, crmCampaigns, crmCampaignContacts, crmEmailThreads, crmEmailMessages }
+  from "@projectx/crm-server/db/schema";
+export { crmLeads, crmDeals, crmSegments, crmCampaigns, crmCampaignContacts, crmEmailThreads, crmEmailMessages };
 ```
 
-Without this re-export, Drizzle doesn't know about the compose's tables and `db:push` won't create them.
+Without this re-export, Drizzle doesn't know about the CRM detail tables and `db:push` won't create them.
+Do not re-export `crmContacts`, `crmAccounts`, `crmPipelines`, `crmActivities` — those tables do not exist in the CRM compose.
 
 ---
 

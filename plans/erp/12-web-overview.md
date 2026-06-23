@@ -35,6 +35,10 @@
 
 ---
 
+> **MTA Note:** Vendors, customers, employees, items, and warehouses are master table entities. ERP API routes remain the same (`/erp/vendors`, `/erp/employees`, etc.) but the server reads from foundation master tables (`parties`, `persons`, `cat_items`, `locations`) filtered by `type` and `organizationId`.
+
+---
+
 ## 12.3 Design Rules
 
 - Shadcn zinc palette, compact density

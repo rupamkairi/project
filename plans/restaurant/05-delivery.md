@@ -68,23 +68,26 @@ Body: `{ riderId?: string }` — if omitted, auto-assign nearest available rider
 
 **Nearest-rider algorithm:**
 ```typescript
-async function findNearestRider(outletId: string, outlet: Outlet): Promise<Rider | null> {
-  const availableRiders = await db.query.rstRiders.findMany({
-    where: and(
-      eq(rstRiders.outletId, outletId),
-      eq(rstRiders.status, "available")
-    ),
+async function findNearestRider(orgId: string, outletId: string): Promise<Person | null> {
+  // Riders are persons with type="rider". Available status stored in meta.status.
+  const availableRiders = await mediator.query({
+    type: "identity.listPersons",
+    payload: { organizationId: orgId, type: "rider", metaFilter: { status: "available" } },
   });
 
   if (availableRiders.length === 0) return null;
-  if (!outlet.location) return availableRiders[0];  // no location data, pick first
 
-  let nearest: Rider | null = null;
+  const outlet = await mediator.query({ type: "location.getLocation", payload: { locationId: outletId } });
+  const outletCoords = outlet?.meta?.location;
+  if (!outletCoords) return availableRiders[0];  // no location data, pick first
+
+  let nearest: Person | null = null;
   let minDist = Infinity;
 
   for (const rider of availableRiders) {
-    if (!rider.currentLocation) continue;
-    const dist = haversineKm(outlet.location, rider.currentLocation);
+    const riderCoords = rider.meta?.currentLocation;
+    if (!riderCoords) continue;
+    const dist = haversineKm(outletCoords, riderCoords);
     if (dist < minDist) {
       minDist = dist;
       nearest = rider;
@@ -119,10 +122,11 @@ Body: `{ lat: number; lng: number }`
 Rate limit: accept at most 1 update per 5 seconds per rider (same debounce pattern as LMS heartbeat).
 
 ```typescript
-await db.update(rstRiders).set({
-  currentLocation: { lat, lng },
-  updatedAt: new Date(),
-}).where(eq(rstRiders.id, riderId));
+// Rider is a persons record (type=rider) — update meta via mediator
+await mediator.send({
+  type: "identity.updatePersonMeta",
+  payload: { personId: riderId, meta: { currentLocation: { lat, lng } } },
+});
 
 // If rider has active delivery, broadcast location to customer-facing app
 if (rider.activeDeliveryId) {

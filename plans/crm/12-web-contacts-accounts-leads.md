@@ -47,6 +47,8 @@ Create/Edit dialog fields: firstName*, lastName*, email, phone, title, departmen
 
 **Data:** `useEffect → crmApi.getContacts({ page, search, status }) → setContacts`
 
+> Server returns persons filtered by `type = "contact"` from the `persons` master table.
+
 ### Detail — `routes/contacts/detail.tsx`
 
 Layout: two-column on desktop (profile left, tabs right)
@@ -73,6 +75,9 @@ Load: `crmApi.getContact(contactId)` on mount.
 
 **Columns:** Name | Domain | Industry | Employees | Status | Actions
 
+> Account data comes from `parties` master (type=`company`) via `crmApi.getAccounts()`.
+> Server route calls `party.listParties` query with `type: "company"`.
+
 Status filters: All | Active | Inactive
 
 Create/Edit dialog fields: name*, domain, industry (select), website, employeeCount, description
@@ -81,10 +86,10 @@ Create/Edit dialog fields: name*, domain, industry (select), website, employeeCo
 
 Tabs: Details | Contacts | Deals
 
-- Contacts tab: table of contacts where `accountId === account.id`
-  → `crmApi.getContacts({ accountId })`
-- Deals tab: table of open deals for this account
-  → `crmApi.getDeals({ accountId })`
+- Contacts tab: contacts whose `party_id` matches this account's master party row
+  → `crmApi.getContacts({ partyId: account.id })`
+- Deals tab: deals where `party_id === account.id`
+  → `crmApi.getDeals({ partyId: account.id })`
 
 ---
 
@@ -94,10 +99,13 @@ Tabs: Details | Contacts | Deals
 
 **Columns:** Avatar+Name | Email | Source | Lead Score | Status | Actions
 
+> Lead data comes from `persons` master (type=`lead`) via `crmApi.getLeads()`, joined with `crm_leads` detail for `status`, `estimatedValue`, and FSM state. Lead score lives in `persons.meta.leadScore`.
+
 Status filters: All | New | Contacted | Qualified | Disqualified
 
 Extra action per row: **Convert** button → opens ConfirmDialog
-- On confirm: `crmApi.convertLead(id)` → adds `POST /crm/leads/:id/convert`
+- On confirm: `crmApi.convertLead(id)` → `POST /crm/leads/:id/convert`
+- Server flips `persons.type` from `lead` → `contact` and creates a `crm_deals` row
 
 Create/Edit dialog fields: firstName*, lastName*, email, phone, source (select), notes
 

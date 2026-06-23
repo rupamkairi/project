@@ -1,5 +1,7 @@
 # Phase 18 — Web: Manufacturing
 
+> **MTA:** BOM `itemId` and BOM item `componentItemId` reference `cat_items.id`. Work order target locations reference `locations.id`. Routes are unchanged.
+
 ---
 
 ## 18.1 BomsPage

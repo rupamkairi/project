@@ -136,9 +136,10 @@ These were addressed in the previous session:
 - `email-sync`, `calendar-sync`, `telephony`, `tax`, `fulfillment` AdapterTypes — done
 
 Remaining P0 for CRM:
-- `Segment` entity — Phase 2
-- `Account` entity — Phase 2
+- `Segment` entity — Phase 2 (detail table only)
 - Campaign segmentation engine — Phase 4
+
+**Master Table Architecture note:** Master tables (`persons`, `parties`, `pipelines`, `pipeline_stages`, `activities`) already exist in the DB — they are provisioned by foundation modules. The CRM compose creates detail tables only (`crm_leads`, `crm_deals`, `crm_segments`, `crm_campaigns`, `crm_campaign_contacts`, `crm_email_threads`, `crm_email_messages`). The Phase 1 schema migration step covers detail tables only; master tables are provisioned at server boot.
 
 ---
 

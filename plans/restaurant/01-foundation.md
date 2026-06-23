@@ -117,7 +117,26 @@ export type RestaurantApp = ReturnType<typeof createRestaurantCompose>;
 
 ---
 
-## 1.5 Order Number Format
+## 1.5 MTA Provisioning Note
+
+Restaurant compose does not create master tables. Before running restaurant migrations:
+
+1. Foundation modules must be provisioned: `locations`, `cat_items`, `persons`, `transactions`, `transaction_lines`, `pipelines`, `pipeline_stages`
+2. Run pipeline seeding for this org:
+   ```typescript
+   import { seedPipeline } from "apps/server/src/infra/db/seed"
+   await seedPipeline(orgId, "rst.order", [
+     { name: "Placed" }, { name: "Preparing" }, { name: "Ready" }, { name: "Served" }, { name: "Cancelled" },
+   ])
+   await seedPipeline(orgId, "rst.delivery", [
+     { name: "Assigned" }, { name: "Picked Up" }, { name: "On the Way" }, { name: "Delivered" }, { name: "Failed" },
+   ])
+   ```
+3. Restaurant migrations only create: `rst_categories`, `rst_kot`, `rst_kot_items`, `rst_deliveries`, `rst_shifts`, `rst_shift_assignments`, `rst_recipes`, `rst_recipe_ingredients`, `rst_reservations`, `rst_modifiers`, `rst_modifier_groups`
+
+---
+
+## 1.6 Order Number Format
 
 Human-readable: `ORD-{OUTLET_CODE}-{YYYY}-{SEQ}`
 Example: `ORD-BLR01-2024-001234`
@@ -128,4 +147,4 @@ Example: `KOT-BLR01-0042`
 Bill Number: `BILL-{OUTLET_CODE}-{YYYY}-{SEQ}`
 Example: `BILL-BLR01-2024-000789`
 
-Sequential counters stored per outlet in `rst_outlets.lastOrderSeq`, `lastKotSeq`, `lastBillSeq`.
+Sequential counters stored per outlet in `locations.meta.lastOrderSeq`, `lastKotSeq`, `lastBillSeq` (outlet location record).

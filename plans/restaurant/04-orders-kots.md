@@ -40,7 +40,7 @@ On create:
 1. Validate outlet accepts orders (type-check from phase 3)
 2. If dine-in: validate table `status = 'available'`, set `status = 'occupied'`
 3. `status = 'draft'`
-4. Assign `orderNumber = ORD-{OUTLET_CODE}-{YEAR}-{SEQ}` (atomic increment on `rstOutlets.lastOrderSeq`)
+4. Assign `orderNumber = ORD-{OUTLET_CODE}-{YEAR}-{SEQ}` (atomic increment on `locations.meta.lastOrderSeq` for the outlet)
 
 **Place order (`/place`):**
 
@@ -53,7 +53,7 @@ Guards:
 4. Modifier selections validated against modifier definitions (required fields, min/max select)
 
 On place:
-1. Insert `rstOrderItems`
+1. Insert `transaction_lines` (via `commerce.addLine` mediator call)
 2. Compute `subtotal`, `tax`, `deliveryFee`, `total`
 3. Apply coupon if present
 4. Ingredient deduction (see section 4.4)
@@ -112,15 +112,16 @@ async function deductIngredients(tx: Tx, outletId: string, items: OrderItem[]): 
     for (const ingredient of recipe.ingredients) {
       const needed = ingredient.qty * item.qty;
 
-      const result = await tx
-        .update(rstIngredients)
-        .set({ currentStock: sql`current_stock - ${needed}` })
-        .where(and(
-          eq(rstIngredients.id, ingredient.ingredientId),
-          eq(rstIngredients.outletId, outletId),
-          gte(rstIngredients.currentStock, needed)  // negative stock guard
-        ))
-        .returning({ id: rstIngredients.id });
+      // Ingredients are cat_items (type=stock_item) — stock tracked in meta.currentStock
+      // Use inventory module via mediator for deduction to keep stock consistent
+      const result = await mediator.send({
+        type: "inventory.deductStock",
+        payload: {
+          itemId: ingredient.itemId,  // cat_items.id (stock_item)
+          qty: needed,
+          organizationId: orgId,
+        },
+      });
 
       if (result.length === 0) {
         throw new ConflictError(

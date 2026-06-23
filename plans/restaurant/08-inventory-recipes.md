@@ -47,9 +47,12 @@ if (newStock < 0 && !force) {
   throw new ConflictError("STOCK_BELOW_ZERO", `Adjustment would result in negative stock: ${newStock}`);
 }
 
-await db.update(rstIngredients)
-  .set({ currentStock: newStock.toString(), updatedAt: new Date() })
-  .where(eq(rstIngredients.id, ingredientId));
+// Ingredients are cat_items (type=stock_item) — stock tracked in meta.currentStock
+// Use inventory mediator to keep stock consistent across modules
+await mediator.send({
+  type: "inventory.adjustStock",
+  payload: { itemId: ingredientId, qty, organizationId: orgId, force },
+});
 ```
 
 ---
@@ -86,12 +89,10 @@ Guard: each `ingredientId` must belong to same `outletId` as menu item.
 Returns ingredients where `currentStock <= reorderLevel`:
 
 ```typescript
-const alerts = await db.query.rstIngredients.findMany({
-  where: and(
-    eq(rstIngredients.outletId, outletId),
-    lte(rstIngredients.currentStock, rstIngredients.reorderLevel)
-  ),
-  orderBy: [asc(sql`current_stock / NULLIF(reorder_level, 0)`)],  // most critical first
+// Ingredients are cat_items (type=stock_item) — stock alerts via inventory mediator
+const alerts = await mediator.query({
+  type: "inventory.listLowStock",
+  payload: { organizationId: orgId, outletId },
 });
 ```
 
@@ -119,20 +120,23 @@ Response includes:
 Returns how much stock would be deducted per 1 (or N) units of this item ordered:
 
 ```typescript
-const recipe = await db.query.rstRecipes.findFirst({ where: eq(rstRecipes.menuItemId, menuItemId) });
+// Recipes stored in rst_recipes; ingredients are cat_items (type=stock_item)
+const recipe = await db.query.rstRecipes.findFirst({ where: eq(rstRecipes.itemId, menuItemId) });
 if (!recipe) return { impact: [] };
 
 const impact = await Promise.all(recipe.ingredients.map(async (ing) => {
-  const ingredient = await db.query.rstIngredients.findFirst({ where: eq(rstIngredients.id, ing.ingredientId) });
+  // ing.itemId is a cat_items.id (stock_item)
+  const ingredient = await mediator.query({ type: "catalog.getItem", payload: { itemId: ing.itemId, organizationId: orgId } });
+  const currentStock = parseFloat(ingredient?.meta?.currentStock ?? "0");
   return {
-    ingredientId: ing.ingredientId,
-    name: ingredient.name,
+    ingredientId: ing.itemId,
+    name: ingredient?.name,
     unit: ing.unit,
     perUnit: ing.qty,
     total: ing.qty * qty,
-    currentStock: parseFloat(ingredient.currentStock),
-    afterDeduction: parseFloat(ingredient.currentStock) - (ing.qty * qty),
-    willCauseStockout: parseFloat(ingredient.currentStock) < (ing.qty * qty),
+    currentStock,
+    afterDeduction: currentStock - (ing.qty * qty),
+    willCauseStockout: currentStock < (ing.qty * qty),
   };
 }));
 

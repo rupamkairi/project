@@ -97,7 +97,7 @@ On create: `sortOrder` auto-assigned as `max(existing) + 10`. Allows gaps for ea
 Body: `{ moduleIds: string[] }` — ordered array.
 Updates `sortOrder` of each module: index × 10.
 
-After module created/deleted: update `lmsCourses.moduleCount`.
+After module created/deleted: no counter to update — module count is computed on demand by counting `lms_modules` rows for the given `itemId`.
 
 ---
 
@@ -162,16 +162,34 @@ archived ──[course.restore]──► draft
 
 ## 3.6 Public Catalog Endpoint
 
-`GET /lms/courses` returns paginated list filtered by `status = 'published'`.
+`GET /lms/courses` returns paginated list of courses via mediator query to catalog module.
+
+```typescript
+const result = await mediator.query({
+  type: "catalog.listItems",
+  orgId: actor.orgId, actorId: actor.id,
+  payload: { type: "course", page, limit }
+})
+```
+
+The route then joins with `lms_course_detail` to enrich with level, durationHours, and instructorId.
 
 Query params:
 - `q` — full-text search on title + description
-- `categoryId`
-- `level` — beginner | intermediate | advanced | all-levels
-- `type` — self-paced | cohort | live-only | hybrid
+- `level` — beginner | intermediate | advanced
 - `minPrice` / `maxPrice`
 - `language`
-- `sort` — newest | popular | rating | price-asc | price-desc
+- `sort` — newest | popular | price-asc | price-desc
 - `page`, `limit` (default 20)
 
-Each course in list response includes: id, slug, title, thumbnail, instructorName, rating, reviewCount, enrolledCount, price, compareAtPrice, durationHours, level, type, tags.
+Each course in list response includes: id, name (title), sku (code), instructorName (resolved from persons), price (from cat_price_lists), durationHours, level (from lms_course_detail), isPublished.
+
+**Instructor listing:**
+```typescript
+// GET /lms/instructors
+const result = await mediator.query({
+  type: "party.listPersons",
+  orgId: actor.orgId, actorId: actor.id,
+  payload: { type: "instructor", page, limit }
+})
+```

@@ -1,5 +1,7 @@
 # Phase 15 — Web: Sales
 
+> **MTA:** Customer data comes from `parties` table (`type="customer"`). Quotations, sales orders, and sales invoices come from `transactions` table with appropriate `type` values. The API routes (`/erp/customers`, `/erp/sales-orders`, etc.) are unchanged.
+
 ---
 
 ## 15.1 ErpCustomersPage

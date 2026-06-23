@@ -1,22 +1,26 @@
 # Phase 20 — Data Seeding
 
+All seed data follows the Master Table Architecture. Courses are seeded as `cat_items` (type=course). Students and instructors are seeded as `persons` (type=student|instructor). Enrollments are seeded as `transactions` (type=order). Live sessions are seeded as `activities` (type=meeting). Pipelines are seeded via `seedPipeline`.
+
 ---
 
 ## 20.1 Seed Entry Point
 
-**File:** `packages/lms/src/seed.ts`
+**File:** `composes/lms/server/src/seed.ts`
 
 ```typescript
 import { db } from "@projectx/core/db";
-import { createId } from "@paralleldrive/cuid2";
+import { generateId } from "@projectx/core/id";
+import { seedPipeline } from "apps/server/src/infra/db/seed";
+import { persons, catItems, transactions, transactionLines, activities } from "@projectx/core/schema";
 
 export async function seedLms(orgId: string) {
+  await seedPipelines(orgId);
   await seedOrgConfig(orgId);
   const instructors = await seedInstructors(orgId);
-  const categories = await seedCategories(orgId);
-  const courses = await seedCourses(orgId, instructors, categories);
-  const learners = await seedLearners(orgId);
-  await seedEnrollments(orgId, learners, courses);
+  const courses = await seedCourses(orgId, instructors);
+  const students = await seedStudents(orgId);
+  await seedEnrollments(orgId, students, courses);
   await seedCoupons(orgId, courses);
   console.log("[lms] seed complete");
 }
@@ -24,46 +28,66 @@ export async function seedLms(orgId: string) {
 
 ---
 
-## 20.2 Org Config
+## 20.2 Pipelines
+
+```typescript
+async function seedPipelines(orgId: string) {
+  await seedPipeline(orgId, "lms.course", [
+    { name: "Draft" },
+    { name: "In Review" },
+    { name: "Published" },
+    { name: "Archived" },
+  ]);
+  await seedPipeline(orgId, "lms.enrollment", [
+    { name: "Enrolled" },
+    { name: "In Progress" },
+    { name: "Completed" },
+    { name: "Dropped" },
+  ]);
+}
+```
+
+---
+
+## 20.3 Org Config
 
 ```typescript
 async function seedOrgConfig(orgId: string) {
   await db.insert(lmsOrgConfig).values({
-    id: createId(),
     orgId,
-    allowSelfEnrollment: true,
-    requireApprovalForEnrollment: false,
-    defaultCurrency: "USD",
-    platformFeePercent: "10.00",
-    completionThreshold: 80,
-    maxQuizAttempts: 3,
-    certificateExpiryDays: null,
+    defaultCompletionThreshold: 80,
+    refundWindowDays: 14,
     inactivityNudgeDays: 14,
-    waitlistEnabled: true,
-    reviewsEnabled: true,
+    maxQuizAttempts: 3,
+    certificateExpiresAfterDays: null,
+    allowLateSubmissionDefault: false,
   }).onConflictDoNothing();
 }
 ```
 
 ---
 
-## 20.3 Instructors
+## 20.4 Instructors
+
+Instructors are `persons` with `type = "instructor"`.
 
 ```typescript
 async function seedInstructors(orgId: string) {
   const rows = [
-    { firstName: "Alice", lastName: "Chen", bio: "Expert in React and TypeScript." },
-    { firstName: "Bob", lastName: "Patel", bio: "Full-stack engineer with 10y experience." },
+    { firstName: "Alice", lastName: "Chen", email: "alice@example.com" },
+    { firstName: "Bob", lastName: "Patel", email: "bob@example.com" },
   ];
 
   return Promise.all(rows.map(async (r) => {
-    const id = createId();
-    await db.insert(lmsInstructors).values({
-      id, orgId,
-      userId: createId(),
-      displayName: `${r.firstName} ${r.lastName}`,
-      bio: r.bio,
-      status: "active",
+    const id = generateId();
+    await db.insert(persons).values({
+      id, organizationId: orgId,
+      type: "instructor",
+      firstName: r.firstName,
+      lastName: r.lastName,
+      email: r.email,
+      version: 1,
+      meta: {},
     }).onConflictDoNothing();
     return id;
   }));
@@ -72,107 +96,77 @@ async function seedInstructors(orgId: string) {
 
 ---
 
-## 20.4 Categories
+## 20.5 Courses
+
+Courses are `cat_items` with `type = "course"`. Extended metadata goes in `lms_course_detail`.
 
 ```typescript
-async function seedCategories(orgId: string) {
-  const cats = ["Web Development", "Data Science", "Design", "Business"];
-  const ids: Record<string, string> = {};
-
-  for (const name of cats) {
-    const id = createId();
-    await db.insert(lmsCategories).values({ id, orgId, name, slug: name.toLowerCase().replace(/ /g, "-"), isActive: true }).onConflictDoNothing();
-    ids[name] = id;
-  }
-  return ids;
-}
-```
-
----
-
-## 20.5 Courses with Modules and Quizzes
-
-```typescript
-async function seedCourses(orgId: string, instructors: string[], categories: Record<string, string>) {
+async function seedCourses(orgId: string, instructors: string[]) {
   const courseDefs = [
     {
-      title: "React Fundamentals",
-      slug: "react-fundamentals",
-      categoryId: categories["Web Development"],
-      price: "49.00",
+      name: "React Fundamentals",
+      sku: "LMS-001",
       instructorId: instructors[0],
-      modules: [
-        { title: "JSX and Components", type: "video" as const, durationMinutes: 20 },
-        { title: "State and Props", type: "video" as const, durationMinutes: 25 },
-        { title: "Hooks Overview", type: "article" as const },
-        { title: "Module 1 Quiz", type: "quiz" as const, questions: [
-          { question: "What is JSX?", type: "multiple-choice", options: ["HTML", "JS extension", "CSS", "XML"], correctOption: 1 },
-          { question: "useState returns?", type: "multiple-choice", options: ["object", "tuple", "array", "promise"], correctOption: 2 },
-        ]},
-      ],
+      level: "beginner",
+      durationHours: 4,
     },
     {
-      title: "TypeScript Basics",
-      slug: "typescript-basics",
-      categoryId: categories["Web Development"],
-      price: "0.00",  // free course
+      name: "TypeScript Basics",
+      sku: "LMS-002",
       instructorId: instructors[1],
-      modules: [
-        { title: "Types and Interfaces", type: "video" as const, durationMinutes: 30 },
-        { title: "Generics", type: "video" as const, durationMinutes: 22 },
-        { title: "Downloadable Cheat Sheet", type: "download" as const },
-      ],
+      level: "beginner",
+      durationHours: 3,
     },
   ];
 
   const courseIds: string[] = [];
 
   for (const def of courseDefs) {
-    const courseId = createId();
-    await db.insert(lmsCourses).values({
-      id: courseId, orgId,
-      instructorId: def.instructorId,
-      categoryId: def.categoryId,
-      title: def.title,
-      slug: def.slug,
-      description: `Learn ${def.title} from scratch.`,
-      price: def.price,
-      currency: "USD",
-      status: "published",
-      completionThreshold: 80,
-      totalModules: def.modules.length,
+    const itemId = generateId();
+    await db.insert(catItems).values({
+      id: itemId, organizationId: orgId,
+      type: "course",
+      name: def.name,
+      sku: def.sku,
+      version: 1,
+      meta: { instructorId: def.instructorId },
     }).onConflictDoNothing();
 
-    let sortOrder = 10;
-    for (const mod of def.modules) {
-      const moduleId = createId();
-      await db.insert(lmsModules).values({
-        id: moduleId, courseId,
-        title: mod.title,
-        type: mod.type,
-        sortOrder,
-        status: "published",
-        isRequired: true,
-        durationMinutes: "durationMinutes" in mod ? mod.durationMinutes : null,
-      }).onConflictDoNothing();
-      sortOrder += 10;
+    await db.insert(lmsCourseDetail).values({
+      id: generateId(), organizationId: orgId,
+      itemId,
+      instructorId: def.instructorId,
+      level: def.level,
+      durationHours: def.durationHours.toString(),
+      language: "en",
+      prerequisites: [],
+      isPublished: true,
+      publishedAt: new Date(),
+    }).onConflictDoNothing();
 
-      if (mod.type === "quiz" && "questions" in mod) {
-        let qOrder = 1;
-        for (const q of mod.questions) {
-          await db.insert(lmsQuizQuestions).values({
-            id: createId(), moduleId,
-            question: q.question,
-            type: q.type,
-            options: q.options,
-            correctOption: q.correctOption,
-            points: 1,
-            sortOrder: qOrder++,
-          }).onConflictDoNothing();
-        }
-      }
-    }
-    courseIds.push(courseId);
+    // Seed modules and lessons
+    const moduleId = generateId();
+    await db.insert(lmsModules).values({
+      id: moduleId, organizationId: orgId,
+      itemId,
+      title: "Getting Started",
+      position: 1,
+      isPublished: true,
+    }).onConflictDoNothing();
+
+    await db.insert(lmsLessons).values({
+      id: generateId(), organizationId: orgId,
+      moduleId,
+      title: "Introduction",
+      position: 1,
+      contentType: "video",
+      contentUrl: "https://example.com/intro.mp4",
+      durationMinutes: 10,
+      isFree: true,
+      isPublished: true,
+    }).onConflictDoNothing();
+
+    courseIds.push(itemId);
   }
   return courseIds;
 }
@@ -180,24 +174,28 @@ async function seedCourses(orgId: string, instructors: string[], categories: Rec
 
 ---
 
-## 20.6 Learners
+## 20.6 Students
+
+Students are `persons` with `type = "student"`.
 
 ```typescript
-async function seedLearners(orgId: string) {
+async function seedStudents(orgId: string) {
   const learners = [
-    { name: "Carol White", email: "carol@example.com" },
-    { name: "Dave Kim", email: "dave@example.com" },
-    { name: "Eva Santos", email: "eva@example.com" },
+    { firstName: "Carol", lastName: "White", email: "carol@example.com" },
+    { firstName: "Dave", lastName: "Kim", email: "dave@example.com" },
+    { firstName: "Eva", lastName: "Santos", email: "eva@example.com" },
   ];
 
   return Promise.all(learners.map(async (l) => {
-    const id = createId();
-    await db.insert(lmsLearners).values({
-      id, orgId,
-      userId: createId(),
-      displayName: l.name,
+    const id = generateId();
+    await db.insert(persons).values({
+      id, organizationId: orgId,
+      type: "student",
+      firstName: l.firstName,
+      lastName: l.lastName,
       email: l.email,
-      status: "active",
+      version: 1,
+      meta: {},
     }).onConflictDoNothing();
     return id;
   }));
@@ -206,26 +204,40 @@ async function seedLearners(orgId: string) {
 
 ---
 
-## 20.7 Enrollments with Progress
+## 20.7 Enrollments
+
+Enrollments are `transactions` with `type = "order"` and lines referencing the course item.
 
 ```typescript
-async function seedEnrollments(orgId: string, learners: string[], courses: string[]) {
-  // Carol enrolled in React (paid, active), Dave in both, Eva in free TS course
+async function seedEnrollments(orgId: string, students: string[], courses: string[]) {
+  // Get pipeline stage ids
+  const inProgressStage = await getPipelineStageByName(orgId, "lms.enrollment", "In Progress");
+  const completedStage = await getPipelineStageByName(orgId, "lms.enrollment", "Completed");
+
   const enrollments = [
-    { learnerId: learners[0], courseId: courses[0], status: "active", completionPct: 60 },
-    { learnerId: learners[1], courseId: courses[0], status: "completed", completionPct: 100 },
-    { learnerId: learners[1], courseId: courses[1], status: "active", completionPct: 33 },
-    { learnerId: learners[2], courseId: courses[1], status: "active", completionPct: 0 },
+    { personId: students[0], itemId: courses[0], stageId: inProgressStage.id },
+    { personId: students[1], itemId: courses[0], stageId: completedStage.id },
+    { personId: students[1], itemId: courses[1], stageId: inProgressStage.id },
+    { personId: students[2], itemId: courses[1], stageId: inProgressStage.id },
   ];
 
   for (const e of enrollments) {
-    await db.insert(lmsEnrollments).values({
-      id: createId(), orgId,
-      learnerId: e.learnerId,
-      courseId: e.courseId,
-      status: e.status,
-      completionPct: e.completionPct,
-      enrolledAt: new Date(),
+    const txnId = generateId();
+    await db.insert(transactions).values({
+      id: txnId, organizationId: orgId,
+      type: "order",
+      personId: e.personId,
+      stageId: e.stageId,
+      version: 1,
+      meta: {},
+    }).onConflictDoNothing();
+
+    await db.insert(transactionLines).values({
+      id: generateId(), organizationId: orgId,
+      transactionId: txnId,
+      itemId: e.itemId,
+      qty: 1,
+      meta: {},
     }).onConflictDoNothing();
   }
 }
@@ -235,24 +247,26 @@ async function seedEnrollments(orgId: string, learners: string[], courses: strin
 
 ## 20.8 Coupons
 
+Coupons remain in the lms_ detail table `lms_coupons`.
+
 ```typescript
 async function seedCoupons(orgId: string, courses: string[]) {
   await db.insert(lmsCoupons).values([
     {
-      id: createId(), orgId,
+      id: generateId(), orgId,
       code: "WELCOME10",
-      discountType: "percent",
-      discountValue: "10.00",
+      type: "percentage",
+      value: "10.00",
       maxUses: 100,
       usedCount: 0,
       isActive: true,
-      courseIds: null,  // applies to all
+      courseIds: [],  // applies to all
     },
     {
-      id: createId(), orgId,
+      id: generateId(), orgId,
       code: "REACT20",
-      discountType: "percent",
-      discountValue: "20.00",
+      type: "percentage",
+      value: "20.00",
       maxUses: 50,
       usedCount: 0,
       isActive: true,
@@ -266,7 +280,7 @@ async function seedCoupons(orgId: string, courses: string[]) {
 
 ## 20.9 Run Script
 
-**File:** `packages/lms/src/seed-run.ts`
+**File:** `composes/lms/server/src/seed-run.ts`
 
 ```typescript
 import { seedLms } from "./seed";
@@ -280,5 +294,5 @@ seedLms(orgId)
 ```
 
 ```bash
-SEED_ORG_ID=org_xxx bun run packages/lms/src/seed-run.ts
+SEED_ORG_ID=org_xxx bun run composes/lms/server/src/seed-run.ts
 ```

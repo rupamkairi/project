@@ -71,24 +71,41 @@ These are runbooks discovered during CRM implementation. **Read 18 before starti
 
 ---
 
-## DB Tables to Create (Phase 2)
+## DB Tables — Master Table Architecture (Phase 2)
+
+> **Master Table Architecture** — never recreate `persons`, `parties`, `pipelines`, `pipeline_stages`, or `activities` in the CRM compose. These are owned by foundation modules and already exist in the DB. Filter them by `type` + `organization_id`. See `docs/master-tables.md`.
 
 See `plans/crm/02-entities.md` for full field specs.
 
+### Master tables (read/filter only — already exist in DB)
+
+| Master table | Module | CRM filter |
+|-------------|--------|------------|
+| `parties` | party | `type = "company"` (accounts) |
+| `persons` | party | `type = "contact"` or `type = "lead"` |
+| `pipelines` | pipeline | `entityType = "crm.deal"` or `"crm.lead"` |
+| `pipeline_stages` | pipeline | stages per CRM pipeline |
+| `activities` | activity | `call \| email \| meeting \| note \| task \| log` |
+| `geo_addresses` | geo | polymorphic — linked to persons/parties |
+
+Reads use mediator queries: `party.listPersons`, `party.listParties`, `pipeline.listStages`, `activity.list`.
+Writes use mediator commands: `party.createPerson`, `party.createParty`, `activity.log`.
+
+Pipeline seeding: use `seedPipeline(orgId, 'crm.deal', stages)` from `apps/server/src/infra/db/seed.ts`.
+
+### Detail tables (crm-owned — create these in Phase 2)
+
 | Drizzle object | SQL table | Key fields |
 |----------------|-----------|------------|
-| `crmContact` | `crm_contacts` | id, orgId, firstName, lastName, email, phone, accountId, ownerId, leadScore, status, source, tags |
-| `crmAccount` | `crm_accounts` | id, orgId, name, domain, industry, employeeCount, ownerId, status |
-| `crmLead` | `crm_leads` | id, orgId, firstName, lastName, email, company, source, status, score, convertedAt, ownerId |
-| `crmDeal` | `crm_deals` | id, orgId, title, pipelineId, stageId, contactId, accountId, value, currency, probability, expectedCloseAt, ownerId, status, rottingAt |
-| `crmPipeline` | `crm_pipelines` | id, orgId, name, isDefault |
-| `crmPipelineStage` | `crm_pipeline_stages` | id, pipelineId, name, order, rotPeriodDays, probability |
-| `crmActivity` | `crm_activities` | id, orgId, type, subject, body, contactId, dealId, leadId, accountId, actorId, status, dueAt, completedAt |
-| `crmSegment` | `crm_segments` | id, orgId, name, filter (jsonb RuleExpr), contactCount, computedAt |
-| `crmCampaign` | `crm_campaigns` | id, orgId, name, type, status, segmentId, templateId, scheduledAt, sentAt |
-| `crmCampaignStat` | `crm_campaign_stats` | id, campaignId, contactId, deliveredAt, openedAt, clickedAt, bouncedAt |
-| `crmEmailThread` | `crm_email_threads` | id, orgId, contactId, externalId, subject, lastMessageAt |
-| `crmCustomField` | `crm_custom_fields` | id, orgId, entityType, name, fieldType, options (jsonb) |
+| `crmLead` | `crm_leads` | person_id, party_id, stage_id, ownerId, status (FSM), interest, estimatedValue, qualifiedAt, convertedAt, dealId |
+| `crmDeal` | `crm_deals` | title, person_id, party_id, stage_id, pipelineId, ownerId, status (FSM), value, probability, expectedCloseDate, rottingAt, approvalStatus |
+| `crmSegment` | `crm_segments` | name, filters (jsonb RuleExpr), contactCount, lastComputedAt |
+| `crmCampaign` | `crm_campaigns` | name, type, status (FSM), segment_id, templateId, scheduledAt, sentAt, recipient/delivery counts |
+| `crmCampaignContact` | `crm_campaign_contacts` | campaign_id, person_id, status, sentAt, openedAt, clickedAt |
+| `crmEmailThread` | `crm_email_threads` | externalThreadId, provider, person_id, subject, lastMessageAt (P1) |
+| `crmEmailMessage` | `crm_email_messages` | thread_id, externalMessageId, from, to, bodyText, receivedAt, direction (P1) |
+
+All detail tables link to masters via plain `text("..._id")` columns — no `references()`.
 
 ---
 

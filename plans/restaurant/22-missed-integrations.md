@@ -29,31 +29,23 @@ bus.on("rst.order.placed", async ({ outletId, kots }) => {
 
 **Pitfall:** Deducting ingredients outside the order placement transaction → order commits but stock stays unchanged on error.
 
-**Pattern — ingredients deducted inside same tx as order items:**
+**Pattern — MTA version: order lines go to transaction_lines, ingredients deducted via inventory mediator, KOTs go to rst_kot:**
 ```typescript
-await db.transaction(async (tx) => {
-  // 1. Insert order items
-  await tx.insert(rstOrderItems).values(itemRows);
+// 1. Add order lines via commerce mediator (transaction_lines)
+for (const item of itemRows) {
+  await mediator.send({ type: "commerce.addLine", payload: { transactionId: orderId, itemId: item.itemId, qty: item.qty, unitPrice: item.unitPrice } });
+}
 
-  // 2. Deduct ingredients (with negative-stock guard)
-  for (const deduction of deductions) {
-    const result = await tx
-      .update(rstIngredients)
-      .set({ currentStock: sql`${rstIngredients.currentStock} - ${deduction.qty}` })
-      .where(and(
-        eq(rstIngredients.id, deduction.ingredientId),
-        gte(rstIngredients.currentStock, deduction.qty),  // Guard
-      ))
-      .returning();
+// 2. Deduct ingredients via inventory mediator (cat_items type=stock_item)
+for (const deduction of deductions) {
+  await mediator.send({
+    type: "inventory.deductStock",
+    payload: { itemId: deduction.itemId, qty: deduction.qty, organizationId: orgId },
+  });
+}
 
-    if (result.length === 0) {
-      throw new Error(`INSUFFICIENT_STOCK:${deduction.ingredientId}`);
-    }
-  }
-
-  // 3. Create KOTs
-  await tx.insert(rstKots).values(kotRows);
-});
+// 3. Create KOTs via direct Drizzle on rst_kot (rst-owned table)
+await db.insert(rstKot).values(kotRows);
 ```
 
 ---
@@ -90,15 +82,15 @@ app.post("/restaurant/webhooks/swiggy/:outletCode", async ({ request, params }) 
 
 **Pitfall:** Aggregator retries a successful webhook → duplicate order created.
 
-**Guard before ingestion:**
+**Guard before ingestion:** Check `rst_aggregator_orders` table for existing `aggregatorOrderId` (unique constraint):
 ```typescript
-const existing = await db.select()
-  .from(rstOrders)
-  .where(eq(rstOrders.aggregatorOrderId, normalizedOrder.aggregatorOrderId))
-  .limit(1);
+// rst_aggregator_orders is an rst-owned detail table (not affected by MTA)
+const existing = await db.query.rstAggregatorOrders.findFirst({
+  where: eq(rstAggregatorOrders.aggregatorOrderId, normalizedOrder.aggregatorOrderId),
+});
 
-if (existing.length > 0) {
-  return { status: "already_processed", orderId: existing[0].id };
+if (existing) {
+  return { status: "already_processed", orderId: existing.internalOrderId };
 }
 ```
 
@@ -145,12 +137,16 @@ for (const itemId of allItemIds) {
 
 **Guard before shift.close:**
 ```typescript
-const openOrders = await db.select({ count: sql<number>`count(*)` })
-  .from(rstOrders)
-  .where(and(
-    eq(rstOrders.outletId, outletId),
-    inArray(rstOrders.status, ["placed", "accepted", "preparing", "ready"]),
-  ));
+// Orders are transactions (type="order") — count open orders via mediator or raw query on transactions
+const openOrders = await mediator.query({
+  type: "commerce.countTransactions",
+  payload: {
+    organizationId: orgId,
+    type: "order",
+    metaFilter: { outletId },
+    stageNames: ["Placed", "Preparing", "Ready"],  // rst.order pipeline stages
+  },
+});
 
 if (openOrders[0].count > 0) {
   throw new ConflictError("OPEN_ORDERS_EXIST", { count: openOrders[0].count });
@@ -234,7 +230,8 @@ function scheduleLocationWrite(riderId: string, lat: string, lng: string) {
   const key = riderId;
   if (locationDebounce.has(key)) clearTimeout(locationDebounce.get(key)!);
   locationDebounce.set(key, setTimeout(async () => {
-    await db.update(rstRiders).set({ latitude: lat, longitude: lng }).where(eq(rstRiders.id, riderId));
+    // Riders are persons (type=rider) — update location in meta via mediator
+    await mediator.send({ type: "identity.updatePersonMeta", payload: { personId: riderId, meta: { currentLocation: { lat, lng } } } });
     locationDebounce.delete(key);
   }, 5_000));
 }
@@ -248,7 +245,8 @@ function scheduleLocationWrite(riderId: string, lat: string, lng: string) {
 - [ ] `RST_SWIGGY_HMAC_SECRET` and `RST_ZOMATO_HMAC_SECRET` set in server env
 - [ ] Aggregator webhook endpoints whitelisted in aggregator dashboards
 - [ ] KDS tested with WebSocket (not SSE/polling)
-- [ ] Order number sequence table initialized per outlet (`rst_order_sequences`)
+- [ ] `locations.meta.lastOrderSeq` initialized to 0 for each outlet location on seed
+- [ ] `seedPipeline(orgId, "rst.order", [...])` and `seedPipeline(orgId, "rst.delivery", [...])` run before first order
 - [ ] Ingredient deduction tested with concurrent requests (race condition)
 - [ ] Bill split rounding verified for 3-way and 5-way splits
 - [ ] Shift close guard tested with open orders present

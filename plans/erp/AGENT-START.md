@@ -29,7 +29,7 @@ Core flows covered:
 ### Backend + Shell
 
 1. `01-foundation.md` — packages, skeleton compose, roles/permissions. **Must complete first.**
-2. `02-entities.md` — all 38 DB tables. Complete before any routes.
+2. `02-entities.md` — all erp_ detail tables (MTA). Complete before any routes.
 3. `03-procurement.md` — P2P flow: vendor, PR, PO, GRN, vendor invoice, payment.
 4. `04-sales.md` — O2C flow: customer, quotation, SO, delivery, AR invoice.
 5. `05-inventory.md` — item master, warehouse, stock entry, stock ledger.
@@ -83,78 +83,65 @@ Do not skip phases. Complete Phase N before Phase N+1.
 
 ---
 
-## DB Tables (38 total — Phase 2)
+## Master Table Architecture (MTA)
 
-### Procurement (10 tables)
+ERP compose follows the Master Table Architecture. Foundation modules own shared generic tables; ERP reads/filters them by `type` + `organizationId`. ERP only creates its own `erp_`-prefixed detail tables.
+
+### Master Tables (read/filter only — owned by foundation modules)
+
+| Foundation table | ERP filter | What it replaces |
+|-----------------|------------|-----------------|
+| `parties` | `type = "vendor"` | `erp_vendors` |
+| `parties` | `type = "customer"` | `erp_customers` |
+| `persons` | `type = "employee"` | `erp_employees` |
+| `persons` | `type = "vendor_contact"` | `erp_vendor_contacts` |
+| `cat_items` | `type in ("product","stock_item","asset")` | `erp_items` |
+| `locations` | `type = "warehouse"` | `erp_warehouses` |
+| `transactions` + `transaction_lines` | `type = "purchase_order"` | `erp_purchase_orders` + `erp_po_items` |
+| `transactions` + `transaction_lines` | `type = "sales_order"` | `erp_sales_orders` + `erp_so_items` |
+| `transactions` + `transaction_lines` | `type = "quote"` | `erp_quotations` + items |
+| `transactions` + `transaction_lines` | `type = "invoice"` | `erp_vendor_invoices` / `erp_sales_invoices` |
+| `transactions` + `transaction_lines` | `type = "receipt"` / `"payment"` | `erp_payment_vouchers` |
+| `pipelines` + `pipeline_stages` | `entityType = "erp.po"` | PO approval pipeline |
+| `pipelines` + `pipeline_stages` | `entityType = "erp.so"` | SO approval pipeline |
+| `pipelines` + `pipeline_stages` | `entityType = "erp.pr"` | PR approval pipeline |
+| `activities` | linked to vendor/PO/employee | interaction logs |
+
+Seed pipelines before any approval flows: call `seedPipeline(orgId, "erp.pr", [...])`, `seedPipeline(orgId, "erp.po", [...])`, `seedPipeline(orgId, "erp.so", [...])`.
+
+### Detail Tables (erp-owned, create in Phase 2)
+
 | Drizzle | SQL | Key fields |
 |---------|-----|------------|
-| `erpVendor` | `erp_vendors` | id, orgId, name, code, type, status, gstin, pan, currency, paymentTerms, rating, bankDetails |
-| `erpPurchaseRequisition` | `erp_purchase_requisitions` | id, orgId, refNo, requestedBy, department, status, justification, requiredBy, approvedBy |
-| `erpPrItem` | `erp_pr_items` | id, prId, itemId, qty, uom, estimatedUnitPrice |
-| `erpPurchaseOrder` | `erp_purchase_orders` | id, orgId, poNumber, vendorId, prId, status, expectedDeliveryDate, paymentTerms, subtotal, tax, total, currency |
-| `erpPoItem` | `erp_po_items` | id, poId, itemId, qty, receivedQty, uom, unitPrice, lineTotal, hsn, gstRate |
-| `erpGoodsReceipt` | `erp_goods_receipts` | id, orgId, grnNumber, poId, vendorId, warehouseId, receivedBy, status, qualityNotes |
-| `erpGrItem` | `erp_gr_items` | id, grnId, poItemId, itemId, orderedQty, receivedQty, acceptedQty, rejectedQty, batchNo, expiryDate |
-| `erpVendorInvoice` | `erp_vendor_invoices` | id, orgId, invoiceNumber, vendorId, poId, grnId, status, invoiceDate, dueDate, subtotal, cgst, sgst, igst, tds, total |
-| `erpVendorInvoiceItem` | `erp_vendor_invoice_items` | id, invoiceId, itemId, qty, unitPrice, lineTotal, hsn, gstRate |
-| `erpPaymentVoucher` | `erp_payment_vouchers` | id, orgId, type (pay/receive), partyType, partyId, amount, currency, date, mode, reference, status, bankAccountId |
-
-### Sales (9 tables)
-| Drizzle | SQL | Key fields |
-|---------|-----|------------|
-| `erpCustomer` | `erp_customers` | id, orgId, name, code, gstin, pan, currency, paymentTerms, creditLimit, outstandingBalance |
-| `erpQuotation` | `erp_quotations` | id, orgId, customerId, date, validUntil, status, subtotal, tax, total, currency, terms |
-| `erpQuotationItem` | `erp_quotation_items` | id, quotationId, itemId, qty, uom, unitPrice, discount, lineTotal, hsn, gstRate |
-| `erpSalesOrder` | `erp_sales_orders` | id, orgId, soNumber, customerId, quotationId, date, deliveryDate, status, subtotal, tax, total, invoicedAmount, deliveredQty |
-| `erpSoItem` | `erp_so_items` | id, soId, itemId, qty, deliveredQty, invoicedQty, uom, unitPrice, lineTotal, hsn, gstRate |
-| `erpDeliveryNote` | `erp_delivery_notes` | id, orgId, dnNumber, soId, customerId, warehouseId, date, status, shippingAddress |
-| `erpDnItem` | `erp_dn_items` | id, dnId, soItemId, itemId, qty, uom, batchNo |
-| `erpSalesInvoice` | `erp_sales_invoices` | id, orgId, siNumber, customerId, soId, dnId, date, dueDate, status, subtotal, cgst, sgst, igst, total, paidAmount, currency, irn, eWayBillNo |
-| `erpSiItem` | `erp_si_items` | id, siId, itemId, qty, uom, unitPrice, lineTotal, hsn, gstRate |
-
-### Inventory (5 tables)
-| Drizzle | SQL | Key fields |
-|---------|-----|------------|
-| `erpItem` | `erp_items` | id, orgId, code, name, description, type (stock/service/asset), uom, valuationMethod, hsn, gstRate, reorderQty, leadTimeDays |
-| `erpWarehouse` | `erp_warehouses` | id, orgId, name, code, type (store/transit/virtual), parentId, address, isActive |
+| `erpPurchaseRequisition` | `erp_purchase_requisitions` | id, orgId, requestedById (persons.id), departmentId, urgency, justification, stageId (pipeline_stages.id for erp.pr) |
+| `erpPrItem` | `erp_pr_items` | id, requisitionId, itemId (cat_items.id), qty, estimatedUnitCost, preferredVendorId (parties.id) |
+| `erpGoodsReceipt` | `erp_grns` | id, orgId, transactionId (transactions.id — the PO), locationId (locations.id), receivedById (persons.id), receivedAt |
+| `erpGrItem` | `erp_grn_items` | id, grnId, itemId (cat_items.id), qtyOrdered, qtyReceived, condition |
+| `erpDeliveryNote` | `erp_delivery_notes` | id, orgId, dnNumber, transactionId (SO transaction), locationId, date, status, shippingAddress |
+| `erpDnItem` | `erp_dn_items` | id, dnId, transactionLineId, itemId (cat_items.id), qty, uom, batchNo |
 | `erpStockEntry` | `erp_stock_entries` | id, orgId, type (receipt/issue/transfer/manufacture/adjustment), date, reference, referenceType, totalValue |
-| `erpStockEntryItem` | `erp_stock_entry_items` | id, entryId, itemId, warehouseFrom, warehouseTo, qty, valuationRate, batchNo |
-| `erpStockLedger` | `erp_stock_ledger` | id, itemId, warehouseId, date, qty, valuationRate, stockValue, balance, entryId |
-
-### Finance (6 tables)
-| Drizzle | SQL | Key fields |
-|---------|-----|------------|
-| `erpAccount` | `erp_accounts` | id, orgId, code, name, type (asset/liability/equity/income/expense), parentId, currency, isGroup, isFrozen |
-| `erpFiscalYear` | `erp_fiscal_years` | id, orgId, name, startDate, endDate, isClosed |
-| `erpJournalEntry` | `erp_journal_entries` | id, orgId, date, reference, narration, status, totalDebit, totalCredit, fiscalYearId |
-| `erpJournalLine` | `erp_journal_lines` | id, journalId, accountId, debit, credit, partyType, partyId, costCenter, description |
-| `erpBankAccount` | `erp_bank_accounts` | id, orgId, accountName, accountNo, bankName, ifsc, currency, glAccountId |
-| `erpBankTransaction` | `erp_bank_transactions` | id, bankAccountId, date, description, debit, credit, balance, status (unmatched/matched), matchedVoucherId |
-
-### Manufacturing (3 tables)
-| Drizzle | SQL | Key fields |
-|---------|-----|------------|
-| `erpBom` | `erp_boms` | id, orgId, itemId, version, isDefault, quantity, uom, operatingCost |
-| `erpBomItem` | `erp_bom_items` | id, bomId, itemId, qty, uom, warehouseId, scrapPct |
-| `erpWorkOrder` | `erp_work_orders` | id, orgId, bomId, itemId, quantity, warehouseId, status, plannedStart, actualStart, actualEnd, producedQty |
-
-### HR (6 tables)
-| Drizzle | SQL | Key fields |
-|---------|-----|------------|
-| `erpEmployee` | `erp_employees` | id, orgId, empNo, name, email, phone, departmentId, designation, employmentType, joinDate, pan, aadhaar, bankAccount, pfNo, esiNo |
-| `erpDepartment` | `erp_departments` | id, orgId, name, parentId, headId |
+| `erpStockEntryItem` | `erp_stock_entry_items` | id, entryId, itemId (cat_items.id), locationFrom (locations.id), locationTo (locations.id), qty, valuationRate, batchNo |
+| `erpStockLedger` | `erp_stock_ledger` | id, itemId (cat_items.id), locationId (locations.id), date, qty, valuationRate, stockValue, balance, entryId |
+| `erpBom` | `erp_bom` | id, orgId, itemId (cat_items.id — finished product), version, isActive |
+| `erpBomItem` | `erp_bom_items` | id, bomId, componentItemId (cat_items.id), qty, unit, scrapPercent |
+| `erpWorkOrder` | `erp_work_orders` | id, orgId, bomId, qty, scheduledStart, scheduledEnd, status, stageId (pipeline_stages.id) |
+| `erpDepartment` | `erp_departments` | id, orgId, name, code, parentId (self-ref), managerId (persons.id) |
+| `erpDesignation` | `erp_designations` | id, orgId, name, level, departmentId |
 | `erpLeaveType` | `erp_leave_types` | id, orgId, name, maxDays, isPaid, isCarryForward |
-| `erpLeaveAllocation` | `erp_leave_allocations` | id, employeeId, leaveTypeId, year, allocated, used, balance |
-| `erpLeaveApplication` | `erp_leave_applications` | id, employeeId, leaveTypeId, fromDate, toDate, days, status, reason, approvedBy |
-| `erpAttendance` | `erp_attendance` | id, employeeId, date, status (present/absent/half-day/leave), checkIn, checkOut, workHours |
-
-### Payroll + Assets + Tax (6 tables)
-| Drizzle | SQL | Key fields |
-|---------|-----|------------|
-| `erpSalaryStructure` | `erp_salary_structures` | id, orgId, name, components (jsonb — earnings/deductions formula) |
-| `erpSalarySlip` | `erp_salary_slips` | id, employeeId, month, year, structureId, workingDays, presentDays, earnings (jsonb), deductions (jsonb), grossPay, netPay, status |
-| `erpPayrollEntry` | `erp_payroll_entries` | id, orgId, month, year, status, employeeCount, totalGross, totalNet |
-| `erpAsset` | `erp_assets` | id, orgId, code, name, category, status, purchaseDate, purchaseCost, usefulLifeYears, depreciationMethod, accumulatedDepreciation, bookValue, warehouseId, assignedToId |
+| `erpLeaveAllocation` | `erp_leave_allocations` | id, personId (persons.id), leaveTypeId, year, allocated, used, balance |
+| `erpLeaveApplication` | `erp_leave_applications` | id, personId (persons.id), leaveTypeId, fromDate, toDate, days, status, reason, approvedBy |
+| `erpAttendance` | `erp_attendance` | id, personId (persons.id), date, status, checkIn, checkOut, workHours |
+| `erpGlAccount` | `erp_gl_accounts` | id, orgId, code, name, type (asset/liability/equity/revenue/expense), parentId |
+| `erpJournalEntry` | `erp_journal_entries` | id, orgId, transactionId (optional), description, postedAt, totalDebit, totalCredit, fiscalYearId |
+| `erpJournalLine` | `erp_journal_lines` | id, journalId, glAccountId, debit, credit, partyId (parties.id), personId (persons.id), costCenter |
+| `erpFiscalYear` | `erp_fiscal_years` | id, orgId, name, startDate, endDate, isClosed |
+| `erpBankAccount` | `erp_bank_accounts` | id, orgId, accountName, accountNo, bankName, ifsc, currency, glAccountId |
+| `erpBankTransaction` | `erp_bank_transactions` | id, bankAccountId, date, description, debit, credit, balance, status (unmatched/matched), matchedTransactionId (transactions.id) |
+| `erpSalaryStructure` | `erp_salary_structures` | id, orgId, name, components (jsonb) |
+| `erpSalarySlip` | `erp_salary_slips` | id, payrollRunId, personId (persons.id), gross, deductions, net, status |
+| `erpPayrollRun` | `erp_payroll_runs` | id, orgId, period (YYYY-MM), status, processedAt, totalGross, totalNet |
+| `erpAsset` | `erp_assets` | id, orgId, code, name, category, status, purchaseDate, purchaseCost, usefulLifeYears, depreciationMethod, accumulatedDepreciation, bookValue, locationId (locations.id), assignedToId (persons.id) |
+| `erpAssetDepreciation` | `erp_asset_depreciation` | id, assetId, period, depreciationAmount, bookValueAfter, postedAt |
 | `erpGstTemplate` | `erp_gst_templates` | id, orgId, name, type (sales/purchase), cgstRate, sgstRate, igstRate, cessRate |
 | `erpGstReturn` | `erp_gst_returns` | id, orgId, type (GSTR1/GSTR3B), period, status (draft/filed), data (jsonb), filedAt |
 

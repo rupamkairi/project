@@ -6,10 +6,12 @@
 
 ### Backend (Phases 1–11)
 
+> **Master Table Architecture:** Master tables (cat_items, persons, transactions, activities, pipelines) already exist — lms compose creates lms_ detail tables only. Schema migration does not touch master tables.
+
 | Phase | File | Description |
 |-------|------|-------------|
-| 01 | [01-foundation.md](01-foundation.md) | Package structure, compose factory, permissions, roles, ID prefixes |
-| 02 | [02-entities.md](02-entities.md) | All 16 Drizzle table definitions |
+| 01 | [01-foundation.md](01-foundation.md) | Package structure, compose factory, permissions, roles, ID prefixes. Schema migration creates lms_ detail tables only. |
+| 02 | [02-entities.md](02-entities.md) | Master table mappings (read/filter only) + lms_ detail table definitions |
 | 03 | [03-courses-modules.md](03-courses-modules.md) | Course CRUD + FSM, module ordering, content types, course review workflow |
 | 04 | [04-enrollment-access.md](04-enrollment-access.md) | Enrollment FSM, payment gate, free course bypass, cohort assignment |
 | 05 | [05-progress-learning.md](05-progress-learning.md) | Module progress, video heartbeat, quiz scoring, sequential unlock |

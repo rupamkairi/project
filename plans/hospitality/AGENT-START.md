@@ -74,28 +74,39 @@ Six front-end apps: FrontDeskApp, HousekeepingApp, ReservationApp, RevenueApp, G
 
 ---
 
-## DB Tables (20 total)
+## Master Table Architecture
+
+**Rooms are `locations`, room types are `cat_items`, guests are `persons`.** See `docs/master-tables.md`.
+
+Use `seedPipeline(orgId, 'hsp.reservation', stages)` from `apps/server/src/infra/db/seed.ts` to provision the reservation pipeline.
+
+### Master tables (read/filter only — already exist)
+
+| Table | type / entityType | Purpose |
+|-------|------------------|---------|
+| `cat_items` | `type = "room_type"` | Room types (Deluxe, Suite, etc.) |
+| `locations` | `type = "room"` | Individual rooms; `parentId` → floor/wing location |
+| `persons` | `type = "guest"` | Guest profiles |
+| `transactions` | `type = "order"` | Reservations; `stageId` → hsp.reservation pipeline |
+| `transaction_lines` | — | Reservation lines (nights × rate) and folio charge lines |
+| `transactions` | `type = "bill"` | Folios; linked to reservation via `meta.reservationId` |
+| `pipelines` + `pipeline_stages` | `entityType = "hsp.reservation"` | Inquiry → Confirmed → Checked In → Checked Out / Cancelled / No Show |
+| `activities` | `type = "service_request"` | Housekeeping requests, amenity requests, guest service requests |
+| `activities` | `type = "log"` | Maintenance logs, incident reports |
+
+### Detail tables (hsp-owned, create these)
 
 | Drizzle | SQL | Key fields |
 |---------|-----|------------|
-| `hspRoomType` | `hsp_room_types` | id, orgId, name, code, description, maxOccupancy, bedType, amenities (jsonb), baseRate, thumbnailUrl |
-| `hspRoom` | `hsp_rooms` | id, orgId, roomNumber, roomTypeId, floor, status, housekeepingStatus, isBlocked, blockReason, currentReservationId, features (jsonb) |
-| `hspReservation` | `hsp_reservations` | id, orgId, confirmationNumber, guestId, roomId, roomTypeId, ratePlanId, status, source, checkInDate, checkOutDate, nights, adults, children, totalRate, depositPaid, specialRequests, corporateId, groupId, folioId, channelReference |
-| `hspGuestProfile` | `hsp_guest_profiles` | id, orgId, actorId, firstName, lastName, email, phone, nationality, idType, idNumber, preferences (jsonb), totalStays, totalSpend, vipStatus |
-| `hspFolio` | `hsp_folios` | id, reservationId, guestId, status, totalCharges, totalPayments, balance, settledAt, ledgerTransactionId |
-| `hspFolioCharge` | `hsp_folio_charges` | id, folioId, type, description, amount, currency, postedAt, postedBy, referenceId, reversed, taxAmount |
-| `hspFolioPayment` | `hsp_folio_payments` | id, folioId, method, amount, receivedAt, gatewayRef, processedBy |
-| `hspRatePlan` | `hsp_rate_plans` | id, orgId, name, code, type, mealPlan, minStay, cancellationPolicy (jsonb), validFrom, validTo, isActive |
-| `hspRatePlanPrice` | `hsp_rate_plan_prices` | id, ratePlanId, roomTypeId, baseRate, extraAdultRate, extraChildRate, weekendSurcharge |
-| `hspRateOverride` | `hsp_rate_overrides` | id, ratePlanId, roomTypeId, date, rate, minStay, stopSell, closeToArrival |
-| `hspHousekeepingTask` | `hsp_housekeeping_tasks` | id, roomId, type, status, assignedTo, assignedBy, priority, scheduledFor, startedAt, completedAt, inspectedBy, inspectionNotes, inspectionPassed, checklistResults (jsonb) |
-| `hspMaintenanceRequest` | `hsp_maintenance_requests` | id, roomId, location, category, description, priority, status, reportedBy, assignedTo, resolvedAt, resolution, partsUsed (jsonb), roomBlockRequired |
-| `hspChannelInventory` | `hsp_channel_inventory` | id, roomTypeId, channel, date, allotment, booked, available, rate, lastSyncAt |
-| `hspGroupBooking` | `hsp_group_bookings` | id, orgId, name, companyName, contactId, checkInDate, checkOutDate, roomCount, status, contractDocId, notes |
-| `hspServiceRequest` | `hsp_service_requests` | id, reservationId, guestId, roomId, type (housekeeping/fnb/concierge/maintenance/other), description, status, priority, requestedAt, completedAt, assignedTo |
-| `hspMealPlan` | `hsp_meal_plans` | id, orgId, code, name, includes (jsonb: breakfast/lunch/dinner), pricePerNightAdult, pricePerNightChild |
-| `hspBlockedDate` | `hsp_blocked_dates` | id, roomTypeId, date, reason, blockedBy |
-| `hspOrgConfig` | `hsp_org_config` | orgId, defaultCheckInTime, defaultCheckOutTime, earlyCheckInFee, lateCheckOutFee, noShowPolicy (jsonb), taxRate, cityTaxPerNight |
+| `hspRatePlans` | `hsp_rate_plans` | id, organizationId, name, code, mealPlan, cancellationPolicy (jsonb), isActive |
+| `hspRatePlanSeasons` | `hsp_rate_plan_seasons` | id, ratePlanId, roomTypeId (cat_items.id), startDate, endDate, pricePerNight, minNights |
+| `hspChannelInventory` | `hsp_channel_inventory` | id, organizationId, channelId, roomTypeId (cat_items.id), date, totalRooms, allocatedRooms, blockedRooms, rate, lastSyncAt |
+| `hspPaymentRecords` | `hsp_payment_records` | id, organizationId, transactionId (transactions.id), method, gateway, gatewayRef, amount, currency, paidAt, status |
+| `hspHousekeepingAssignments` | `hsp_housekeeping_assignments` | id, organizationId, locationId (locations.id), actorId, date, shift, taskType, status, checklistResults (jsonb), inspectedBy, inspectionPassed |
+| `hspMaintenanceRequests` | `hsp_maintenance_requests` | id, organizationId, locationId (locations.id), reportedById, category, priority, description, status, assignedTo, resolvedAt, partsUsed (jsonb), roomBlockRequired |
+| `hspPackages` | `hsp_packages` | id, organizationId, name, roomTypeId (cat_items.id), ratePlanId, isActive, inclusions (jsonb) |
+| `hspPackageInclusions` | `hsp_package_inclusions` | id, organizationId, packageId, inclusionType, name, qty, value |
+| `hspOrgConfig` | `hsp_org_config` | orgId, propertyName, defaultCheckInTime, defaultCheckOutTime, earlyCheckInFee, lateCheckOutFee, noShowPolicy (jsonb), taxRate, cityTaxPerNight, currency |
 
 ---
 
@@ -114,7 +125,11 @@ Six front-end apps: FrontDeskApp, HousekeepingApp, ReservationApp, RevenueApp, G
 | Need | Mediator type prefix |
 |------|---------------------|
 | Actor/org/guest profiles | `identity.*` |
-| Room catalog / room types | `catalog.*` |
+| Room types (cat_items) | `catalog.listItems` with `payload: { type: "room_type" }` |
+| Rooms (locations) | `location.listLocations` with `payload: { type: "room" }` |
+| Guests (persons) | `party.listPersons` with `payload: { type: "guest" }` |
+| Create reservation | `commerce.createTransaction` with `payload: { type: "order" }` |
+| Add reservation line | `commerce.addLine` |
 | Revenue posting | `ledger.postTransaction` |
 | Availability / booking slots | `scheduling.checkAvailability`, `scheduling.book` |
 | Invoice generation | `document.generatePDF` |

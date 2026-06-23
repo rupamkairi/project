@@ -14,6 +14,11 @@ PATCH  /erp/departments/:id         erp:hr:manage
 
 ## 8.2 Employee Routes
 
+> **MTA note:** Employees are stored in the `persons` table with `type = "employee"`. There is no `erp_employees` table.
+> - Read: `mediator.dispatch({ type: "person.listPersons", filter: { type: "employee" } })`
+> - Create: `mediator.dispatch({ type: "person.createPerson", data: { type: "employee", ... } })`
+> - HR-specific fields (`pfNo`, `esiNo`, `aadhaar`, `bankAccount`) go in `meta` jsonb on the `persons` record.
+
 ```
 GET    /erp/employees               erp:hr:read
 POST   /erp/employees               erp:hr:manage
@@ -37,11 +42,12 @@ GET    /erp/employees/:id/salary-slips    erp:hr:read
   employmentType: "permanent" | "contract" | "intern";
   joinDate: string;
   pan?: string;
-  aadhaar?: string;       // stored masked: XXXX-XXXX-1234
-  bankAccount?: { accountNo: string; bankName: string; ifsc: string };
-  pfNo?: string;
-  esiNo?: string;
-  actorId?: string;       // link to platform actor (optional)
+  // HR-specific fields below are stored in persons.meta (jsonb):
+  aadhaar?: string;       // stored masked: XXXX-XXXX-1234 — in meta
+  bankAccount?: { accountNo: string; bankName: string; ifsc: string };  // in meta
+  pfNo?: string;          // in meta
+  esiNo?: string;         // in meta
+  actorId?: string;       // link to platform actor (optional) — top-level on persons record
 }
 ```
 
@@ -158,9 +164,13 @@ POST   /erp/salary-slips/:id/submit  erp:payroll:run
 
 Salary slips are created by Payroll Entry (see 8.7). Individual slip submission marks it as `submitted`.
 
+> **MTA note:** `erp_salary_slips.employeeId` is renamed to `personId` — references `persons.id` (type="employee").
+
 ---
 
 ## 8.7 Payroll Entry Routes
+
+> **MTA note:** The Drizzle table is `erp_payroll_runs` (renamed from `erp_payroll_entries`). All `employeeId` references in code comments become `personId` — references `persons.id` (type="employee").
 
 ```
 GET    /erp/payroll-entries          erp:payroll:run
@@ -175,20 +185,20 @@ POST   /erp/payroll-entries/:id/submit          erp:payroll:run
 {
   month: number;     // 1-12
   year: number;
-  departmentId?: string;   // null = all employees
+  departmentId?: string;   // null = all persons with type="employee"
   salaryStructureId?: string;
 }
 ```
 
 **Generate slips** (`/generate-slips`):
 
-For each active employee (in department if filtered):
+For each active person with `type = "employee"` (in department if filtered) — query via `person.listPersons({ type: "employee", departmentId })`:
 1. Get attendance for the month → `presentDays` count
 2. Load salary structure
 3. Compute each component using formula evaluator (safe eval sandbox)
 4. Pro-rate if `presentDays < workingDays`: `amount = componentAmount * presentDays / workingDays`
-5. Insert `erpSalarySlip` (status: `draft`)
-6. Update `erpPayrollEntry.employeeCount`, `totalGross`, `totalNet`
+5. Insert `erpSalarySlip` (status: `draft`) with `personId` (not `employeeId`)
+6. Update `erpPayrollRuns.personCount`, `totalGross`, `totalNet`
 
 **Submit payroll entry:**
 1. Validate all slips have status `submitted`

@@ -90,17 +90,19 @@ let app: any = new Elysia()
 
 ---
 
-### File 4: Run DB migration
+### File 4: Run DB push
 
 From `apps/server/`:
 ```bash
-bun run db:generate    # generates migration for new crm_* tables
-bun run db:migrate     # applies migration
+bun run db:push    # pushes detail table schema — master tables already exist
 ```
 
-Confirm tables created: `crm_contacts`, `crm_accounts`, `crm_deals`, `crm_pipelines`,
-`crm_pipeline_stages`, `crm_leads`, `crm_activities`, `crm_segments`,
-`crm_campaigns`, `crm_campaign_stats`, `crm_email_threads`, `crm_custom_fields`.
+Confirm CRM detail tables created:
+`crm_leads`, `crm_deals`, `crm_segments`, `crm_campaigns`, `crm_campaign_contacts`,
+`crm_email_threads`, `crm_email_messages`.
+
+Master tables (`persons`, `parties`, `pipelines`, `pipeline_stages`, `activities`, `geo_addresses`)
+are provisioned by foundation modules — do not recreate them.
 
 ---
 
@@ -222,32 +224,31 @@ All route components must use `sharedRootRoute` from `@projectx/shared-router` a
 
 ## 9.4 Seed Data
 
-After migration, run seed to create default pipeline + roles:
+After push, run seed to create default pipelines + roles. Pipelines are seeded into the
+`pipelines` / `pipeline_stages` master tables via `seedPipeline()` — not inserted directly.
 
 ```typescript
 // composes/crm/server/src/db/seed/crm.ts
-export async function seedCrm(db: DrizzleDb) {
-  // 1. Insert default pipeline
-  await db.insert(crmPipeline).values({
-    id: generateId(),
-    orgId: PLATFORM_ORG_ID,
-    name: "Sales Pipeline",
-    isDefault: true,
-  }).onConflictDoNothing();
+import { seedPipeline } from "apps/server/src/infra/db/seed";
 
-  // 2. Insert default stages
-  const pipelineId = ...; // from above
-  await db.insert(crmPipelineStage).values([
-    { id: generateId(), pipelineId, name: "Lead In",      order: 1, probability: 10 },
-    { id: generateId(), pipelineId, name: "Meeting",      order: 2, probability: 30 },
-    { id: generateId(), pipelineId, name: "Proposal",     order: 3, probability: 50 },
-    { id: generateId(), pipelineId, name: "Negotiation",  order: 4, probability: 70 },
-    { id: generateId(), pipelineId, name: "Closed Won",   order: 5, probability: 100 },
-  ]).onConflictDoNothing();
+export async function seedCrm(orgId: string) {
+  await seedPipeline(orgId, "crm.deal", [
+    { name: "Prospecting",   meta: { probability: 10 } },
+    { name: "Qualification", meta: { probability: 30 } },
+    { name: "Proposal",      meta: { probability: 60 } },
+    { name: "Closed Won",    meta: { probability: 100 } },
+    { name: "Closed Lost",   meta: { probability: 0 } },
+  ]);
+  await seedPipeline(orgId, "crm.lead", [
+    { name: "New" }, { name: "Contacted" }, { name: "Qualified" }, { name: "Converted" },
+  ]);
 }
 ```
 
-Call `seedCrm` from `apps/server/src/index.ts` after boot (or via a separate seed script).
+Call `seedCrm(orgId)` from `apps/server/src/index.ts` after boot (or via a separate seed script).
+
+Do not insert into `crm_pipelines` or `crm_pipeline_stages` — those tables do not exist. The master
+`pipelines` + `pipeline_stages` tables are the correct target.
 
 ---
 
@@ -257,10 +258,11 @@ After all edits:
 
 - [ ] `bun run typecheck` from repo root — zero errors
 - [ ] `GET /crm/contacts` returns 401 (not 404) — route is mounted
-- [ ] `GET /crm/pipeline` returns pipeline data
+- [ ] `GET /crm/pipelines` returns pipeline data (from `pipelines` master, entityType=crm.deal)
 - [ ] Web app navigates to `/crm` without 404
 - [ ] TanStack Router DevTools shows CRM routes in route tree
-- [ ] DB tables exist: `psql -c "\dt crm_*"`
+- [ ] CRM detail tables exist: `psql -c "\dt crm_*"` — should show `crm_leads`, `crm_deals`, `crm_segments`, `crm_campaigns`, `crm_campaign_contacts`, `crm_email_threads`, `crm_email_messages`
+- [ ] Master tables exist: `psql -c "\dt persons"`, `\dt parties"`, `\dt pipelines"` — provisioned by foundation
 
 ---
 

@@ -9,6 +9,7 @@
 All FSMs use `FSMEngine` from `@core`.
 
 ### Vendor FSM
+> **MTA note:** Vendor entity = `parties` record with `type = "vendor"`. FSM state is stored in `parties.status`.
 ```
 pending-approval → active           [on: vendor.approve]    guard: erp:vendor:approve
                  → rejected         [on: vendor.reject]     guard: erp:vendor:approve
@@ -26,6 +27,7 @@ approved   → converted   [on: pr.convert]  entry: create PO
 ```
 
 ### PO FSM
+> **MTA note:** PO entity = `transactions` record with `type = "purchase_order"`. FSM stageId links to `pipeline_stages.id` (entityType = "erp.po").
 ```
 draft              → pending-approval    [on: po.submit]
 pending-approval   → approved           [on: po.approve]     guard: erp:purchase-order:approve
@@ -62,6 +64,7 @@ disputed      → under-review    [on: invoice.reopen]
 ```
 
 ### Sales Order FSM
+> **MTA note:** SO entity = `transactions` record with `type = "sales_order"`. FSM stageId links to `pipeline_stages.id` (entityType = "erp.so").
 ```
 draft              → confirmed          [on: so.confirm]   guard: credit limit check
 confirmed          → partially-delivered [on: dn.created]
@@ -113,6 +116,7 @@ export function registerErpHooks(bus: EventBus, mediator: Mediator) {
   // PO Approved → ledger commitment + notify vendor + start workflow
   bus.on("po.approved", async (event) => {
     const { poId, vendorId, total } = event.payload;
+    // poId = transactions.id (type="purchase_order"); vendorId = parties.id (type="vendor")
     // 1. Post commitment journal: Dr Purchase Commitment, Cr AP
     await mediator.dispatch({ type: "ledger.postTransaction", ... });
     // 2. Notify vendor
@@ -126,6 +130,7 @@ export function registerErpHooks(bus: EventBus, mediator: Mediator) {
     const { grnId } = event.payload;
     const grn = await getGrn(grnId);
     for (const item of grn.items.filter(i => i.acceptedQty > 0)) {
+      // item.itemId = cat_items.id
       await mediator.dispatch({ type: "inventory.receive", variantId: item.itemId, qty: item.acceptedQty, ... });
     }
     // Reverse commitment, post actual AP: Dr AP-Commitment, Cr Inventory Asset

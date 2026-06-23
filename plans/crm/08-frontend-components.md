@@ -58,12 +58,14 @@ Used in: `/crm/deals/pipeline`
 
 ```tsx
 interface KanbanBoardProps {
-  pipeline: Pipeline;
-  stages: PipelineStage[];
+  pipeline: Pipeline;      // loaded from pipelines master (entityType=crm.deal)
+  stages: PipelineStage[]; // loaded dynamically from GET /crm/pipelines/:id/stages
   deals: Deal[];
   onDealMoved: (dealId: string, newStageId: string) => void;
 }
 ```
+
+**Stages are never hardcoded** — always loaded from the pipeline master via `crmApi.getPipelineStages(pipelineId)`.
 
 **Implementation:** Uses `@dnd-kit/core` + `@dnd-kit/sortable`.
 
@@ -73,7 +75,7 @@ Drag-over highlight: column background changes on hover during drag.
 
 **Column header:** Stage name | Deal count | Total value.
 
-`onDealMoved` → optimistic update (move card in state) → call `POST /crm/deals/:id/move` → on error: revert.
+`onDealMoved` → optimistic update (move card in state) → call `crmApi.moveDeal(id, stageId)` → on error: revert.
 
 ---
 

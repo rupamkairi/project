@@ -1,5 +1,7 @@
 # Phase 16 — Web: Inventory
 
+> **MTA:** Items come from `cat_items` table (type in `product`, `stock_item`, `asset`). Warehouses come from `locations` table (`type="warehouse"`). The API routes (`/erp/items`, `/erp/warehouses`) are unchanged on the client side.
+
 ---
 
 ## 16.1 ItemsPage

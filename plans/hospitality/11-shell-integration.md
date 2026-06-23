@@ -69,22 +69,18 @@ export type HospitalityApp = ReturnType<typeof createHospitalityCompose>;
 
 **File:** `composes/hospitality/server/src/schema/index.ts`
 
+Only hsp_ prefixed detail tables are exported here. Master tables (locations, persons, transactions, etc.) are imported from their respective foundation module packages.
+
 ```typescript
-export * from "./room-types";
-export * from "./rooms";
-export * from "./guest-profiles";
-export * from "./reservations";
-export * from "./folios";
-export * from "./folio-charges";
-export * from "./folio-payments";
+// hsp-owned detail tables only
 export * from "./rate-plans";
-export * from "./rate-plan-prices";
-export * from "./rate-overrides";
-export * from "./housekeeping-tasks";
-export * from "./maintenance-requests";
+export * from "./rate-plan-seasons";
 export * from "./channel-inventory";
-export * from "./service-requests";
-export * from "./group-bookings";
+export * from "./payment-records";
+export * from "./housekeeping-assignments";
+export * from "./maintenance-requests";
+export * from "./packages";
+export * from "./package-inclusions";
 export * from "./org-config";
 ```
 

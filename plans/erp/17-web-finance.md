@@ -1,5 +1,7 @@
 # Phase 17 — Web: Finance
 
+> **Note:** Finance tables (`erp_gl_accounts`, `erp_journal_entries`, `erp_bank_accounts`, `erp_fiscal_years`) are ERP-owned detail tables — no MTA remapping needed.
+
 ---
 
 ## 17.1 ChartOfAccountsPage

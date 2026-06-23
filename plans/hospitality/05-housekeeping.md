@@ -72,50 +72,47 @@ assigned | in-progress ──[task.reassign]──► assigned (new assignee)
 
 ## 5.4 Auto Task Generation
 
-**On check-out:** `reservation.checked-out` hook:
-```typescript
-bus.on("hsp.reservation.checked-out", async ({ roomId, checkInDate: todayArrivals }) => {
-  // Check if room has same-day arrival
-  const sameDay = await db.query.hspReservations.findFirst({
-    where: and(
-      eq(hspReservations.roomId, roomId),
-      eq(hspReservations.checkInDate, todayStr()),
-      eq(hspReservations.status, "confirmed")
-    ),
-  });
+Housekeeping tasks are stored in `hsp_housekeeping_assignments`. Rooms are `locations` (type=room). Room status is tracked on `location.status`.
 
-  await db.insert(hspHousekeepingTasks).values({
-    roomId,
-    type: "departure-clean",
-    status: "pending",
-    priority: sameDay ? "rush" : "normal",
-    scheduledFor: new Date(),
-  });
+**On check-out:** `reservation.checked-out` hook inserts into `hsp_housekeeping_assignments`:
+```typescript
+// See 10-backend-logic.md for full hook implementation
+await db.insert(hspHousekeepingAssignments).values({
+  id: generateId(), organizationId: orgId,
+  locationId,  // locations.id (room)
+  actorId: null,  // assigned by supervisor
+  date: todayStr(),
+  taskType: "departure-clean",
+  status: "pending",
+  priority: sameDay ? "rush" : "normal",
 });
 ```
 
 **Morning stay-over job (7AM daily):**
 ```typescript
-// Get all occupied rooms
-const occupied = await db.query.hspRooms.findMany({
-  where: eq(hspRooms.status, "occupied"),
+// Get all occupied rooms (locations where type=room and status=occupied)
+const occupied = await db.query.locations.findMany({
+  where: and(eq(locations.type, "room"), eq(locations.status, "occupied"), eq(locations.organizationId, orgId)),
 });
 for (const room of occupied) {
-  // Skip if already has pending/in-progress task today
-  const existing = await db.query.hspHousekeepingTasks.findFirst({
+  // Skip if already has pending/in-progress assignment today
+  const existing = await db.query.hspHousekeepingAssignments.findFirst({
     where: and(
-      eq(hspHousekeepingTasks.roomId, room.id),
-      inArray(hspHousekeepingTasks.status, ["pending", "assigned", "in-progress"]),
+      eq(hspHousekeepingAssignments.locationId, room.id),
+      eq(hspHousekeepingAssignments.date, todayStr()),
+      inArray(hspHousekeepingAssignments.status, ["pending", "in_progress"]),
     ),
   });
   if (existing) continue;
 
-  await db.insert(hspHousekeepingTasks).values({
-    roomId: room.id,
-    type: "stay-over",
+  await db.insert(hspHousekeepingAssignments).values({
+    id: generateId(), organizationId: orgId,
+    locationId: room.id,  // locations.id (type=room)
+    actorId: null,        // to be assigned by supervisor
+    date: todayStr(),
+    taskType: "stay-over",
     status: "pending",
     priority: "normal",
-    scheduledFor: new Date(),
   });
 }
 ```

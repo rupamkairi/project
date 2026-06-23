@@ -9,7 +9,7 @@
 | Phase | File | Description |
 |-------|------|-------------|
 | 01 | [01-foundation.md](01-foundation.md) | Package structure, compose factory, permissions, roles, ID prefixes |
-| 02 | [02-entities.md](02-entities.md) | All 18 Drizzle table definitions |
+| 02 | [02-entities.md](02-entities.md) | MTA entity mapping + 8 hsp_ detail table definitions |
 | 03 | [03-reservations.md](03-reservations.md) | Reservation CRUD + FSM, availability check, confirmation number, group booking |
 | 04 | [04-front-desk.md](04-front-desk.md) | Check-in/out flow, room assignment, walk-in, early/late checkout, no-show |
 | 05 | [05-housekeeping.md](05-housekeeping.md) | Task CRUD, assignment, completion, inspection workflow, room status |
@@ -80,6 +80,21 @@ packages/hospitality-web/src/
   api/hospitality-client.ts
   stores/
 ```
+
+---
+
+## Master Table Architecture
+
+Hospitality uses the Master Table Architecture (MTA). Foundation modules own shared generic tables. The compose filters by `type` + `organizationId` and adds hsp-owned detail tables.
+
+- Rooms are `locations` (`type = "room"`)
+- Room types are `cat_items` (`type = "room_type"`)
+- Guests are `persons` (`type = "guest"`)
+- Reservations are `transactions` (`type = "order"`) with `stageId` → `hsp.reservation` pipeline
+- Folios are `transactions` (`type = "bill"`)
+- Housekeeping tasks and service requests are `activities`
+
+**P0 blockers before Phase 1:** foundation modules (catalog, location, party, commerce, pipeline) must be provisioned and the `hsp.reservation` pipeline must be seeded via `seedPipeline(orgId, "hsp.reservation", stages)`.
 
 ---
 

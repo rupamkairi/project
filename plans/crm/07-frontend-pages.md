@@ -33,10 +33,10 @@ key interactions, and notable UX decisions.
 4. **Recent Deals (last 5 modified)**
    - DealCard component in list form
 
-**Data fetching:**
-- `GET /crm/analytics/pipeline` — pipeline summary
-- `GET /crm/activities/upcoming` — upcoming tasks
-- `GET /crm/deals?sort=updatedAt:desc&limit=5` — recent deals
+**Data fetching (all via `useState + useEffect`, no TanStack Query):**
+- `crmApi.getAnalytics()` → `GET /crm/analytics/summary` — KPI counts + pipeline value
+- `crmApi.getActivities({ limit: 8 })` → `GET /crm/activities` — upcoming tasks
+- `crmApi.getDeals({ sort: "updatedAt:desc", limit: 5 })` → `GET /crm/deals` — recent deals
 
 ---
 
@@ -113,13 +113,17 @@ DataTable. Columns: Title | Contact | Account | Stage | Value | Probability | Ow
 
 **Layout:** Horizontal columns per stage. Scrollable within columns.
 
-**Pipeline selector:** Dropdown to switch between pipelines (if multiple).
+**Pipeline selector:** Dropdown to switch between pipelines (if multiple). Pipelines loaded
+from `crmApi.getPipelines()` — server reads from `pipelines` master (entityType=`crm.deal`).
+
+**Stages loaded dynamically:** `crmApi.getPipelineStages(pipelineId)` → `GET /crm/pipelines/:id/stages`.
+Columns are rendered from this response — never hardcoded.
 
 **Column:** Stage name + deal count + total value.
 
 **DealCard:** Title, contact avatar, value, expected close date, owner initials, rotting indicator.
 
-**Drag-and-drop:** Drag card between columns → calls `POST /crm/deals/:id/move` with new stageId.
+**Drag-and-drop:** Drag card between columns → calls `crmApi.moveDeal(id, stageId)` → `POST /crm/deals/:id/move`.
 
 **Deal actions on card:** Quick win/lose buttons, open detail.
 

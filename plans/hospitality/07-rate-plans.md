@@ -45,51 +45,33 @@ After creating plan, add prices per room type via `/prices`.
 
 ---
 
-## 7.3 Rate Plan Prices
+## 7.3 Rate Plan Seasons
 
-`POST /hospitality/admin/rate-plans/:id/prices`
+Rate plans use `hsp_rate_plan_seasons` (date-range pricing per room type). `roomTypeId` references `cat_items.id` (type=room_type), not an hsp table.
 
-Body:
-```typescript
-{
-  roomTypeId: string;
-  baseRate: number;
-  extraAdultRate?: number;
-  extraChildRate?: number;
-  weekendSurcharge?: number;   // added Fri–Sat nights
-}
-```
-
-One price row per room type per rate plan. `PATCH` to update existing row.
-
----
-
-## 7.4 Date Overrides
-
-`POST /hospitality/admin/rate-plans/:id/overrides`
+`POST /hospitality/admin/rate-plans/:id/seasons`
 
 Body:
 ```typescript
 {
-  roomTypeId: string;
-  date: string;             // YYYY-MM-DD
-  rate?: number;            // null = use base rate
-  minStay?: number;
-  stopSell?: boolean;       // block all new bookings for this date
-  closeToArrival?: boolean; // block arrivals on this date (continuations allowed)
+  roomTypeId: string;     // cat_items.id where type = 'room_type'
+  startDate: string;      // YYYY-MM-DD
+  endDate: string;        // YYYY-MM-DD
+  pricePerNight: number;
+  currency?: string;
+  minNights?: number;
+  maxNights?: number;
+  conditions?: Record<string, unknown>;   // RuleExpr for advanced restrictions
 }
 ```
 
-Use cases:
-- Peak season rate: set higher `rate` for festival dates
-- Minimum stay: `minStay = 3` for long weekend
-- Stop sell: fully blocked out (maintenance, sold out)
+Multiple season rows per rate plan per room type (one per date range / season period). Use overlapping ranges sparingly — the most specific date range wins.
 
 ---
 
-## 7.5 Bulk Override
+## 7.4 Bulk Season Override
 
-`POST /hospitality/admin/rate-plans/:id/bulk-overrides`
+`POST /hospitality/admin/rate-plans/:id/bulk-seasons`
 
 Body:
 ```typescript
@@ -97,60 +79,65 @@ Body:
   roomTypeId: string;
   dateFrom: string;    // YYYY-MM-DD
   dateTo: string;
-  daysOfWeek?: number[];  // 0 = Sunday, 6 = Saturday; null = all days
-  rate?: number;
-  minStay?: number;
-  stopSell?: boolean;
-  closeToArrival?: boolean;
+  pricePerNight: number;
+  minNights?: number;
+  conditions?: { stopSell?: boolean; closeToArrival?: boolean };
 }
 ```
 
-Generates individual override rows for each date in range matching `daysOfWeek` filter.
-Used for: "Set rate to 8000 for all Fridays in July".
+Used for: "Set rate to 8000 for July peak season".
 
 ---
 
-## 7.6 Rate Computation
+## 7.5 Rate Computation
+
+Room type is looked up from `cat_items` (type=room_type). Season pricing from `hsp_rate_plan_seasons`.
 
 ```typescript
 async function computeNightlyRates(
   ratePlanId: string,
-  roomTypeId: string,
+  roomTypeId: string,     // cat_items.id (room_type)
   checkInDate: string,    // YYYY-MM-DD
   nights: number,
   orgId: string,
-  adults: number
 ): Promise<{ nightlyRates: number[]; total: number }> {
-  const basePrice = await db.query.hspRatePlanPrices.findFirst({
-    where: and(eq(hspRatePlanPrices.ratePlanId, ratePlanId), eq(hspRatePlanPrices.roomTypeId, roomTypeId))
+  // Find season covering checkInDate
+  const season = await db.query.hspRatePlanSeasons.findFirst({
+    where: and(
+      eq(hspRatePlanSeasons.ratePlanId, ratePlanId),
+      eq(hspRatePlanSeasons.roomTypeId, roomTypeId),   // cat_items.id
+      lte(hspRatePlanSeasons.startDate, checkInDate),
+      gte(hspRatePlanSeasons.endDate, checkInDate),
+    )
   });
-  if (!basePrice) throw new NotFoundError("RATE_NOT_CONFIGURED");
+  if (!season) throw new NotFoundError("RATE_NOT_CONFIGURED");
 
-  const roomType = await db.query.hspRoomTypes.findFirst({ where: eq(hspRoomTypes.id, roomTypeId) });
+  // Room type is from cat_items (type=room_type) — no hspRoomTypes table
+  const roomType = await db.query.catItems.findFirst({
+    where: and(eq(catItems.id, roomTypeId), eq(catItems.type, "room_type")),
+  });
 
   const nightlyRates: number[] = [];
   for (let i = 0; i < nights; i++) {
     const date = addDays(checkInDate, i);
 
-    // Check override
-    const override = await db.query.hspRateOverrides.findFirst({
+    // Find season covering this date (hsp_rate_plan_seasons)
+    const season = await db.query.hspRatePlanSeasons.findFirst({
       where: and(
-        eq(hspRateOverrides.ratePlanId, ratePlanId),
-        eq(hspRateOverrides.roomTypeId, roomTypeId),
-        eq(hspRateOverrides.date, date)
+        eq(hspRatePlanSeasons.ratePlanId, ratePlanId),
+        eq(hspRatePlanSeasons.roomTypeId, roomTypeId),  // cat_items.id
+        lte(hspRatePlanSeasons.startDate, date),
+        gte(hspRatePlanSeasons.endDate, date),
       ),
     });
+    if (!season) throw new NotFoundError("RATE_NOT_CONFIGURED", `No season configured for ${date}`);
 
-    if (override?.stopSell) throw new ConflictError("DATE_STOP_SELL", `No availability for ${date}`);
-    if (override?.closeToArrival && i === 0) throw new ConflictError("CLOSE_TO_ARRIVAL", `Arrivals blocked for ${date}`);
+    // Check conditions for stop_sell / close_to_arrival
+    const conditions = season.conditions as Record<string, boolean> | null;
+    if (conditions?.stopSell) throw new ConflictError("DATE_STOP_SELL", `No availability for ${date}`);
+    if (conditions?.closeToArrival && i === 0) throw new ConflictError("CLOSE_TO_ARRIVAL", `Arrivals blocked for ${date}`);
 
-    let rate = override?.rate ? parseFloat(override.rate) : parseFloat(basePrice.baseRate);
-
-    // Weekend surcharge
-    const dow = new Date(date).getDay();
-    if ((dow === 5 || dow === 6) && basePrice.weekendSurcharge) {
-      rate += parseFloat(basePrice.weekendSurcharge);
-    }
+    let rate = parseFloat(season.pricePerNight as string);
 
     // Extra adult charge
     const extraAdults = Math.max(0, adults - roomType.maxOccupancy);

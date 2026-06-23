@@ -25,24 +25,58 @@ at each step. This is the most critical, most failure-prone flow in the compose.
 
 ---
 
-## 3.2 Cart Validation (pre-checkout guard)
+## 3.2 Cart — Master Table Pattern
+
+A cart is a `transactions` row with `type = "order"` parked in an early pipeline stage (e.g. "Draft").
+Cart line items are `transaction_lines` rows linked to `cat_items`.
+
+**Create cart:**
+```typescript
+await mediator.send({
+  type: "commerce.createTransaction",
+  orgId,
+  payload: { type: "order", stageId: draftStageId },
+})
+```
+
+**Add cart item:**
+```typescript
+await mediator.send({
+  type: "commerce.createTransactionLine",
+  transactionId: cartId,
+  payload: { itemId: variantId, quantity, unitPrice },
+})
+```
+
+**Place order (move stage):**
+```typescript
+await mediator.send({
+  type: "commerce.transitionStage",
+  transactionId: cartId,
+  toStage: "placed",
+})
+```
+
+The `eco_cart` detail table is optional — add it only if abandonment tracking or region/coupon fields are needed that the `transactions` master does not carry.
+
+## 3.3 Cart Validation (pre-checkout guard)
 
 File: `composes/ecommerce/server/src/checkout/validate-cart.ts`
 
 Runs before steps 4–6. Checks:
 
-1. Cart exists and belongs to requesting actor
-2. Cart has at least one item
-3. Each `cartItem.variantId` exists in catalog and is `published`
-4. Each variant has sufficient inventory (`inventory.checkAvailability()`)
+1. Cart transaction exists (`transactions` where `id = cartId AND type = "order"` and in draft stage) and belongs to requesting actor
+2. Cart has at least one `transaction_lines` row
+3. Each line's `item_id` exists in `cat_items` (`type = "product"`) with `status = "published"`
+4. Each item has sufficient inventory (`inventory.checkAvailability()`)
 5. Any coupon on cart is still valid (not expired, not usage-limit-exceeded)
-6. Cart `regionId` is set (required for tax + shipping)
+6. Cart `regionId` is set in `eco_cart` detail (required for tax + shipping)
 
 Returns `CartValidationResult { valid: boolean; errors: string[] }`.
 
 ---
 
-## 3.3 Shipping Option Resolver
+## 3.4 Shipping Option Resolver
 
 File: `composes/ecommerce/server/src/checkout/resolve-shipping.ts`
 
@@ -60,7 +94,7 @@ Algorithm:
 
 ---
 
-## 3.4 Tax Calculation
+## 3.5 Tax Calculation
 
 File: `composes/ecommerce/server/src/checkout/calculate-tax.ts`
 
@@ -91,7 +125,7 @@ if (adapter) {
 
 ---
 
-## 3.5 Payment Session Creation
+## 3.6 Payment Session Creation
 
 File: `composes/ecommerce/server/src/checkout/create-payment-session.ts`
 
@@ -102,11 +136,11 @@ POST /ecommerce/store/cart/:id/payment-session
 Steps:
 1. Run `validateCart()` — fail with 400 if invalid
 2. Calculate order total: `subtotal + shipping + tax - coupon_discount`
-3. Call `paymentAdapter.createPaymentSession({ amount, currency, metadata: { orderId, cartId } })`
-4. Create `eco_orders` record with status = `pending`
-5. Reserve inventory: for each cart item, call `inventory.reserve(variantId, qty, orderId)`
-6. Save `paymentSession` on order
-7. Return `{ sessionId, url, expiresAt, orderId }`
+3. Call `paymentAdapter.createPaymentSession({ amount, currency, metadata: { transactionId: cartId } })`
+4. Transition the cart transaction stage to `"placed"` via mediator (`commerce.transitionStage`) — the `transactions` row is the order
+5. Reserve inventory: for each `transaction_lines` row, call `inventory.reserve(itemId, qty, transactionId)`
+6. Save `paymentSession` on the transaction (`meta` field or separate payment record)
+7. Return `{ sessionId, url, expiresAt, orderId: transactionId }`
 
 **Compensation on failure:**
 - If payment session creation fails → do NOT create order → do NOT reserve inventory
@@ -114,7 +148,7 @@ Steps:
 
 ---
 
-## 3.6 Saga: Order Confirmation
+## 3.7 Saga: Order Confirmation
 
 Triggered by `onPaymentReceived` callback from payment plugin.
 
@@ -155,7 +189,7 @@ async function onPaymentFailed(orderId: string, gatewayRef: string) {
 
 ---
 
-## 3.7 Order Fulfillment Workflow
+## 3.8 Order Fulfillment Workflow
 
 The ORDER_FULFILLMENT ProcessTemplate drives post-payment order handling.
 
@@ -190,7 +224,7 @@ Step 5 — complete-order
 
 ---
 
-## 3.8 Return Flow
+## 3.9 Return Flow
 
 Triggered by `POST /ecommerce/store/orders/:id/returns`.
 
@@ -212,7 +246,7 @@ Steps:
 
 ---
 
-## 3.9 Gift Card Application
+## 3.10 Gift Card Application
 
 At checkout, customer can apply a gift card code to their cart.
 
@@ -230,7 +264,7 @@ Body: { code: string }
 
 ---
 
-## 3.10 Draft Order Flow (Admin)
+## 3.11 Draft Order Flow (Admin)
 
 Admin creates order on behalf of customer, bypassing payment session.
 
@@ -242,7 +276,7 @@ Body: { customerId, items, shippingOptionId, paymentMethod: "cod" | "bank_transf
 1. Creates `eco_draft_orders` with status `draft`
 2. Admin edits line items, applies discounts
 3. `POST /ecommerce/admin/orders/draft/:id/place` — places the real order
-4. Creates `eco_orders` from draft, skips payment session
+4. Creates a `transactions` row (`type = "order"`) from the draft via mediator (`commerce.createTransaction`), skips payment session; sets `eco_draft_orders.placedTransactionId`
 5. ORDER_FULFILLMENT workflow starts immediately (payment is offline)
 
 ---

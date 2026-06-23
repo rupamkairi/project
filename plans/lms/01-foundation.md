@@ -2,6 +2,28 @@
 
 ---
 
+## 1.0 Master Table Architecture Note
+
+LMS compose does **not** create or migrate master tables (`cat_items`, `persons`, `transactions`, `activities`, `pipelines`, `pipeline_stages`). These are provisioned by foundation modules.
+
+Run `bun db:push` from the project root to apply foundation migrations before running lms migrations.
+
+The schema migration in this phase creates only lms_ detail tables:
+`lms_course_detail`, `lms_modules`, `lms_lessons`, `lms_assignments`, `lms_submissions`, `lms_quizzes`, `lms_quiz_questions`, `lms_certificates`, `lms_cohorts`, `lms_cohort_members`, `lms_progress`, `lms_discussions`, `lms_discussion_replies`, `lms_org_config`, `lms_coupons`.
+
+Pipelines are seeded (not migrated) via:
+```typescript
+import { seedPipeline } from "apps/server/src/infra/db/seed"
+await seedPipeline(orgId, "lms.course", [
+  { name: "Draft" }, { name: "In Review" }, { name: "Published" }, { name: "Archived" },
+])
+await seedPipeline(orgId, "lms.enrollment", [
+  { name: "Enrolled" }, { name: "In Progress" }, { name: "Completed" }, { name: "Dropped" },
+])
+```
+
+---
+
 ## 1.1 Package Structure
 
 ```
