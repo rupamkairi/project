@@ -1,0 +1,25 @@
+{
+  "name": "@projectx/restaurant-compose",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "Restaurant Compose Server — full food service operations",
+  "exports": {
+    ".": "./src/index.ts",
+    "./db/schema/restaurant": "./src/db/schema/restaurant.ts",
+    "./db/seed/restaurant": "./src/db/seed/restaurant.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist node_modules"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.45.1",
+    "elysia": "^1.4.25"
+  },
+  "devDependencies": {
+    "@projectx/config": "workspace:*",
+    "@types/bun": "^1.3.9",
+    "typescript": "^5.3.3"
+  }
+}

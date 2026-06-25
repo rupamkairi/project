@@ -424,6 +424,14 @@ async function main() {
   const { createPlatformCompose } = await import("@projectx/platform-server");
   const platformCompose = createPlatformCompose(mediator);
 
+  // Dynamic import to avoid circular dependency with restaurant-compose
+  const { createRestaurantCompose } = await import("@projectx/restaurant-compose");
+  const restaurantCompose = createRestaurantCompose(
+    mediator,
+    bus,
+    bootRegistry.scheduler as any,
+  );
+
   let app: any = new Elysia()
     // Plugins
     .use(cors())
@@ -431,6 +439,8 @@ async function main() {
     .use(bearer())
     // Platform Compose plugin
     .use(platformCompose)
+    // Restaurant Compose plugin
+    .use(restaurantCompose)
     // Health check
     .get("/health", () => ({
       status: "ok",

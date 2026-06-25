@@ -20,6 +20,37 @@ export * from "./analytics";
 export * from "./storage";
 export * from "./search";
 
+// Restaurant schema - re-exported from compose
+import {
+  rstCategories,
+  rstModifiers,
+  rstModifierGroups,
+  rstKot,
+  rstKotItems,
+  rstDeliveries,
+  rstShifts,
+  rstShiftAssignments,
+  rstRecipes,
+  rstRecipeIngredients,
+  rstReservations,
+  rstAggregatorOrders,
+} from "@projectx/restaurant-compose/db/schema/restaurant";
+
+export {
+  rstCategories,
+  rstModifiers,
+  rstModifierGroups,
+  rstKot,
+  rstKotItems,
+  rstDeliveries,
+  rstShifts,
+  rstShiftAssignments,
+  rstRecipes,
+  rstRecipeIngredients,
+  rstReservations,
+  rstAggregatorOrders,
+};
+
 // Platform schema - re-exported from compose
 import {
   pltSettings,
