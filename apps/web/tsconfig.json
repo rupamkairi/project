@@ -6,7 +6,9 @@
     "paths": {
       "@/*": ["./src/*"],
       "@projectx/platform-web": ["../../composes/platform/web/src"],
-      "@projectx/platform-web/*": ["../../composes/platform/web/src/*"]
+      "@projectx/platform-web/*": ["../../composes/platform/web/src/*"],
+      "@projectx/restaurant-web": ["../../composes/restaurant/web/src"],
+      "@projectx/restaurant-web/*": ["../../composes/restaurant/web/src/*"]
     }
   },
   "include": ["src"]

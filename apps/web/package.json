@@ -16,6 +16,7 @@
     "@hookform/resolvers": "^5.2.2",
     "cmdk": "^1.1.1",
     "@projectx/platform-web": "workspace:*",
+    "@projectx/restaurant-web": "workspace:*",
     "@projectx/shared-router": "workspace:*",
     "@projectx/ui": "workspace:*",
     "@tanstack/react-query": "^5.90.21",
