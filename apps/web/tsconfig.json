@@ -6,7 +6,9 @@
     "paths": {
       "@/*": ["./src/*"],
       "@projectx/platform-web": ["../../composes/platform/web/src"],
-      "@projectx/platform-web/*": ["../../composes/platform/web/src/*"]
+      "@projectx/platform-web/*": ["../../composes/platform/web/src/*"],
+      "@projectx/erp-web": ["../../composes/erp/web/src"],
+      "@projectx/erp-web/*": ["../../composes/erp/web/src/*"]
     }
   },
   "include": ["src"]

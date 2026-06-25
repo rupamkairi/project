@@ -424,6 +424,9 @@ async function main() {
   const { createPlatformCompose } = await import("@projectx/platform-server");
   const platformCompose = createPlatformCompose(mediator);
 
+  const { createErpCompose } = await import("@projectx/erp-server");
+  const erpCompose = createErpCompose(mediator, bus, bootRegistry.scheduler as any);
+
   let app: any = new Elysia()
     // Plugins
     .use(cors())
@@ -431,6 +434,8 @@ async function main() {
     .use(bearer())
     // Platform Compose plugin
     .use(platformCompose)
+    // ERP Compose
+    .use(erpCompose)
     // Health check
     .get("/health", () => ({
       status: "ok",

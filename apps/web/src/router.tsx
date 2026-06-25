@@ -1,11 +1,13 @@
 import { Route as indexRoute } from "@/routes/index";
 import { platformRoutes } from "@projectx/platform-web";
+import { erpRoutes } from "@projectx/erp-web";
 import { sharedRootRoute } from "@projectx/shared-router";
 import { createRouter } from "@tanstack/react-router";
 
 const routeTree = sharedRootRoute.addChildren([
   indexRoute,
   ...platformRoutes,
+  ...erpRoutes,
 ]);
 
 export const router = createRouter({

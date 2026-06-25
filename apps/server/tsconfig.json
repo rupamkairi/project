@@ -13,7 +13,11 @@
       "@projectx/platform-server": [
         "../../composes/platform/server/src/index.ts"
       ],
-      "@projectx/platform-server/*": ["../../composes/platform/server/src/*"]
+      "@projectx/platform-server/*": ["../../composes/platform/server/src/*"],
+      "@projectx/erp-server": [
+        "../../composes/erp/server/src/index.ts"
+      ],
+      "@projectx/erp-server/*": ["../../composes/erp/server/src/*"]
     }
   },
   "include": ["src/**/*"],

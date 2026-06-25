@@ -20,6 +20,9 @@ export * from "./analytics";
 export * from "./storage";
 export * from "./search";
 
+// ERP schema - re-exported from compose
+export * from "@projectx/erp-server/db/schema/erp";
+
 // Platform schema - re-exported from compose
 import {
   pltSettings,
