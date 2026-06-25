@@ -18,6 +18,8 @@ export * from "./notification";
 export * from "./geo";
 export * from "./analytics";
 export * from "./storage";
+// Compose detail tables
+export * from "../../../../../../composes/restaurant/server/src/db/schema/restaurant.js";
 export * from "./search";
 
 // Restaurant schema - re-exported from compose

@@ -1,22 +1,13 @@
 {
   "extends": "@projectx/config/tsconfig/server",
   "compilerOptions": {
-    "outDir": "dist",
     "baseUrl": ".",
-    "types": ["bun"],
-    "lib": ["ESNext"],
     "paths": {
-      "@projectx/server": ["../../../apps/server/src/index.ts"],
-      "@projectx/server/*": ["../../../apps/server/src/*"],
+      "@/*": ["./src/*"],
       "@core": ["../../../apps/server/src/core/index.ts"],
-      "@core/*": ["../../../apps/server/src/core/*"],
-      "@modules/*": ["../../../apps/server/src/modules/*"],
-      "@infra/*": ["../../../apps/server/src/infra/*"],
-      "@db/*": ["../../../apps/server/src/infra/db/*"],
-      "@projectx/restaurant-compose": ["./src/index.ts"],
-      "@projectx/restaurant-compose/*": ["./src/*"]
+      "@core/*": ["../../../apps/server/src/core/*"]
     }
   },
-  "include": ["src/**/*"],
+  "include": ["src"],
   "exclude": ["node_modules", "dist"]
 }

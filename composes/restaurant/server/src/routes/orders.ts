@@ -1,452 +1,243 @@
 import Elysia from "elysia";
 import type { Mediator, EventBus } from "@core";
-import { generateId, createDomainEvent } from "@core";
-import { ConflictError, NotFoundError, ValidationError } from "@core";
-import { db } from "@db/client";
-import { eq, and } from "drizzle-orm";
-import { rstKot, rstKotItems } from "../db/schema/restaurant";
-import { groupBy, nextLocationSeq, formatOrderNumber, formatKotNumber } from "../lib/utils";
+import { generateId, createDomainEvent, NotFoundError, ValidationError, ConflictError } from "@core";
+import { db } from "../lib/db.js";
+import { rstKot, rstKotItems } from "../db/schema/restaurant.js";
+import { eq } from "drizzle-orm";
 
-async function getOrderStage(mediator: Mediator, orgId: string, stageName: string) {
-  const stages = await mediator.query<any>({
-    type: "pipeline.listStages",
-    params: { organizationId: orgId, entityType: "rst.order" },
-    actorId: "system",
-    orgId,
-  });
-  return (stages?.items ?? stages ?? []).find((s: any) => s.name === stageName);
+function orderNumber(outletCode: string): string {
+  return `ORD-${outletCode}-${Date.now().toString(36).toUpperCase()}`;
 }
 
-async function createKots(
-  mediator: Mediator,
-  transactionId: string,
-  outletId: string,
-  outletCode: string,
-  orgId: string,
-  items: any[],
-) {
-  const byStation = groupBy(items, (i: any) => i.station ?? "default");
-
-  for (const [station, stationItems] of Object.entries(byStation)) {
-    const seq = await nextLocationSeq(outletId, "lastKotSeq");
-    const kotNumber = formatKotNumber(outletCode, seq);
-
-    const kot = await db
-      .insert(rstKot)
-      .values({
-        id: generateId(),
-        organizationId: orgId,
-        transactionId,
-        locationId: outletId,
-        kotNumber,
-        station,
-        status: "sent",
-        sentAt: new Date(),
-      })
-      .returning();
-
-    await db.insert(rstKotItems).values(
-      stationItems.map((item: any) => ({
-        id: generateId(),
-        organizationId: orgId,
-        kotId: kot[0].id,
-        transactionLineId: item.lineId ?? generateId(),
-        itemId: item.menuItemId,
-        name: item.name,
-        qty: item.qty,
-        modifiers: item.modifiers ?? [],
-        notes: item.note ?? null,
-        status: "pending",
-      })),
-    );
-  }
+function kotNumber(outletCode: string, station: string): string {
+  return `KOT-${outletCode}-${station.toUpperCase().slice(0, 3)}-${Date.now().toString(36).toUpperCase()}`;
 }
 
 export function orderRoutes(mediator: Mediator, bus: EventBus) {
   return new Elysia({ prefix: "/orders" })
-    .get("/", async (ctx) => {
-      const q = (ctx as any).query ?? {};
-      const actor = (ctx as any).actor;
-      const orgId = actor?.orgId;
-
-      const orders = await mediator.query<any>({
+    .get("/", async ({ request }) => {
+      const session = (request as any).session;
+      const url = new URL(request.url);
+      const limit = parseInt(url.searchParams.get("limit") ?? "50");
+      const status = url.searchParams.get("status");
+      const outletId = url.searchParams.get("outletId");
+      const orders = await mediator.query({
         type: "commerce.listTransactions",
-        params: {
-          type: "order",
-          organizationId: orgId,
-          limit: parseInt(q.limit ?? "50"),
-          offset: parseInt(q.page ?? "1") > 1 ? (parseInt(q.page) - 1) * 50 : 0,
-        },
-        actorId: actor?.id ?? "system",
-        orgId,
+        params: { orgId: session.orgId, type: "order", status, limit, outletId },
+        actorId: session.actorId,
+        orgId: session.orgId,
       });
-
-      return { data: orders?.items ?? orders ?? [] };
+      return { data: orders };
     })
 
-    .get("/:id", async (ctx) => {
-      const { params } = ctx as any;
-      const actor = (ctx as any).actor;
-      const orgId = actor?.orgId;
-
-      const order = await mediator.query<any>({
+    .get("/:id", async ({ params, request }) => {
+      const session = (request as any).session;
+      const order = await mediator.query({
         type: "commerce.getTransaction",
-        params: { transactionId: params.id, organizationId: orgId },
-        actorId: actor?.id ?? "system",
-        orgId,
+        params: { transactionId: params.id },
+        actorId: session.actorId,
+        orgId: session.orgId,
       });
-
       if (!order) throw new NotFoundError("Order not found");
-
       const kots = await db.query.rstKot.findMany({
-        where: and(eq(rstKot.transactionId, params.id), eq(rstKot.organizationId, orgId)),
+        where: eq(rstKot.transactionId, params.id),
+        with: { items: true },
       });
-
-      return { ...order, kots };
+      return { data: { ...order, kots } };
     })
 
-    .post("/", async (ctx) => {
-      const body = (ctx as any).body as any;
-      const actor = (ctx as any).actor;
-      const orgId = actor?.orgId;
-
-      const outlet = await mediator.query<any>({
-        type: "location.getLocation",
-        params: { locationId: body.outletId },
-        actorId: actor?.id ?? "system",
-        orgId,
+    .post("/", async ({ body, request }) => {
+      const session = (request as any).session;
+      const input = body as any;
+      const outlet = await mediator.query({
+        type: "location.get",
+        params: { locationId: input.outletId },
+        actorId: session.actorId,
+        orgId: session.orgId,
       });
-
       if (!outlet) throw new NotFoundError("Outlet not found");
 
-      if (body.type === "dine-in" && body.tableId) {
-        await mediator.dispatch<any>({
+      if (input.tableId) {
+        const table = await mediator.query({
+          type: "location.get",
+          params: { locationId: input.tableId },
+          actorId: session.actorId,
+          orgId: session.orgId,
+        });
+        if (!table) throw new NotFoundError("Table not found");
+        if (table.status === "occupied") throw new ConflictError("Table already occupied");
+        await mediator.dispatch({
           type: "location.updateStatus",
-          payload: { locationId: body.tableId, status: "occupied" },
-          actorId: actor?.id ?? "system",
-          orgId,
+          payload: { locationId: input.tableId, status: "occupied" },
+          actorId: session.actorId,
+          orgId: session.orgId,
           correlationId: generateId(),
         });
       }
 
-      const draftStage = await getOrderStage(mediator, orgId, "Placed");
-      const seq = await nextLocationSeq(body.outletId, "lastOrderSeq");
-      const orderNumber = formatOrderNumber(outlet.code ?? "ORD", seq);
-
-      const order = await mediator.dispatch<any>({
+      const order = await mediator.dispatch({
         type: "commerce.createTransaction",
         payload: {
           type: "order",
-          organizationId: orgId,
-          personId: body.customerId ?? null,
-          stageId: draftStage?.id ?? null,
           meta: {
-            outletId: body.outletId,
-            orderNumber,
-            orderType: body.type,
-            source: body.source ?? "pos",
-            tableId: body.tableId ?? null,
-            coverCount: body.coverCount ?? null,
-            waiterId: actor?.id ?? null,
-            deliveryAddress: body.deliveryAddress ?? null,
-            couponCode: body.couponCode ?? null,
-            specialInstructions: body.specialInstructions ?? null,
+            orderType: input.type ?? "dine-in",
+            tableId: input.tableId,
+            outletId: input.outletId,
+            orderNumber: orderNumber(outlet.code ?? "OUT"),
             status: "draft",
+            source: "pos",
           },
         },
-        actorId: actor?.id ?? "system",
-        orgId,
+        actorId: session.actorId,
+        orgId: session.orgId,
         correlationId: generateId(),
       });
-
-      await bus.publish(createDomainEvent(
-        "rst.orders.live-update",
-        order?.id,
-        "rst.order",
-        { orderId: order?.id, event: "created", orgId },
-        orgId,
-      ));
       return { data: order };
     })
 
-    // Place order
-    .post("/:id/place", async (ctx) => {
-      const { params, body } = ctx as any;
-      const actor = (ctx as any).actor;
-      const orgId = actor?.orgId;
-      const items: any[] = (body as any).items ?? [];
+    .post("/:id/place", async ({ params, body, request }) => {
+      const session = (request as any).session;
+      const input = body as any;
+      if (!input.items?.length) throw new ValidationError("At least one item required");
 
-      if (items.length === 0) {
-        throw new ValidationError("At least one item required");
-      }
-
-      const order = await mediator.query<any>({
+      const order = await mediator.query({
         type: "commerce.getTransaction",
-        params: { transactionId: params.id, organizationId: orgId },
-        actorId: actor?.id ?? "system",
-        orgId,
+        params: { transactionId: params.id },
+        actorId: session.actorId,
+        orgId: session.orgId,
       });
-
       if (!order) throw new NotFoundError("Order not found");
+      if (order.meta?.status !== "draft") throw new ConflictError("Order already placed");
 
-      const outletId = order.meta?.outletId;
-      const outlet = await mediator.query<any>({
-        type: "location.getLocation",
-        params: { locationId: outletId },
-        actorId: actor?.id ?? "system",
-        orgId,
-      });
-
-      const resolvedItems: any[] = [];
-      for (const item of items) {
-        const menuItem = await mediator.query<any>({
+      for (const item of input.items) {
+        const menuItem = await mediator.query({
           type: "catalog.getItem",
-          params: { itemId: item.menuItemId, organizationId: orgId },
-          actorId: actor?.id ?? "system",
-          orgId,
+          params: { itemId: item.menuItemId },
+          actorId: session.actorId,
+          orgId: session.orgId,
         });
+        if (!menuItem) throw new NotFoundError(`Menu item not found: ${item.menuItemId}`);
+        if (menuItem.meta?.isAvailable === false) throw new ConflictError(`${menuItem.name} is unavailable`);
 
-        if (!menuItem || menuItem.type !== "menu_item") {
-          throw new NotFoundError(`Item ${item.menuItemId} not found`);
-        }
-
-        if (!menuItem.meta?.isAvailable) {
-          throw new ConflictError(`${menuItem.name} is unavailable`);
-        }
-
-        const line = await mediator.dispatch<any>({
+        await mediator.dispatch({
           type: "commerce.addLine",
           payload: {
             transactionId: params.id,
             itemId: item.menuItemId,
             qty: item.qty,
             unitPrice: menuItem.meta?.basePrice ?? 0,
-            organizationId: orgId,
             meta: {
               name: menuItem.name,
+              station: menuItem.meta?.station,
               modifiers: item.modifiers ?? [],
-              note: item.note ?? null,
-              station: menuItem.meta?.station ?? "default",
+              note: item.note,
             },
           },
-          actorId: actor?.id ?? "system",
-          orgId,
+          actorId: session.actorId,
+          orgId: session.orgId,
           correlationId: generateId(),
-        });
-
-        resolvedItems.push({
-          ...item,
-          lineId: line?.id,
-          name: menuItem.name,
-          station: menuItem.meta?.station ?? "default",
-          unitPrice: menuItem.meta?.basePrice ?? 0,
         });
       }
 
-      await createKots(
-        mediator,
-        params.id,
-        outletId,
-        outlet?.code ?? "ORD",
-        orgId,
-        resolvedItems,
-      );
-
-      await mediator.dispatch<any>({
-        type: "commerce.updateTransactionMeta",
-        payload: { transactionId: params.id, organizationId: orgId, meta: { status: "placed" } },
-        actorId: actor?.id ?? "system",
-        orgId,
-        correlationId: generateId(),
-      });
-
-      await bus.publish(createDomainEvent(
-        "rst.order.placed",
-        params.id,
-        "rst.order",
-        { orderId: params.id, orgId, outletId },
-        orgId,
-      ));
-      await bus.publish(createDomainEvent(
-        "rst.orders.live-update",
-        params.id,
-        "rst.order",
-        { orderId: params.id, event: "placed", orgId },
-        orgId,
-      ));
-
-      return { status: "placed", orderId: params.id };
-    })
-
-    // Accept order
-    .post("/:id/accept", async (ctx) => {
-      const { params } = ctx as any;
-      const actor = (ctx as any).actor;
-      const orgId = actor?.orgId;
-
-      const preparingStage = await getOrderStage(mediator, orgId, "Preparing");
-
-      await mediator.dispatch<any>({
-        type: "commerce.advanceStage",
-        payload: { transactionId: params.id, stageId: preparingStage?.id, organizationId: orgId },
-        actorId: actor?.id ?? "system",
-        orgId,
-        correlationId: generateId(),
-      });
-
-      await mediator.dispatch<any>({
-        type: "commerce.updateTransactionMeta",
+      await mediator.dispatch({
+        type: "commerce.updateTransaction",
         payload: {
           transactionId: params.id,
-          organizationId: orgId,
-          meta: { status: "accepted", acceptedAt: new Date().toISOString() },
+          meta: { ...order.meta, status: "placed" },
         },
-        actorId: actor?.id ?? "system",
-        orgId,
+        actorId: session.actorId,
+        orgId: session.orgId,
         correlationId: generateId(),
       });
 
-      await bus.publish(createDomainEvent(
-        "rst.orders.live-update",
-        params.id,
-        "rst.order",
-        { orderId: params.id, event: "accepted", orgId },
-        orgId,
-      ));
-      return { status: "accepted" };
-    })
-
-    // Reject order
-    .post("/:id/reject", async (ctx) => {
-      const { params, body } = ctx as any;
-      const actor = (ctx as any).actor;
-      const orgId = actor?.orgId;
-
-      const cancelledStage = await getOrderStage(mediator, orgId, "Cancelled");
-
-      await mediator.dispatch<any>({
-        type: "commerce.advanceStage",
-        payload: { transactionId: params.id, stageId: cancelledStage?.id, organizationId: orgId },
-        actorId: actor?.id ?? "system",
-        orgId,
-        correlationId: generateId(),
-      });
-
-      await mediator.dispatch<any>({
-        type: "commerce.updateTransactionMeta",
-        payload: {
-          transactionId: params.id,
-          organizationId: orgId,
-          meta: { status: "rejected", rejectionReason: (body as any)?.reason ?? null },
-        },
-        actorId: actor?.id ?? "system",
-        orgId,
-        correlationId: generateId(),
-      });
-
-      await bus.publish(createDomainEvent(
-        "rst.order.rejected",
-        params.id,
-        "rst.order",
-        { orderId: params.id, orgId },
-        orgId,
-      ));
-      await bus.publish(createDomainEvent(
-        "rst.orders.live-update",
-        params.id,
-        "rst.order",
-        { orderId: params.id, event: "rejected", orgId },
-        orgId,
-      ));
-      return { status: "rejected" };
-    })
-
-    // Add items to existing order
-    .post("/:id/items", async (ctx) => {
-      const { params, body } = ctx as any;
-      const actor = (ctx as any).actor;
-      const orgId = actor?.orgId;
-      const items: any[] = (body as any).items ?? [];
-
-      const order = await mediator.query<any>({
-        type: "commerce.getTransaction",
-        params: { transactionId: params.id, organizationId: orgId },
-        actorId: actor?.id ?? "system",
-        orgId,
-      });
-
-      if (!order) throw new NotFoundError("Order not found");
-
-      const outletId = order.meta?.outletId;
-      const outlet = await mediator.query<any>({
-        type: "location.getLocation",
-        params: { locationId: outletId },
-        actorId: actor?.id ?? "system",
-        orgId,
-      });
-
-      const resolvedItems: any[] = [];
-      for (const item of items) {
-        const menuItem = await mediator.query<any>({
+      // Create KOTs grouped by station
+      const stationMap = new Map<string, typeof input.items>();
+      for (const item of input.items) {
+        const menuItem = await mediator.query({
           type: "catalog.getItem",
-          params: { itemId: item.menuItemId, organizationId: orgId },
-          actorId: actor?.id ?? "system",
-          orgId,
+          params: { itemId: item.menuItemId },
+          actorId: session.actorId,
+          orgId: session.orgId,
         });
-
-        if (!menuItem?.meta?.isAvailable) {
-          throw new ConflictError(`${menuItem?.name} is unavailable`);
-        }
-
-        const line = await mediator.dispatch<any>({
-          type: "commerce.addLine",
-          payload: {
-            transactionId: params.id,
-            itemId: item.menuItemId,
-            qty: item.qty,
-            unitPrice: menuItem.meta?.basePrice ?? 0,
-            organizationId: orgId,
-            meta: { modifiers: item.modifiers ?? [], note: item.note ?? null },
-          },
-          actorId: actor?.id ?? "system",
-          orgId,
-          correlationId: generateId(),
-        });
-
-        resolvedItems.push({
-          ...item,
-          lineId: line?.id,
-          name: menuItem.name,
-          station: menuItem.meta?.station ?? "default",
-        });
+        const station = menuItem?.meta?.station ?? "general";
+        if (!stationMap.has(station)) stationMap.set(station, []);
+        stationMap.get(station)!.push({ ...item, name: menuItem?.name ?? item.menuItemId });
       }
 
-      await createKots(
-        mediator,
-        params.id,
-        outletId,
-        outlet?.code ?? "ORD",
-        orgId,
-        resolvedItems,
-      );
+      for (const [station, items] of stationMap) {
+        const kotId = generateId();
+        await db.insert(rstKot).values({
+          id: kotId,
+          organizationId: session.orgId,
+          transactionId: params.id,
+          kotNumber: kotNumber(order.meta?.outletId?.slice(0, 3) ?? "OUT", station),
+          station,
+          status: "new",
+        });
+        for (const item of items) {
+          await db.insert(rstKotItems).values({
+            organizationId: session.orgId,
+            kotId,
+            transactionLineId: generateId(),
+            itemId: item.menuItemId,
+            name: item.name,
+            qty: item.qty,
+            notes: item.note,
+            modifiers: item.modifiers ?? [],
+          });
+        }
+        await bus.publish(createDomainEvent(
+          "rst.kds.new-kot", kotId, "rst.kot",
+          { kotId, station, orderId: params.id, orgId: session.orgId, outletId: order.meta?.outletId },
+          session.orgId,
+        ));
+      }
 
-      return { status: "items_added", count: items.length };
+      await bus.publish(createDomainEvent(
+        "rst.order.placed", params.id, "rst.order",
+        { orderId: params.id, orgId: session.orgId, outletId: order.meta?.outletId },
+        session.orgId,
+      ));
+
+      return { data: { orderId: params.id, status: "placed" } };
     })
 
-    // Remove item
-    .delete("/:id/items/:itemId", async (ctx) => {
-      const { params } = ctx as any;
-      const actor = (ctx as any).actor;
-      const orgId = actor?.orgId;
-
-      await mediator.dispatch<any>({
-        type: "commerce.removeLine",
-        payload: { transactionId: params.id, lineId: params.itemId, organizationId: orgId },
-        actorId: actor?.id ?? "system",
-        orgId,
+    .post("/:id/accept", async ({ params, request }) => {
+      const session = (request as any).session;
+      const order = await mediator.query({
+        type: "commerce.getTransaction",
+        params: { transactionId: params.id },
+        actorId: session.actorId,
+        orgId: session.orgId,
+      });
+      if (!order) throw new NotFoundError("Order not found");
+      await mediator.dispatch({
+        type: "commerce.updateTransaction",
+        payload: { transactionId: params.id, meta: { ...order.meta, status: "accepted" } },
+        actorId: session.actorId,
+        orgId: session.orgId,
         correlationId: generateId(),
       });
+      return { data: { orderId: params.id, status: "accepted" } };
+    })
 
-      return { status: "item_removed" };
+    .post("/:id/reject", async ({ params, body, request }) => {
+      const session = (request as any).session;
+      const input = body as any;
+      const order = await mediator.query({
+        type: "commerce.getTransaction",
+        params: { transactionId: params.id },
+        actorId: session.actorId,
+        orgId: session.orgId,
+      });
+      if (!order) throw new NotFoundError("Order not found");
+      await mediator.dispatch({
+        type: "commerce.updateTransaction",
+        payload: { transactionId: params.id, meta: { ...order.meta, status: "rejected", rejectReason: input?.reason } },
+        actorId: session.actorId,
+        orgId: session.orgId,
+        correlationId: generateId(),
+      });
+      return { data: { orderId: params.id, status: "rejected" } };
     });
 }

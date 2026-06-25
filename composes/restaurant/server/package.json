@@ -1,9 +1,8 @@
 {
-  "name": "@projectx/restaurant-compose",
+  "name": "@projectx/restaurant-server",
   "version": "0.1.0",
   "type": "module",
   "private": true,
-  "description": "Restaurant Compose Server — full food service operations",
   "exports": {
     ".": "./src/index.ts",
     "./db/schema/restaurant": "./src/db/schema/restaurant.ts",
@@ -14,8 +13,10 @@
     "clean": "rm -rf dist node_modules"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^0.10.4",
     "drizzle-orm": "^0.45.1",
-    "elysia": "^1.4.25"
+    "elysia": "^1.4.25",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@projectx/config": "workspace:*",

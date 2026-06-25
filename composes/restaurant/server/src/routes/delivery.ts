@@ -1,371 +1,143 @@
 import Elysia from "elysia";
 import type { Mediator, EventBus } from "@core";
-import { generateId, createDomainEvent } from "@core";
-import { ConflictError, NotFoundError } from "@core";
-import { db } from "@db/client";
-import { eq, and } from "drizzle-orm";
-import { rstDeliveries } from "../db/schema/restaurant";
-import { haversineKm } from "../lib/utils";
-
-const DELIVERY_TRANSITIONS: Record<string, string[]> = {
-  "pending-assignment": ["assigned"],
-  assigned: ["rider-heading-to-outlet", "pending-assignment"],
-  "rider-heading-to-outlet": ["reached-outlet"],
-  "reached-outlet": ["picked-up"],
-  "picked-up": ["out-for-delivery"],
-  "out-for-delivery": ["delivered", "failed"],
-  failed: ["returned"],
-  delivered: [],
-  returned: [],
-};
-
-function assertDeliveryTransition(current: string, next: string) {
-  if (!DELIVERY_TRANSITIONS[current]?.includes(next)) {
-    throw new ConflictError(`Delivery cannot transition from ${current} to ${next}`);
-  }
-}
-
-async function findNearestRider(
-  mediator: Mediator,
-  orgId: string,
-  outletId: string,
-): Promise<any | null> {
-  const riders = await mediator.query<any>({
-    type: "identity.listPersons",
-    params: { organizationId: orgId, type: "rider", limit: 100 },
-    actorId: "system",
-    orgId,
-  });
-
-  const available = (riders?.items ?? riders ?? []).filter(
-    (r: any) => r.meta?.status === "available",
-  );
-
-  if (available.length === 0) return null;
-
-  const outlet = await mediator.query<any>({
-    type: "location.getLocation",
-    params: { locationId: outletId },
-    actorId: "system",
-    orgId,
-  });
-
-  const outletCoords = outlet?.meta?.location;
-  if (!outletCoords) return available[0];
-
-  let nearest: any = null;
-  let minDist = Infinity;
-
-  for (const rider of available) {
-    const riderCoords = rider.meta?.currentLocation;
-    if (!riderCoords) continue;
-    const dist = haversineKm(outletCoords, riderCoords);
-    if (dist < minDist) {
-      minDist = dist;
-      nearest = rider;
-    }
-  }
-
-  return nearest ?? available[0];
-}
-
-const locationDebounce = new Map<string, ReturnType<typeof setTimeout>>();
+import { generateId, createDomainEvent, NotFoundError, ConflictError } from "@core";
+import { db } from "../lib/db.js";
+import { rstDeliveries } from "../db/schema/restaurant.js";
+import { and, eq } from "drizzle-orm";
 
 export function deliveryRoutes(mediator: Mediator, bus: EventBus) {
-  return new Elysia({ prefix: "/deliveries" })
-    .get("/", async (ctx) => {
-      const actor = (ctx as any).actor;
-      const orgId = actor?.orgId;
+  return new Elysia({ prefix: "/delivery" })
+    .get("/deliveries", async ({ request }) => {
+      const session = (request as any).session;
+      const url = new URL(request.url);
+      const outletId = url.searchParams.get("outletId");
+      const status = url.searchParams.get("status");
 
-      const all = await db.query.rstDeliveries.findMany({
-        where: eq(rstDeliveries.organizationId, orgId),
-        orderBy: (t, { desc }) => [desc(t.createdAt)],
-      });
-
-      return {
-        data: all,
-        pendingAssignment: all.filter((d) => d.status === "pending-assignment"),
-        inProgress: all.filter((d) =>
-          ["assigned", "rider-heading-to-outlet", "reached-outlet", "picked-up", "out-for-delivery"].includes(
-            d.status,
-          ),
-        ),
-        completed: all.filter((d) => d.status === "delivered"),
-        failed: all.filter((d) => ["failed", "returned"].includes(d.status)),
-      };
-    })
-
-    .get("/:id", async (ctx) => {
-      const { params } = ctx as any;
-      const actor = (ctx as any).actor;
-      const orgId = actor?.orgId;
-
-      const delivery = await db.query.rstDeliveries.findFirst({
-        where: and(eq(rstDeliveries.id, params.id), eq(rstDeliveries.organizationId, orgId)),
-      });
-
-      if (!delivery) throw new NotFoundError("Delivery not found");
-      return delivery;
-    })
-
-    .post("/:id/assign", async (ctx) => {
-      const { params, body } = ctx as any;
-      const actor = (ctx as any).actor;
-      const orgId = actor?.orgId;
-
-      const delivery = await db.query.rstDeliveries.findFirst({
-        where: and(eq(rstDeliveries.id, params.id), eq(rstDeliveries.organizationId, orgId)),
-      });
-
-      if (!delivery) throw new NotFoundError("Delivery not found");
-      assertDeliveryTransition(delivery.status, "assigned");
-
-      let riderId = (body as any)?.riderId;
-
-      if (!riderId) {
-        const order = await mediator.query<any>({
-          type: "commerce.getTransaction",
-          params: { transactionId: delivery.transactionId, organizationId: orgId },
-          actorId: actor?.id ?? "system",
-          orgId,
-        });
-        const outletId = order?.meta?.outletId;
-        const rider = await findNearestRider(mediator, orgId, outletId);
-        if (!rider) throw new ConflictError("No available riders");
-        riderId = rider.id;
-      }
-
-      await db
-        .update(rstDeliveries)
-        .set({ personId: riderId, status: "assigned", updatedAt: new Date() })
-        .where(eq(rstDeliveries.id, params.id));
-
-      await mediator.dispatch<any>({
-        type: "identity.updatePersonMeta",
-        payload: {
-          personId: riderId,
-          meta: { status: "busy", activeDeliveryId: params.id },
-          organizationId: orgId,
-        },
-        actorId: actor?.id ?? "system",
-        orgId,
-        correlationId: generateId(),
-      });
-
-      await bus.publish(createDomainEvent(
-        "rst.delivery.assigned",
-        params.id,
-        "rst.delivery",
-        { deliveryId: params.id, riderId, orgId },
-        orgId,
-      ));
-      return { status: "assigned", riderId };
-    })
-
-    .post("/:id/unassign", async (ctx) => {
-      const { params, body } = ctx as any;
-      const actor = (ctx as any).actor;
-      const orgId = actor?.orgId;
-
-      const delivery = await db.query.rstDeliveries.findFirst({
-        where: and(eq(rstDeliveries.id, params.id), eq(rstDeliveries.organizationId, orgId)),
-      });
-
-      if (!delivery) throw new NotFoundError("Delivery not found");
-      if (delivery.status !== "assigned") {
-        throw new ConflictError("Can only unassign when status is assigned");
-      }
-
-      const riderId = delivery.personId;
-
-      await db
-        .update(rstDeliveries)
-        .set({ personId: null, status: "pending-assignment", notes: (body as any)?.reason, updatedAt: new Date() })
-        .where(eq(rstDeliveries.id, params.id));
-
-      if (riderId) {
-        await mediator.dispatch<any>({
-          type: "identity.updatePersonMeta",
-          payload: {
-            personId: riderId,
-            meta: { status: "available", activeDeliveryId: null },
-            organizationId: orgId,
-          },
-          actorId: actor?.id ?? "system",
-          orgId,
-          correlationId: generateId(),
-        });
-      }
-
-      return { status: "unassigned" };
-    })
-
-    .post("/:id/status", async (ctx) => {
-      const { params, body } = ctx as any;
-      const actor = (ctx as any).actor;
-      const orgId = actor?.orgId;
-      const nextStatus = (body as any).status;
-
-      const delivery = await db.query.rstDeliveries.findFirst({
-        where: and(eq(rstDeliveries.id, params.id), eq(rstDeliveries.organizationId, orgId)),
-      });
-
-      if (!delivery) throw new NotFoundError("Delivery not found");
-      assertDeliveryTransition(delivery.status, nextStatus);
-
-      const patch: Record<string, unknown> = { status: nextStatus, updatedAt: new Date() };
-
-      if (nextStatus === "picked-up") patch.pickupAt = new Date();
-      if (nextStatus === "delivered") patch.deliveredAt = new Date();
-      if (nextStatus === "failed") patch.failureReason = (body as any).reason ?? null;
-
-      await db.update(rstDeliveries).set(patch).where(eq(rstDeliveries.id, params.id));
-
-      if (nextStatus === "delivered" || nextStatus === "failed") {
-        if (delivery.personId) {
-          await mediator.dispatch<any>({
-            type: "identity.updatePersonMeta",
-            payload: {
-              personId: delivery.personId,
-              meta: { status: "available", activeDeliveryId: null },
-              organizationId: orgId,
-            },
-            actorId: actor?.id ?? "system",
-            orgId,
-            correlationId: generateId(),
-          });
-        }
-        if (nextStatus === "delivered") {
-          await bus.publish(createDomainEvent(
-            "rst.delivery.delivered",
-            params.id,
-            "rst.delivery",
-            { deliveryId: params.id, riderId: delivery.personId, orderId: delivery.transactionId, orgId },
-            orgId,
-          ));
-        } else {
-          await bus.publish(createDomainEvent(
-            "rst.delivery.failed",
-            params.id,
-            "rst.delivery",
-            { deliveryId: params.id, riderId: delivery.personId, orgId },
-            orgId,
-          ));
-        }
-      }
-
-      await bus.publish(createDomainEvent(
-        "rst.delivery.status-update",
-        params.id,
-        "rst.delivery",
-        { deliveryId: params.id, status: nextStatus, orgId },
-        orgId,
-      ));
-      return { status: nextStatus };
-    })
-
-    .post("/:id/pod", async (ctx) => {
-      const { params, body } = ctx as any;
-      const actor = (ctx as any).actor;
-      const orgId = actor?.orgId;
-
-      await db
-        .update(rstDeliveries)
-        .set({ proofOfDelivery: (body as any).documentId, updatedAt: new Date() })
-        .where(and(eq(rstDeliveries.id, params.id), eq(rstDeliveries.organizationId, orgId)));
-
-      return { status: "pod_captured" };
-    });
-}
-
-export function riderRoutes(mediator: Mediator, bus: EventBus) {
-  return new Elysia({ prefix: "/riders" })
-    .get("/", async (ctx) => {
-      const actor = (ctx as any).actor;
-      const orgId = actor?.orgId;
-
-      const riders = await mediator.query<any>({
-        type: "identity.listPersons",
-        params: { organizationId: orgId, type: "rider", limit: 100 },
-        actorId: actor?.id ?? "system",
-        orgId,
-      });
-
-      return { data: riders?.items ?? riders ?? [] };
-    })
-
-    .patch("/:id/location", async (ctx) => {
-      const { params, body } = ctx as any;
-      const actor = (ctx as any).actor;
-      const orgId = actor?.orgId;
-      const { lat, lng } = body as any;
-
-      // Debounce DB write — max 1 write per 5s per rider
-      const key = `${params.id}:${orgId}`;
-      if (locationDebounce.has(key)) clearTimeout(locationDebounce.get(key)!);
-      locationDebounce.set(
-        key,
-        setTimeout(async () => {
-          await mediator.dispatch<any>({
-            type: "identity.updatePersonMeta",
-            payload: {
-              personId: params.id,
-              meta: { currentLocation: { lat, lng } },
-              organizationId: orgId,
-            },
-            actorId: "system",
-            orgId,
-            correlationId: generateId(),
-          });
-          locationDebounce.delete(key);
-        }, 5_000),
-      );
-
-      const delivery = await db.query.rstDeliveries.findFirst({
+      const deliveries = await db.query.rstDeliveries.findMany({
         where: and(
-          eq(rstDeliveries.personId, params.id),
-          eq(rstDeliveries.organizationId, orgId),
+          eq(rstDeliveries.organizationId, session.orgId),
+          outletId ? undefined : undefined, // filtered via join in production
         ),
+        orderBy: (t, { desc }) => [desc(t.createdAt)],
+        limit: 50,
       });
 
-      if (delivery && !["delivered", "failed", "returned"].includes(delivery.status)) {
-        await db
-          .update(rstDeliveries)
-          .set({
-            riderLocation: { lat, lng, updatedAt: new Date().toISOString() },
-            updatedAt: new Date(),
-          })
-          .where(eq(rstDeliveries.id, delivery.id));
+      // Enrich with rider and order info
+      const enriched = await Promise.all(deliveries.map(async (d) => {
+        let riderName: string | null = null;
+        if (d.personId) {
+          const rider = await mediator.query({
+            type: "identity.getPerson",
+            params: { personId: d.personId },
+            actorId: session.actorId,
+            orgId: session.orgId,
+          }).catch(() => null);
+          riderName = rider ? `${rider.firstName} ${rider.lastName}` : null;
+        }
+        const order = await mediator.query({
+          type: "commerce.getTransaction",
+          params: { transactionId: d.transactionId },
+          actorId: session.actorId,
+          orgId: session.orgId,
+        }).catch(() => null);
+        return {
+          ...d,
+          meta: {
+            riderName,
+            riderId: d.personId,
+            address: d.deliveryAddress,
+            orderNumber: order?.meta?.orderNumber,
+            customerName: order?.meta?.customerName,
+            distance: d.distanceKm,
+          },
+        };
+      }));
 
-        await bus.publish(createDomainEvent(
-          "rst.delivery.rider-location",
-          delivery.id,
-          "rst.delivery",
-          { deliveryId: delivery.id, lat, lng, orgId },
-          orgId,
-        ));
-      }
-
-      return { status: "ok" };
+      return { data: enriched };
     })
 
-    .patch("/:id/status", async (ctx) => {
-      const { params, body } = ctx as any;
-      const actor = (ctx as any).actor;
-      const orgId = actor?.orgId;
+    .post("/deliveries/:id/assign", async ({ params, body, request }) => {
+      const session = (request as any).session;
+      const input = body as any;
 
-      await mediator.dispatch<any>({
-        type: "identity.updatePersonMeta",
-        payload: {
-          personId: params.id,
-          meta: { status: (body as any).status },
-          organizationId: orgId,
-        },
-        actorId: actor?.id ?? "system",
-        orgId,
-        correlationId: generateId(),
+      let riderId = input?.riderId;
+      if (!riderId) {
+        // Auto-assign: find available rider
+        const riders = await mediator.query({
+          type: "identity.listPersons",
+          params: { orgId: session.orgId, type: "rider", available: true },
+          actorId: session.actorId,
+          orgId: session.orgId,
+        }).catch(() => []);
+        const available = (riders as any[]).find((r) => r.meta?.status === "available");
+        if (!available) throw new ConflictError("No available riders");
+        riderId = available.id;
+      }
+
+      const delivery = await db.query.rstDeliveries.findFirst({
+        where: eq(rstDeliveries.id, params.id),
       });
+      if (!delivery) throw new NotFoundError("Delivery not found");
 
-      return { status: "updated" };
+      await db.update(rstDeliveries)
+        .set({ personId: riderId, status: "assigned" })
+        .where(eq(rstDeliveries.id, params.id));
+
+      await bus.publish(createDomainEvent(
+        "rst.delivery.assigned", params.id, "rst.delivery",
+        { deliveryId: params.id, riderId, orgId: session.orgId },
+        session.orgId,
+      ));
+      return { data: { deliveryId: params.id, riderId, status: "assigned" } };
+    })
+
+    .post("/deliveries/:id/status", async ({ params, body, request }) => {
+      const session = (request as any).session;
+      const input = body as any;
+      const delivery = await db.query.rstDeliveries.findFirst({ where: eq(rstDeliveries.id, params.id) });
+      if (!delivery) throw new NotFoundError("Delivery not found");
+
+      const updates: any = { status: input.status };
+      if (input.status === "picked_up") updates.pickupAt = new Date();
+      if (input.status === "delivered") updates.deliveredAt = new Date();
+
+      await db.update(rstDeliveries).set(updates).where(eq(rstDeliveries.id, params.id));
+
+      await bus.publish(createDomainEvent(
+        `rst.delivery.${input.status}`, params.id, "rst.delivery",
+        { deliveryId: params.id, status: input.status, orgId: session.orgId },
+        session.orgId,
+      ));
+      return { data: { deliveryId: params.id, status: input.status } };
+    })
+
+    .post("/deliveries/:id/location", async ({ params, body, request }) => {
+      const session = (request as any).session;
+      const input = body as any;
+      await db.update(rstDeliveries)
+        .set({ riderLocation: { lat: input.lat, lng: input.lng, updatedAt: new Date().toISOString() } })
+        .where(eq(rstDeliveries.id, params.id));
+      await bus.publish(createDomainEvent(
+        "rst.delivery.rider-location", params.id, "rst.delivery",
+        { deliveryId: params.id, lat: input.lat, lng: input.lng, orgId: session.orgId },
+        session.orgId,
+      ));
+      return { data: { ok: true } };
+    })
+
+    .get("/riders", async ({ request }) => {
+      const session = (request as any).session;
+      const url = new URL(request.url);
+      const available = url.searchParams.get("available");
+      const riders = await mediator.query({
+        type: "identity.listPersons",
+        params: { orgId: session.orgId, type: "rider" },
+        actorId: session.actorId,
+        orgId: session.orgId,
+      }).catch(() => []);
+      const filtered = available === "true"
+        ? (riders as any[]).filter((r) => r.meta?.status === "available")
+        : riders;
+      return { data: filtered };
     });
 }

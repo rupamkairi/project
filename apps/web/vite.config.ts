@@ -5,6 +5,7 @@ import path from "path";
 
 const composes = {
   platform: "../../composes/platform/web/src",
+  restaurant: "../../composes/restaurant/web/src",
 };
 
 const packages = {
@@ -20,6 +21,7 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "./src"),
       "@projectx/platform-web": path.resolve(__dirname, composes.platform),
+      "@projectx/restaurant-web": path.resolve(__dirname, composes.restaurant),
       "@projectx/ui": path.resolve(__dirname, packages.ui),
     },
   },

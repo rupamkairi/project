@@ -14,10 +14,10 @@
         "../../composes/platform/server/src/index.ts"
       ],
       "@projectx/platform-server/*": ["../../composes/platform/server/src/*"],
-      "@projectx/restaurant-compose": [
+      "@projectx/restaurant-server": [
         "../../composes/restaurant/server/src/index.ts"
       ],
-      "@projectx/restaurant-compose/*": ["../../composes/restaurant/server/src/*"]
+      "@projectx/restaurant-server/*": ["../../composes/restaurant/server/src/*"]
     }
   },
   "include": ["src/**/*"],
