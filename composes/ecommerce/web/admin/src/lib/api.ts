@@ -63,11 +63,12 @@ class EcommerceAdminApiClient {
   }
 
   // Products
-  async getProducts(params?: { page?: number; limit?: number; search?: string; status?: string }) {
+  async getProducts(params?: { page?: number; limit?: number; search?: string; status?: string; q?: string }) {
     const query = new URLSearchParams();
     if (params?.page) query.set("page", String(params.page));
     if (params?.limit) query.set("limit", String(params.limit));
     if (params?.search) query.set("search", params.search);
+    if (params?.q) query.set("search", params.q);
     if (params?.status) query.set("status", params.status);
     return this.request<{ data: any[]; pagination: any }>(`/products?${query}`);
   }
@@ -88,12 +89,55 @@ class EcommerceAdminApiClient {
     return this.request<any>(`/products/${id}`, { method: "DELETE" });
   }
 
+  // Variants
+  async getVariants(productId: string) {
+    return this.request<{ data: any[] }>(`/products/${productId}/variants`);
+  }
+
+  async getVariant(productId: string, variantId: string) {
+    return this.request<any>(`/products/${productId}/variants/${variantId}`);
+  }
+
+  async createVariant(productId: string, data: any) {
+    return this.request<any>(`/products/${productId}/variants`, { method: "POST", body: JSON.stringify(data) });
+  }
+
+  async updateVariant(productId: string, variantId: string, data: any) {
+    return this.request<any>(`/products/${productId}/variants/${variantId}`, { method: "PATCH", body: JSON.stringify(data) });
+  }
+
+  async deleteVariant(productId: string, variantId: string) {
+    return this.request<any>(`/products/${productId}/variants/${variantId}`, { method: "DELETE" });
+  }
+
+  // Categories
+  async getCategories() {
+    return this.request<{ data: any[] }>("/categories");
+  }
+
+  async getCategory(id: string) {
+    return this.request<any>(`/categories/${id}`);
+  }
+
+  async createCategory(data: any) {
+    return this.request<any>("/categories", { method: "POST", body: JSON.stringify(data) });
+  }
+
+  async updateCategory(id: string, data: any) {
+    return this.request<any>(`/categories/${id}`, { method: "PATCH", body: JSON.stringify(data) });
+  }
+
+  async deleteCategory(id: string) {
+    return this.request<any>(`/categories/${id}`, { method: "DELETE" });
+  }
+
   // Orders
-  async getOrders(params?: { page?: number; limit?: number; status?: string }) {
+  async getOrders(params?: { page?: number; limit?: number; status?: string; q?: string }) {
     const query = new URLSearchParams();
     if (params?.page) query.set("page", String(params.page));
     if (params?.limit) query.set("limit", String(params.limit));
     if (params?.status) query.set("status", params.status);
+    if (params?.q) query.set("q", params.q);
     return this.request<{ data: any[]; pagination: any }>(`/orders?${query}`);
   }
 
@@ -101,17 +145,43 @@ class EcommerceAdminApiClient {
     return this.request<any>(`/orders/${id}`);
   }
 
+  async updateOrder(id: string, data: any) {
+    return this.request<any>(`/orders/${id}`, { method: "PATCH", body: JSON.stringify(data) });
+  }
+
+  async cancelOrder(id: string) {
+    return this.request<any>(`/orders/${id}/cancel`, { method: "POST" });
+  }
+
+  async createFulfillment(orderId: string, data: any) {
+    return this.request<any>(`/orders/${orderId}/fulfillments`, { method: "POST", body: JSON.stringify(data) });
+  }
+
   // Customers
-  async getCustomers(params?: { page?: number; limit?: number; search?: string }) {
+  async getCustomers(params?: { page?: number; limit?: number; search?: string; q?: string }) {
     const query = new URLSearchParams();
     if (params?.page) query.set("page", String(params.page));
     if (params?.limit) query.set("limit", String(params.limit));
     if (params?.search) query.set("search", params.search);
+    if (params?.q) query.set("search", params.q);
     return this.request<{ data: any[]; pagination: any }>(`/customers?${query}`);
   }
 
   async getCustomer(id: string) {
     return this.request<any>(`/customers/${id}`);
+  }
+
+  // Fulfillments
+  async getFulfillments(params?: { page?: number; limit?: number; status?: string }) {
+    const query = new URLSearchParams();
+    if (params?.page) query.set("page", String(params.page));
+    if (params?.limit) query.set("limit", String(params.limit));
+    if (params?.status) query.set("status", params.status);
+    return this.request<{ data: any[]; pagination: any }>(`/fulfillments?${query}`);
+  }
+
+  async updateFulfillmentStatus(id: string, status: string) {
+    return this.request<any>(`/fulfillments/${id}/status`, { method: "POST", body: JSON.stringify({ status }) });
   }
 
   // Returns
@@ -162,7 +232,11 @@ class EcommerceAdminApiClient {
   async getAnalytics(params?: { period?: string }) {
     const query = new URLSearchParams();
     if (params?.period) query.set("period", params.period);
-    return this.request<any>(`/analytics?${query}`);
+    return this.request<any>(`/analytics/overview?${query}`);
+  }
+
+  async getDashboard() {
+    return this.getAnalytics({ period: "30d" });
   }
 }
 

@@ -35,4 +35,4 @@ export type EcommerceApp = ReturnType<typeof createEcommerceCompose>;
 
 // Re-export seed functions
 export { seedEcommerceRoles } from "./db/seed/roles.seed";
-export { seedEcommerceRegions } from "./db/seed/regions.seed";
+export { seedEcommerceData } from "./db/seed/regions.seed";

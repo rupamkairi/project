@@ -6,4 +6,6 @@
 @source "../../../composes/platform/web/src";
 @source "../../../plugins/notification/web/src";
 @source "../../../plugins/storage/web/src";
+@source "../../../composes/ecommerce/web/admin/src";
+@source "../../../composes/ecommerce/web/storefront/src";
 @source ".";

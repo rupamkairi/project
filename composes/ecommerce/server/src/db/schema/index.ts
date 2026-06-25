@@ -11,3 +11,27 @@ export { ecoOrderEdits, ecoOrderEditItems, type EcoOrderEdit, type EcoOrderEditI
 export { ecoGiftCards, type EcoGiftCard } from "./gift-cards";
 export { ecoFulfillments, ecoFulfillmentItems, type EcoFulfillment, type EcoFulfillmentItem } from "./fulfillments";
 export { ecoCart, type EcoCart } from "./cart";
+
+// Core catalog tables — re-exported for compose route access
+export {
+  catItems,
+  catVariants,
+  catCategories,
+  catPriceLists,
+  catPriceRules,
+  type CatItem,
+  type CatVariant,
+  type CatCategory,
+  type CatPriceList,
+  type CatPriceRule,
+} from "@db/schema/catalog";
+export {
+  transactions,
+  transactionLines,
+  type Transaction,
+  type TransactionLine,
+} from "@db/schema/commerce";
+export {
+  persons,
+  type Person,
+} from "@db/schema/party";

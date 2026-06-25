@@ -26,6 +26,7 @@ import {
   Mail,
   Bell,
   FolderOpen,
+  ShoppingBag,
   LogOut,
 } from "lucide-react"
 
@@ -55,6 +56,7 @@ const NAV_ITEMS = [
   { label: "Invites", href: "/dashboard/invites", icon: Mail },
   { label: "Notifications", href: "/dashboard/notifications", icon: Bell },
   { label: "Files", href: "/dashboard/files", icon: FolderOpen },
+  { label: "Ecommerce", href: "/admin/ecommerce", icon: ShoppingBag },
 ]
 
 function UserMenu() {
