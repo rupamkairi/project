@@ -330,6 +330,20 @@ const dbSchemas = [
     tables: ["storage_files"],
     filePath: "./infra/db/schema/storage",
   },
+  {
+    id: "crm",
+    name: "CRM",
+    tables: [
+      "crm_leads",
+      "crm_deals",
+      "crm_segments",
+      "crm_campaigns",
+      "crm_campaign_contacts",
+      "crm_email_threads",
+      "crm_email_messages",
+    ],
+    filePath: "./composes/crm/server/src/db/schema/crm",
+  },
 ];
 
 // All module layers
@@ -424,6 +438,10 @@ async function main() {
   const { createPlatformCompose } = await import("@projectx/platform-server");
   const platformCompose = createPlatformCompose(mediator);
 
+  // Dynamic import to avoid circular dependency with crm-compose
+  const { createCrmRoutes } = await import("@projectx/crm-server");
+  const crmCompose = createCrmRoutes(mediator);
+
   let app: any = new Elysia()
     // Plugins
     .use(cors())
@@ -431,6 +449,8 @@ async function main() {
     .use(bearer())
     // Platform Compose plugin
     .use(platformCompose)
+    // CRM Compose plugin
+    .use(crmCompose)
     // Health check
     .get("/health", () => ({
       status: "ok",

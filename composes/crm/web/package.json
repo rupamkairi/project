@@ -1,0 +1,29 @@
+{
+  "name": "@projectx/crm-web",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "CRM Compose Web — routes, API client, and UI for the CRM section",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist node_modules"
+  },
+  "dependencies": {
+    "@projectx/platform-web": "workspace:*",
+    "@projectx/shared-router": "workspace:*",
+    "@projectx/ui": "workspace:*",
+    "@tanstack/react-router": "^1.161.3",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "zustand": "^5.0.11"
+  },
+  "devDependencies": {
+    "@projectx/config": "workspace:*",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "^5.3.3"
+  }
+}
