@@ -424,6 +424,10 @@ async function main() {
   const { createPlatformCompose } = await import("@projectx/platform-server");
   const platformCompose = createPlatformCompose(mediator);
 
+  // Dynamic import to avoid circular dependency with ecommerce-compose
+  const { createEcommerceCompose } = await import("@projectx/ecommerce-server");
+  const ecommerceCompose = createEcommerceCompose(mediator, bootRegistry.adapters);
+
   let app: any = new Elysia()
     // Plugins
     .use(cors())
@@ -431,6 +435,8 @@ async function main() {
     .use(bearer())
     // Platform Compose plugin
     .use(platformCompose)
+    // Ecommerce Compose plugin
+    .use(ecommerceCompose)
     // Health check
     .get("/health", () => ({
       status: "ok",

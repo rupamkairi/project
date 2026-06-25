@@ -5,6 +5,8 @@ import path from "path";
 
 const composes = {
   platform: "../../composes/platform/web/src",
+  ecommerceAdmin: "../../composes/ecommerce/web/admin/src",
+  ecommerceStorefront: "../../composes/ecommerce/web/storefront/src",
 };
 
 const packages = {
@@ -19,6 +21,8 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "@projectx/ecommerce-admin": path.resolve(__dirname, composes.ecommerceAdmin),
+      "@projectx/ecommerce-storefront": path.resolve(__dirname, composes.ecommerceStorefront),
       "@projectx/platform-web": path.resolve(__dirname, composes.platform),
       "@projectx/ui": path.resolve(__dirname, packages.ui),
     },

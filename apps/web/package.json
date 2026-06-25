@@ -15,6 +15,8 @@
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
     "cmdk": "^1.1.1",
+    "@projectx/ecommerce-admin": "workspace:*",
+    "@projectx/ecommerce-storefront": "workspace:*",
     "@projectx/platform-web": "workspace:*",
     "@projectx/shared-router": "workspace:*",
     "@projectx/ui": "workspace:*",

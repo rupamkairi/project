@@ -20,6 +20,50 @@ export * from "./analytics";
 export * from "./storage";
 export * from "./search";
 
+// Ecommerce schema - re-exported from compose
+export {
+  ecoRegions,
+  ecoTaxProfiles,
+  ecoTaxRates,
+  ecoShippingOptions,
+  ecoCustomerGroups,
+  ecoCustomerGroupMembers,
+  ecoReturns,
+  ecoReturnItems,
+  ecoClaims,
+  ecoSwaps,
+  ecoSwapItems,
+  ecoSwapNewItems,
+  ecoDraftOrders,
+  ecoDraftOrderItems,
+  ecoOrderEdits,
+  ecoOrderEditItems,
+  ecoGiftCards,
+  ecoFulfillments,
+  ecoFulfillmentItems,
+  ecoCart,
+  type EcoRegion,
+  type EcoTaxProfile,
+  type EcoTaxRate,
+  type EcoShippingOption,
+  type EcoCustomerGroup,
+  type EcoCustomerGroupMember,
+  type EcoReturn,
+  type EcoReturnItem,
+  type EcoClaim,
+  type EcoSwap,
+  type EcoSwapItem,
+  type EcoSwapNewItem,
+  type EcoDraftOrder,
+  type EcoDraftOrderItem,
+  type EcoOrderEdit,
+  type EcoOrderEditItem,
+  type EcoGiftCard,
+  type EcoFulfillment,
+  type EcoFulfillmentItem,
+  type EcoCart,
+} from "@projectx/ecommerce-server/db/schema/index";
+
 // Platform schema - re-exported from compose
 import {
   pltSettings,

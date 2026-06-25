@@ -1,11 +1,15 @@
 import { Route as indexRoute } from "@/routes/index";
 import { platformRoutes } from "@projectx/platform-web";
+import { ecommerceAdminRoutes } from "@projectx/ecommerce-admin";
+import { ecommerceStorefrontRoutes } from "@projectx/ecommerce-storefront";
 import { sharedRootRoute } from "@projectx/shared-router";
 import { createRouter } from "@tanstack/react-router";
 
 const routeTree = sharedRootRoute.addChildren([
   indexRoute,
   ...platformRoutes,
+  ...ecommerceAdminRoutes,
+  ...ecommerceStorefrontRoutes,
 ]);
 
 export const router = createRouter({
