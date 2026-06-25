@@ -13,7 +13,11 @@
       "@projectx/platform-server": [
         "../../composes/platform/server/src/index.ts"
       ],
-      "@projectx/platform-server/*": ["../../composes/platform/server/src/*"]
+      "@projectx/platform-server/*": ["../../composes/platform/server/src/*"],
+      "@projectx/lms-server": [
+        "../../composes/lms/server/src/index.ts"
+      ],
+      "@projectx/lms-server/*": ["../../composes/lms/server/src/*"]
     }
   },
   "include": ["src/**/*"],

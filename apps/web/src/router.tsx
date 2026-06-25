@@ -1,11 +1,13 @@
 import { Route as indexRoute } from "@/routes/index";
 import { platformRoutes } from "@projectx/platform-web";
+import { lmsRoutes } from "@projectx/lms-web";
 import { sharedRootRoute } from "@projectx/shared-router";
 import { createRouter } from "@tanstack/react-router";
 
 const routeTree = sharedRootRoute.addChildren([
   indexRoute,
   ...platformRoutes,
+  ...lmsRoutes,
 ]);
 
 export const router = createRouter({

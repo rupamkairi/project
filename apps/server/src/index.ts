@@ -424,6 +424,10 @@ async function main() {
   const { createPlatformCompose } = await import("@projectx/platform-server");
   const platformCompose = createPlatformCompose(mediator);
 
+  // Dynamic import to avoid circular dependency with lms-compose
+  const { createLmsCompose } = await import("@projectx/lms-server");
+  const lmsCompose = createLmsCompose(mediator, bus, bootRegistry.scheduler);
+
   let app: any = new Elysia()
     // Plugins
     .use(cors())
@@ -431,6 +435,8 @@ async function main() {
     .use(bearer())
     // Platform Compose plugin
     .use(platformCompose)
+    // LMS Compose plugin
+    .use(lmsCompose)
     // Health check
     .get("/health", () => ({
       status: "ok",

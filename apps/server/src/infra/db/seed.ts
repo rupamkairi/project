@@ -4,6 +4,7 @@ import { invLocations } from "./schema/inventory";
 import { ntfTemplates } from "./schema/notification";
 import { pipelines, pipelineStages } from "./schema/pipeline";
 import { seedPlatform } from "@projectx/platform-server";
+import { seedLms } from "@projectx/lms-server";
 import { ulid } from "ulid";
 
 function generateId(): string {
@@ -203,6 +204,13 @@ async function seed() {
 
   console.log("Step 6: Seeding platform data...");
   await seedPlatform();
+
+  console.log("Step 7: Seeding LMS data...");
+  await seedLms(defaultOrgId);
 }
 
-seed().catch(console.error);
+if (import.meta.path === Bun.main) {
+  seed().catch(console.error);
+}
+
+

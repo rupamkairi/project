@@ -38,3 +38,37 @@ export {
   type PltComposeConfig,
   type PltOrganizationSetting,
 };
+
+// LMS schema
+export {
+  lmsCourseDetail,
+  lmsModule,
+  lmsLesson,
+  lmsAssignment,
+  lmsSubmission,
+  lmsQuiz,
+  lmsQuizQuestion,
+  lmsCertificate,
+  lmsCohort,
+  lmsCohortMember,
+  lmsProgress,
+  lmsDiscussion,
+  lmsDiscussionReply,
+  lmsCourseReview,
+  lmsCoupon,
+  lmsWaitlist,
+  lmsQuizSubmission,
+  lmsPaymentEvent,
+  lmsOrgConfig,
+  contentTypeEnum,
+  questionTypeEnum,
+  courseLevelEnum,
+  submissionStatusEnum,
+  cohortStatusEnum,
+  sessionStatusEnum,
+  courseReviewStatusEnum,
+  waitlistStatusEnum,
+  couponDiscountTypeEnum,
+} from "@projectx/lms-server/db/schema/lms";
+
+

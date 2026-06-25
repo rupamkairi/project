@@ -15,6 +15,9 @@ import {
   FileText,
   Mail,
   ChevronRight,
+  GraduationCap,
+  BookOpen,
+  Settings2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -64,6 +67,27 @@ const sections: Section[] = [
   },
 ];
 
+const lmsSections: Section[] = [
+  {
+    title: "My Learning",
+    description: "Browse courses, track progress, and view certificates",
+    href: "/learn/dashboard",
+    Icon: GraduationCap,
+  },
+  {
+    title: "Teaching",
+    description: "Create and manage courses, view analytics",
+    href: "/teach/dashboard",
+    Icon: BookOpen,
+  },
+  {
+    title: "LMS Admin",
+    description: "Manage courses, enrollments, instructors, and settings",
+    href: "/lms-admin/dashboard",
+    Icon: Settings2,
+  },
+];
+
 function DashboardIndex() {
   return (
     <div className="space-y-6 p-4">
@@ -95,6 +119,32 @@ function DashboardIndex() {
             </Card>
           </Link>
         ))}
+      </div>
+
+      <div className="pt-2">
+        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-3">
+          Learning Management
+        </h2>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {lmsSections.map(({ title, description, href, Icon }) => (
+            <Link key={href} to={href} className="group block focus:outline-none">
+              <Card className="h-full cursor-pointer group-hover:bg-accent/50 group-focus-visible:ring-2 group-focus-visible:ring-ring group-focus-visible:ring-offset-2 transition-colors">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-md bg-muted">
+                      <Icon className="h-4 w-4 text-muted-foreground" strokeWidth={1.75} />
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" strokeWidth={2} />
+                  </div>
+                  <CardTitle className="mt-3 text-sm font-medium">{title}</CardTitle>
+                  <CardDescription className="text-xs leading-relaxed">
+                    {description}
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
+          ))}
+        </div>
       </div>
     </div>
   );

@@ -27,6 +27,9 @@ import {
   Bell,
   FolderOpen,
   LogOut,
+  GraduationCap,
+  BookOpen,
+  Settings,
 } from "lucide-react"
 
 export const Route = createRoute({
@@ -55,6 +58,9 @@ const NAV_ITEMS = [
   { label: "Invites", href: "/dashboard/invites", icon: Mail },
   { label: "Notifications", href: "/dashboard/notifications", icon: Bell },
   { label: "Files", href: "/dashboard/files", icon: FolderOpen },
+  { label: "Learning", href: "/learn/dashboard", icon: GraduationCap },
+  { label: "Teaching", href: "/teach/dashboard", icon: BookOpen },
+  { label: "LMS Admin", href: "/lms-admin/dashboard", icon: Settings },
 ]
 
 function UserMenu() {
