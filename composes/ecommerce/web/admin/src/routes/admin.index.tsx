@@ -3,11 +3,11 @@ import { ecommerceAdminLayoutRoute } from "./admin.layout";
 import { PageHeader } from "@projectx/ui";
 import { useQuery } from "@tanstack/react-query";
 import { ecommerceAdminApi } from "../lib/api";
-import { formatCurrency } from "../../../../web/storefront/src/lib/format";
+import { formatCurrency } from "../lib/format";
 
 function AdminDashboard() {
   const { data: analyticsData } = useQuery({ queryKey: ["admin-analytics"], queryFn: () => ecommerceAdminApi.getAnalytics() });
-  const { data: ordersData } = useQuery({ queryKey: ["admin-orders"], queryFn: () => ecommerceAdminApi.getOrders({ limit: "5" }) });
+  const { data: ordersData } = useQuery({ queryKey: ["admin-orders"], queryFn: () => ecommerceAdminApi.getOrders({ limit: 5 }) });
 
   const analytics = analyticsData?.data ?? {};
   const orders = ordersData?.data?.data ?? [];

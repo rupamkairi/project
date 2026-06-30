@@ -2,7 +2,7 @@ import Elysia from "elysia";
 import type { Mediator, EventBus } from "@core";
 import { generateId, createDomainEvent, NotFoundError, ConflictError } from "@core";
 
-export function inventoryRoutes(mediator: Mediator, bus: EventBus) {
+export function createInventoryRoutes(mediator: Mediator, bus: EventBus) {
   return new Elysia({ prefix: "/inventory" })
     .get("/ingredients", async ({ request }) => {
       const session = (request as any).session;

@@ -111,10 +111,11 @@ const payment = createPaymentPlugin({
 });
 
 // Register adapter so modules can resolve it
-bootRegistry.adapters.register("payment", payment.adapter);
+export function createEcommerceCompose(mediator: Mediator, adapters: AdapterRegistry) {
+  adapters.register("payment", payment.adapter);
 
-export const ecommerceCompose = new Elysia({ prefix: "/ecommerce" })
-  .use(payment.plugin);
+  return new Elysia({ prefix: "/ecommerce" }).use(payment.plugin);
+}
 ```
 
 ---

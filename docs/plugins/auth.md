@@ -71,9 +71,9 @@ const auth = createAuthPlugin({ ... });
 
 app
   .use(auth.plugin)      // registers middleware globally
-  .use(platformCompose)  // /platform — also adds /platform/auth/* routes
-  .use(crmCompose)       // /crm — receives ctx.actor automatically
-  .use(erpCompose);      // /erp — receives ctx.actor automatically
+  .use(createPlatformCompose(mediator))  // /platform — also adds /platform/auth/* routes
+  .use(createCrmCompose(mediator))       // /crm — receives ctx.actor automatically
+  .use(createErpCompose(mediator, bus, scheduler)); // /erp — receives ctx.actor automatically
 ```
 
 The auth plugin middleware runs before every compose handler. It populates `ctx.actor` and `ctx.org` in `SystemContext` or returns `401` for unauthenticated requests on protected paths.
@@ -225,7 +225,8 @@ Platform compose wires the two together at boot:
 import { createAuthPlugin } from "@projectx/plugin-auth-server";
 import { identityModule } from "../../modules/identity";
 
-export const platformCompose = new Elysia({ prefix: "/platform" })
+export function createPlatformCompose(mediator: Mediator) {
+  return new Elysia({ prefix: "/platform" })
   .use(
     createAuthPlugin({
       provider: "local-jwt",
@@ -234,6 +235,7 @@ export const platformCompose = new Elysia({ prefix: "/platform" })
     }).routes  // mounts /auth/* under /platform
   )
   // ... other platform routes
+}
 ```
 
 The identity module never imports from the auth plugin. The auth plugin receives a callback; it does not know it is talking to the identity module.

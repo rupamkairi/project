@@ -1,7 +1,7 @@
 // CRM Compose — server shell.
 //
 // Entry point consumed by apps/server/src/index.ts during boot. Exports a single
-// `createCrmRoutes(mediator)` function that returns an Elysia instance with the
+// `createCrmCompose(mediator)` function that returns an Elysia instance with the
 // `/crm` prefix applied. Each sub-route group is a separate file in ./routes/.
 //
 // Also exports `registerCrmHooks` and `registerCrmJobs` for the server shell
@@ -22,7 +22,7 @@ import { createSearchRoutes } from "./routes/search";
 import { createTicketsRoutes } from "./routes/tickets";
 import { createImportExportRoutes } from "./routes/import-export";
 
-export function createCrmRoutes(mediator: Mediator) {
+export function createCrmCompose(mediator: Mediator) {
   return new Elysia({ prefix: "/crm" })
     .use(createContactsRoutes(mediator))
     .use(createAccountsRoutes(mediator))
@@ -39,6 +39,7 @@ export function createCrmRoutes(mediator: Mediator) {
 }
 
 export { seedCrm } from "./db/seed/crm";
+export * from "./db/schema/crm";
 export { registerCrmHooks } from "./hooks/index";
 export { registerCrmJobs } from "./jobs/index";
 export type { CrmJobScheduler } from "./jobs/index";

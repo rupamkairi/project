@@ -2,7 +2,7 @@ import Elysia from "elysia";
 import type { Mediator, EventBus } from "@core";
 import { generateId, createDomainEvent, NotFoundError, ConflictError } from "@core";
 
-export function outletRoutes(mediator: Mediator, bus: EventBus) {
+export function createOutletRoutes(mediator: Mediator, bus: EventBus) {
   return new Elysia({ prefix: "/outlets" })
     .get("/", async ({ request }) => {
       const session = (request as any).session;

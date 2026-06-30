@@ -48,9 +48,9 @@ app
   .use(security.plugin)   // 1. headers, rate limiting, CORS — runs first on every request
   .use(logging.plugin)    // 2. request logging
   .use(auth.plugin)       // 3. token validation → populates ctx.actor
-  .use(platformCompose)   // 4. /platform — also mounts /platform/auth/* routes
-  .use(crmCompose)        // 5. /crm — receives ctx.actor automatically
-  .use(erpCompose);       // 6. /erp — receives ctx.actor automatically
+  .use(createPlatformCompose(mediator))   // 4. /platform — also mounts /platform/auth/* routes
+  .use(createCrmCompose(mediator))        // 5. /crm — receives ctx.actor automatically
+  .use(createErpCompose(mediator, bus, scheduler)); // 6. /erp — receives ctx.actor automatically
 ```
 
 Rules:

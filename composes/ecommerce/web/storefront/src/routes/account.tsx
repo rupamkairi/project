@@ -23,7 +23,7 @@ function StorefrontAccount() {
 
   const { data: ordersData } = useQuery({
     queryKey: ["customer-orders"],
-    queryFn: () => ecommerceStorefrontApi.getOrders({ limit: "10" }),
+    queryFn: () => ecommerceStorefrontApi.getOrders({ limit: 10 }),
     enabled: !!customer,
   });
 

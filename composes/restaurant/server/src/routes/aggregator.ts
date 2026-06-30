@@ -5,7 +5,7 @@ import { db } from "../lib/db.js";
 import { rstAggregatorMappings } from "../db/schema/restaurant.js";
 import { and, eq } from "drizzle-orm";
 
-export function aggregatorRoutes(mediator: Mediator, bus: EventBus) {
+export function createAggregatorRoutes(mediator: Mediator, bus: EventBus) {
   return new Elysia({ prefix: "/aggregators" })
     .get("/", async ({ request }) => {
       const session = (request as any).session;

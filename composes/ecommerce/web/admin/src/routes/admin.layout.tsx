@@ -18,8 +18,10 @@ const NAV_ITEMS = [
 ];
 
 function AdminUserMenu() {
-  const { user, logout } = useAuthStore();
-  const initials = user?.name ? user.name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2) : "AD";
+  const { actor, logout } = useAuthStore();
+  const initials = actor?.firstName || actor?.lastName
+    ? [actor?.firstName?.[0], actor?.lastName?.[0]].filter(Boolean).join("").toUpperCase().slice(0, 2)
+    : "AD";
 
   return (
     <DropdownMenu>

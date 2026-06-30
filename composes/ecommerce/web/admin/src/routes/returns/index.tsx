@@ -4,7 +4,7 @@ import { PageHeader, Button, Badge } from "@projectx/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { ecommerceAdminApi } from "../../lib/api";
-import { formatCurrency } from "../../../../storefront/src/lib/format";
+import { formatCurrency } from "../../lib/format";
 
 const STATUS_BADGES: Record<string, string> = { pending: "bg-yellow-100 text-yellow-700", approved: "bg-green-100 text-green-700", rejected: "bg-red-100 text-red-600", refunded: "bg-zinc-100 text-zinc-600" };
 

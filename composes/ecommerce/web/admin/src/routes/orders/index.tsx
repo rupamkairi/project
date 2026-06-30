@@ -6,7 +6,7 @@ import { Search, Eye } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, Link } from "@tanstack/react-router";
 import { ecommerceAdminApi } from "../../lib/api";
-import { formatCurrency } from "../../../../storefront/src/lib/format";
+import { formatCurrency } from "../../lib/format";
 
 const STATUS_BADGES: Record<string, string> = { pending: "bg-yellow-100 text-yellow-700", processing: "bg-blue-100 text-blue-700", fulfilled: "bg-green-100 text-green-700", cancelled: "bg-red-100 text-red-600", refunded: "bg-zinc-100 text-zinc-600" };
 

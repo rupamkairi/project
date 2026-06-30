@@ -33,6 +33,9 @@ export function createEcommerceCompose(mediator: Mediator, adapters: AdapterRegi
 
 export type EcommerceApp = ReturnType<typeof createEcommerceCompose>;
 
+export * from "./db/schema/index";
+
 // Re-export seed functions
+export { seedEcommerce } from "./db/seed/ecommerce";
 export { seedEcommerceRoles } from "./db/seed/roles.seed";
 export { seedEcommerceData } from "./db/seed/regions.seed";

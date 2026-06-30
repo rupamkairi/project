@@ -12,7 +12,7 @@ import { createRouter } from "@tanstack/react-router";
 const routeTree = sharedRootRoute.addChildren([
   indexRoute,
   ...platformRoutes,
-  crmRoutes,
+  ...crmRoutes,
   ...ecommerceAdminRoutes,
   ...ecommerceStorefrontRoutes,
   ...erpRoutes,

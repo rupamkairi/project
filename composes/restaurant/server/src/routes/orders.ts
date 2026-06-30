@@ -13,7 +13,7 @@ function kotNumber(outletCode: string, station: string): string {
   return `KOT-${outletCode}-${station.toUpperCase().slice(0, 3)}-${Date.now().toString(36).toUpperCase()}`;
 }
 
-export function orderRoutes(mediator: Mediator, bus: EventBus) {
+export function createOrderRoutes(mediator: Mediator, bus: EventBus) {
   return new Elysia({ prefix: "/orders" })
     .get("/", async ({ request }) => {
       const session = (request as any).session;

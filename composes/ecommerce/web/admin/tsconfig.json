@@ -2,10 +2,11 @@
   "extends": "@projectx/config/tsconfig/web",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "src",
     "baseUrl": ".",
     "paths": {
       "@projectx/ecommerce-admin": ["./src"],
+      "@projectx/platform-web": ["../../../platform/web/src"],
+      "@projectx/platform-web/*": ["../../../platform/web/src/*"],
       "@/*": ["./src/*"]
     }
   },

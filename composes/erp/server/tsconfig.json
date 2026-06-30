@@ -8,6 +8,8 @@
     "paths": {
       "@projectx/server": ["../../../apps/server/src/index.ts"],
       "@projectx/server/*": ["../../../apps/server/src/*"],
+      "@projectx/erp-server": ["./src/index.ts"],
+      "@projectx/erp-server/*": ["./src/*"],
       "@core": ["../../../apps/server/src/core/index.ts"],
       "@core/*": ["../../../apps/server/src/core/*"],
       "@modules/*": ["../../../apps/server/src/modules/*"],

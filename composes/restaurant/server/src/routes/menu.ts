@@ -5,7 +5,7 @@ import { db } from "../lib/db.js";
 import { rstCategories } from "../db/schema/restaurant.js";
 import { eq, and } from "drizzle-orm";
 
-export function menuRoutes(mediator: Mediator, bus: EventBus) {
+export function createMenuRoutes(mediator: Mediator, bus: EventBus) {
   return new Elysia({ prefix: "/menu" })
     .get("/categories", async ({ request }) => {
       const session = (request as any).session;

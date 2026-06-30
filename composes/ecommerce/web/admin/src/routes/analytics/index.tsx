@@ -3,7 +3,7 @@ import { ecommerceAdminLayoutRoute } from "../admin.layout";
 import { PageHeader } from "@projectx/ui";
 import { useQuery } from "@tanstack/react-query";
 import { ecommerceAdminApi } from "../../lib/api";
-import { formatCurrency } from "../../../../storefront/src/lib/format";
+import { formatCurrency } from "../../lib/format";
 import { ShoppingBag, CreditCard, TrendingUp, Users, Package, ArrowUpRight } from "lucide-react";
 
 export const ecoAdminAnalyticsRoute = createRoute({

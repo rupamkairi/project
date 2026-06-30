@@ -35,7 +35,8 @@ function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
-export const authRoutes = new Elysia({ prefix: "/auth" })
+export function createAuthRoutes() {
+  return new Elysia({ prefix: "/auth" })
   .post(
     "/login",
     async ({ body, set, request }) => {
@@ -196,5 +197,6 @@ export const authRoutes = new Elysia({ prefix: "/auth" })
 
     return { token: newToken };
   });
+}
 
-export type AuthRoutes = typeof authRoutes;
+export type AuthRoutes = ReturnType<typeof createAuthRoutes>;

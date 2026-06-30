@@ -33,7 +33,7 @@ async function getPersonIdFromActor(actorId: string, orgId: string): Promise<str
 
 // ── Routes ─────────────────────────────────────────────
 
-export function assignmentRoutes(mediator: Mediator) {
+export function createAssignmentRoutes(mediator: Mediator) {
   return new Elysia({ prefix: "" })
 
     // ── Instructor: List Assignments for Course ──

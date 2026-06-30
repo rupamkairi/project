@@ -1,15 +1,15 @@
 import { Elysia } from "elysia"
 import type { Mediator } from "@core"
 import type { EventBus, Scheduler } from "@core"
-import { courseRoutes } from "./routes/courses"
-import { enrollmentRoutes } from "./routes/enrollments"
-import { learningRoutes } from "./routes/learning"
-import { assignmentRoutes } from "./routes/assignments"
-import { cohortRoutes } from "./routes/cohorts"
-import { certificateRoutes } from "./routes/certificates"
-import { analyticsRoutes } from "./routes/analytics"
-import { discussionRoutes } from "./routes/discussions"
-import { webhookRoutes } from "./routes/webhook"
+import { createCourseRoutes } from "./routes/courses"
+import { createEnrollmentRoutes } from "./routes/enrollments"
+import { createLearningRoutes } from "./routes/learning"
+import { createAssignmentRoutes } from "./routes/assignments"
+import { createCohortRoutes } from "./routes/cohorts"
+import { createCertificateRoutes } from "./routes/certificates"
+import { createAnalyticsRoutes } from "./routes/analytics"
+import { createDiscussionRoutes } from "./routes/discussions"
+import { createWebhookRoutes } from "./routes/webhook"
 import { registerLmsHooks, registerLmsJobs, LMS_FSMs } from "./backend"
 
 export function createLmsCompose(mediator: Mediator, bus?: EventBus, scheduler?: Scheduler) {
@@ -36,15 +36,15 @@ export function createLmsCompose(mediator: Mediator, bus?: EventBus, scheduler?:
   }
 
   return new Elysia({ prefix: "/lms" })
-    .use(courseRoutes(mediator))
-    .use(enrollmentRoutes(mediator))
-    .use(learningRoutes(mediator))
-    .use(assignmentRoutes(mediator))
-    .use(cohortRoutes(mediator))
-    .use(certificateRoutes(mediator))
-    .use(analyticsRoutes(mediator))
-    .use(discussionRoutes(mediator))
-    .use(webhookRoutes(mediator))
+    .use(createCourseRoutes(mediator))
+    .use(createEnrollmentRoutes(mediator))
+    .use(createLearningRoutes(mediator))
+    .use(createAssignmentRoutes(mediator))
+    .use(createCohortRoutes(mediator))
+    .use(createCertificateRoutes(mediator))
+    .use(createAnalyticsRoutes(mediator))
+    .use(createDiscussionRoutes(mediator))
+    .use(createWebhookRoutes(mediator))
 }
 
 export type LmsApp = ReturnType<typeof createLmsCompose>

@@ -1,6 +1,6 @@
 import React from "react";
-import { Outlet, Link, useNavigate } from "@tanstack/react-router";
-import { NavBar, Avatar, AvatarFallback, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, cn } from "@projectx/ui";
+import { Outlet } from "@tanstack/react-router";
+import { NavBar, cn } from "@projectx/ui";
 import { useOutletStore } from "../../stores/outlet-store";
 
 interface NavItem {
@@ -20,13 +20,14 @@ export function RestaurantLayout({ navItems, title, darkMode = false }: Restaura
   const { outletName } = useOutletStore();
 
   return (
-    <div className={cn("flex flex-col min-h-screen", darkMode ? "bg-zinc-900 text-white" : "bg-background")}>
+    <div className={cn("flex flex-col min-h-screen", darkMode ? "bg-card text-card-foreground" : "bg-background text-foreground")}>
       <NavBar
+        logo={<span className="text-sm font-semibold">{title}</span>}
         items={navItems.map((n) => ({ label: n.label, href: n.href }))}
         actions={
           <div className="flex items-center gap-3">
             {outletName && (
-              <span className={cn("text-xs px-2 py-1 rounded-md", darkMode ? "bg-zinc-800 text-zinc-300" : "bg-muted text-muted-foreground")}>
+              <span className={cn("text-xs px-2 py-1 rounded-md", darkMode ? "bg-muted text-muted-foreground" : "bg-muted text-muted-foreground")}>
                 {outletName}
               </span>
             )}
@@ -52,14 +53,14 @@ export function OutletSelector({ onSelect }: { onSelect: (id: string, name: stri
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="w-full max-w-sm space-y-4 p-6 border rounded-xl">
+      <div className="w-full max-w-sm space-y-4 p-6 border border-border rounded-xl bg-card text-card-foreground">
         <h2 className="text-lg font-semibold text-center">Select Outlet</h2>
         <div className="space-y-2">
           {outlets.map((o) => (
             <button
               key={o.id}
               onClick={() => onSelect(o.id, o.name)}
-              className="w-full text-left px-4 py-3 rounded-lg border hover:bg-muted transition-colors"
+              className="w-full text-left px-4 py-3 rounded-lg border border-border hover:bg-muted transition-colors"
             >
               {o.name}
             </button>

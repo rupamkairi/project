@@ -6,10 +6,11 @@ Read this first before implementing any compose. No exceptions.
 
 ## 1. Read These Docs (In Order)
 
-1. `docs/instructions/architectural-rules.md` — non-negotiable layer rules
+1. `docs/ARCHITECTURE.md` — non-negotiable layer rules
 2. `docs/conventions.md` — all naming: files, dirs, DB tables, exports, routes
-3. `docs/instructions/tooling.md` — Bun only, DB commands, workspace commands
-4. `docs/instructions/README.md` — full reading order if more context needed
+3. `docs/setup/server.md` — Elysia server structure and compose registration
+4. `docs/server-quality.md` — canonical compose server contract and compliance matrix
+5. `docs/compose.md` — compose integration contract and shell wiring
 
 ---
 

@@ -14,3 +14,4 @@ export { AuthGuard, requireAuth, useAuth } from "./components/auth-guard";
 
 // Routes for host app integration
 export { platformRoutes } from "./routes/index";
+export { platformManifest } from "./manifest";

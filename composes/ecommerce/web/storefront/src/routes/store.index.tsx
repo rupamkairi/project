@@ -17,7 +17,7 @@ function StorefrontHome() {
   const { data: prodData, isLoading } = useQuery({
     queryKey: ["products", "trending"],
     queryFn: () =>
-      ecommerceStorefrontApi.getProducts({ limit: "6", sort: "popularity" }),
+      ecommerceStorefrontApi.getProducts({ limit: 6 }),
   });
 
   const categories = catData?.data?.data ?? [];

@@ -41,7 +41,7 @@ function generateCertificateNo(): string {
 
 // ── Routes ─────────────────────────────────────────────
 
-export function certificateRoutes(_mediator: Mediator) {
+export function createCertificateRoutes(_mediator: Mediator) {
   return new Elysia({ prefix: "" })
 
     // ── Issue Certificate (Internal) ──

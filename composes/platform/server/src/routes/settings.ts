@@ -1,7 +1,8 @@
 import Elysia, { t } from "elysia";
 import { getAllSettings, setSetting } from "../lib/settings";
 
-export const settingsRoutes = new Elysia({ prefix: "/settings" })
+export function createSettingsRoutes() {
+  return new Elysia({ prefix: "/settings" })
   .get("/", async () => {
     return getAllSettings();
   })
@@ -25,5 +26,6 @@ export const settingsRoutes = new Elysia({ prefix: "/settings" })
       }),
     },
   );
+}
 
-export type SettingsRoutes = typeof settingsRoutes;
+export type SettingsRoutes = ReturnType<typeof createSettingsRoutes>;

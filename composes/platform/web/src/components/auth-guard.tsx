@@ -4,6 +4,7 @@
 
 import { useEffect, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { Spinner } from "@projectx/ui";
 import { useAuthStore } from "../stores/auth";
 
 interface AuthGuardProps {
@@ -49,10 +50,10 @@ export function AuthGuard({ children, publicPaths = [] }: AuthGuardProps) {
   // Show loading state while checking authentication
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Verifying session...</p>
+      <div className="min-h-screen flex items-center justify-center bg-muted/30">
+        <div className="text-center space-y-3">
+          <Spinner size="lg" className="mx-auto" />
+          <p className="text-sm text-muted-foreground">Verifying session...</p>
         </div>
       </div>
     );

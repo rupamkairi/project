@@ -40,7 +40,7 @@ async function getStageId(orgId: string, entityType: string, stageName: string):
   return stage[0]?.id ?? null
 }
 
-export function learningRoutes(_mediator: Mediator) {
+export function createLearningRoutes(_mediator: Mediator) {
   return new Elysia({ prefix: "" })
 
     // ── Module progress ──

@@ -12,7 +12,8 @@ import {
 import { eq, and, desc, like, or, isNull } from "drizzle-orm";
 import { generateId } from "@core/entity";
 
-export const notificationRoutes = new Elysia({ prefix: "/notifications" })
+export function createNotificationRoutes() {
+  return new Elysia({ prefix: "/notifications" })
   // ==================== Templates ====================
   .get("/templates", async ({ query, headers, set }) => {
     const authHeader = headers.authorization;
@@ -504,5 +505,6 @@ export const notificationRoutes = new Elysia({ prefix: "/notifications" })
       },
     };
   });
+}
 
-export type NotificationRoutes = typeof notificationRoutes;
+export type NotificationRoutes = ReturnType<typeof createNotificationRoutes>;

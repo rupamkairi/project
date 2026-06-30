@@ -6,6 +6,8 @@
     "baseUrl": ".",
     "paths": {
       "@projectx/ecommerce-storefront": ["./src"],
+      "@projectx/platform-web": ["../../../platform/web/src"],
+      "@projectx/platform-web/*": ["../../../platform/web/src/*"],
       "@/*": ["./src/*"]
     }
   },

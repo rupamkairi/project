@@ -99,7 +99,7 @@ dashboard.roles.tsx
 
 | What | Pattern | Examples |
 |------|---------|---------|
-| Elysia plugin (compose) | `{name}Compose` | `platformCompose` `crmCompose` |
+| Elysia plugin (compose) | `create{Name}Compose` | `createPlatformCompose` `createCrmCompose` |
 | Elysia app type (compose) | `{Name}App` | `PlatformApp` `CrmApp` |
 | Route array | `{name}Routes` | `platformRoutes` `crmRoutes` |
 | Compose manifest | `{name}Manifest` | `platformManifest` `crmManifest` |

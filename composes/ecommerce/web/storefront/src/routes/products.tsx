@@ -5,6 +5,7 @@ import { Input, Button, Skeleton, Select, SelectContent, SelectItem, SelectTrigg
 import { useQuery } from "@tanstack/react-query";
 import { ecommerceStorefrontApi } from "../lib/api";
 import { ProductCard } from "../components/ProductCard";
+import { formatCurrency } from "../lib/format";
 import { Search, SlidersHorizontal, Grid3X3, List } from "lucide-react";
 
 function StorefrontProducts() {
@@ -13,7 +14,7 @@ function StorefrontProducts() {
   const [view, setView] = useState<"grid" | "list">("grid");
   const { data, isLoading } = useQuery({
     queryKey: ["store-products", search, sort],
-    queryFn: () => ecommerceStorefrontApi.getProducts({ search: search || undefined, limit: "20" }),
+    queryFn: () => ecommerceStorefrontApi.getProducts({ search: search || undefined, limit: 20 }),
   });
 
   const products = data?.data?.data ?? [];

@@ -11,7 +11,7 @@ function StorefrontSearch() {
   const [q, setQ] = useState("");
   const { data, isLoading } = useQuery({
     queryKey: ["store-search", q],
-    queryFn: () => ecommerceStorefrontApi.getProducts({ search: q, limit: "20" }),
+    queryFn: () => ecommerceStorefrontApi.getProducts({ search: q, limit: 20 }),
     enabled: q.length > 0,
   });
 

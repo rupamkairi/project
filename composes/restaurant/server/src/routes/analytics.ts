@@ -1,7 +1,7 @@
 import Elysia from "elysia";
 import type { Mediator, EventBus } from "@core";
 
-export function analyticsRoutes(mediator: Mediator, bus: EventBus) {
+export function createAnalyticsRoutes(mediator: Mediator, bus: EventBus) {
   return new Elysia({ prefix: "/analytics" })
     .get("/", async ({ request }) => {
       const session = (request as any).session;

@@ -42,7 +42,7 @@ async function getStageId(orgId: string, entityType: string, stageName: string):
 
 // ── Courses ────────────────────────────────────────────
 
-export function courseRoutes(_mediator: Mediator) {
+export function createCourseRoutes(_mediator: Mediator) {
   return new Elysia({ prefix: "" })
 
     // ── Public Catalog ──

@@ -5,6 +5,7 @@ Elysia HTTP server (`apps/server`) and background worker (`apps/server/src/worke
 → For monorepo structure and workspaces: [monorepo.md](../monorepo.md)
 → For module layer details: [module.md](../module.md)
 → For compose plug model: [compose.md](../compose.md)
+→ For the server-quality contract: [server-quality.md](../server-quality.md)
 
 ---
 
@@ -147,7 +148,7 @@ Full module spec: [module.md](../module.md)
 ## Adding a new compose
 
 1. Create `composes/{name}/server/`
-2. Export `{name}Compose` Elysia plugin and `{Name}App` type
+2. Export `create{Name}Compose(...)` and `{Name}App`
 3. Import and `.use()` in `apps/server/src/index.ts`
 4. Add `@projectx/{name}-server` to `apps/server/package.json`
 

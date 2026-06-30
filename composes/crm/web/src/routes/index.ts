@@ -15,7 +15,8 @@ import { Route as segmentsRoute } from "./segments/index"
 import { Route as segmentDetailRoute } from "./segments/detail"
 import { Route as ticketsRoute } from "./tickets/index"
 
-export const crmRoutes = crmLayoutRoute.addChildren([
+export const crmRoutes = [
+  crmLayoutRoute.addChildren([
   dashboardRoute,
   contactsRoute,
   contactDetailRoute,
@@ -31,4 +32,5 @@ export const crmRoutes = crmLayoutRoute.addChildren([
   segmentsRoute,
   segmentDetailRoute,
   ticketsRoute,
-])
+  ]),
+]

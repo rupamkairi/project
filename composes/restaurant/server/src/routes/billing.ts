@@ -5,7 +5,7 @@ import { db } from "../lib/db.js";
 import { rstShifts } from "../db/schema/restaurant.js";
 import { and, eq } from "drizzle-orm";
 
-export function billingRoutes(mediator: Mediator, bus: EventBus) {
+export function createBillingRoutes(mediator: Mediator, bus: EventBus) {
   return new Elysia({ prefix: "/billing" })
     .post("/bills", async ({ body, request }) => {
       const session = (request as any).session;

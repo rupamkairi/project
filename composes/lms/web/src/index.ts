@@ -12,6 +12,7 @@ export { learnerRoutes };
 export { instructorRoutes };
 export { adminRoutes };
 export { verifyCertificateRoute };
+export { lmsManifest } from "./manifest";
 
 export const lmsRoutes = [
   ...learnerRoutes,

@@ -6,7 +6,7 @@ import { ArrowLeft, Plus, Pencil, Trash2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, Link } from "@tanstack/react-router";
 import { ecommerceAdminApi } from "../../lib/api";
-import { formatCurrency } from "../../../../storefront/src/lib/format";
+import { formatCurrency } from "../../lib/format";
 
 function VariantDialog({ productId, variant, onClose }: { productId: string; variant?: any; onClose: () => void }) {
   const queryClient = useQueryClient();

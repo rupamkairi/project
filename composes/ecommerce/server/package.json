@@ -6,6 +6,10 @@
   "description": "Ecommerce Compose Server - Headless ecommerce with products, cart, checkout, orders, fulfillment",
   "exports": {
     ".": "./src/index.ts",
+    "./db/seed/ecommerce": "./src/db/seed/ecommerce.ts",
+    "./db/seed/regions": "./src/db/seed/regions.seed.ts",
+    "./db/seed/roles": "./src/db/seed/roles.seed.ts",
+    "./db/schema/index": "./src/db/schema/index.ts",
     "./db/schema/ecommerce": "./src/db/schema/index.ts"
   },
   "scripts": {

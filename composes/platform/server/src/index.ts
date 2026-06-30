@@ -5,8 +5,8 @@ import { createAuthPlugin } from "@projectx/plugin-auth-server";
 import type { AuthSession } from "@projectx/plugin-auth-server";
 import { createUserRoutes } from "./routes/users.js";
 import { createRoleRoutes } from "./routes/roles.js";
-import { notificationRoutes } from "./routes/notifications.js";
-import { settingsRoutes } from "./routes/settings.js";
+import { createNotificationRoutes } from "./routes/notifications.js";
+import { createSettingsRoutes } from "./routes/settings.js";
 import { createInviteRoutes } from "./routes/invites.js";
 import { createOverviewRoutes } from "./routes/overview.js";
 import { createMastersRoutes } from "./routes/masters.js";
@@ -152,8 +152,8 @@ export function createPlatformCompose(mediator: Mediator) {
     .use(createInviteRoutes())
     .use(createOverviewRoutes(mediator))
     .use(createMastersRoutes(mediator))
-    .use(notificationRoutes)
-    .use(settingsRoutes)
+    .use(createNotificationRoutes())
+    .use(createSettingsRoutes())
     .use(storagePlugin.plugin as any)
     .use(notificationPlugin.plugin as any);
 }

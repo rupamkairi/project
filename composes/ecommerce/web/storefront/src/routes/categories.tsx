@@ -48,7 +48,7 @@ function StorefrontCategoryDetail() {
   const navigate = useNavigate();
   const { data, isLoading } = useQuery({
     queryKey: ["store-products-category", id],
-    queryFn: () => ecommerceStorefrontApi.getProducts({ categoryId: id, limit: "50" }),
+    queryFn: () => ecommerceStorefrontApi.getProducts({ categoryId: id, limit: 50 }),
   });
   const products = data?.data?.data ?? [];
 

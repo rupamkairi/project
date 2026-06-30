@@ -53,7 +53,7 @@ async function validateCoupon(code: string, courseId: string, orgId: string) {
   return coupon[0]
 }
 
-export function enrollmentRoutes(_mediator: Mediator) {
+export function createEnrollmentRoutes(_mediator: Mediator) {
   return new Elysia({ prefix: "" })
 
     .get("/enrollments", async (ctx) => {

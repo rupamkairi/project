@@ -8,11 +8,15 @@
     "paths": {
       "@projectx/server": ["../../../apps/server/src/index.ts"],
       "@projectx/server/*": ["../../../apps/server/src/*"],
+      "@projectx/platform-server": ["./src/index.ts"],
+      "@projectx/platform-server/*": ["./src/*"],
       "@core": ["../../../apps/server/src/core/index.ts"],
       "@core/*": ["../../../apps/server/src/core/*"],
       "@modules/*": ["../../../apps/server/src/modules/*"],
       "@infra/*": ["../../../apps/server/src/infra/*"],
-      "@db/*": ["../../../apps/server/src/infra/db/*"]
+      "@db/*": ["../../../apps/server/src/infra/db/*"],
+      "@db/client": ["../../../apps/server/src/infra/db/client.ts"],
+      "@db/schema/*": ["../../../apps/server/src/infra/db/schema/*"]
     }
   },
   "include": ["src/**/*"],

@@ -42,7 +42,7 @@ async function getStageId(orgId: string, entityType: string, stageName: string):
   return stage[0]?.id ?? null
 }
 
-export function analyticsRoutes(_mediator: Mediator) {
+export function createAnalyticsRoutes(_mediator: Mediator) {
   return new Elysia({ prefix: "" })
 
     .get("/admin/analytics/overview", async (ctx) => {

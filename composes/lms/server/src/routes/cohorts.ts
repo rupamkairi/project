@@ -41,7 +41,7 @@ async function getStageId(orgId: string, entityType: string, stageName: string):
   return stage[0]?.id ?? null
 }
 
-export function cohortRoutes(_mediator: Mediator) {
+export function createCohortRoutes(_mediator: Mediator) {
   return new Elysia({ prefix: "" })
 
     .get("/instructor/courses/:id/cohorts", async (ctx) => {

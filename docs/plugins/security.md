@@ -67,8 +67,8 @@ app
   .use(security.plugin)  // first
   .use(logging.plugin)
   .use(auth.plugin)
-  .use(platformCompose)
-  .use(crmCompose);
+  .use(createPlatformCompose(mediator))
+  .use(createCrmCompose(mediator));
 ```
 
 ---

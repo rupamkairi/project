@@ -1,10 +1,9 @@
 import Elysia from "elysia";
-import type { EventBus } from "@core";
 
-export function wsRoutes(bus: EventBus) {
+export function createWsRoutes() {
   return new Elysia()
     // KDS WebSocket: kitchen staff subscribe per outlet+station
-    .ws("/restaurant/ws/kds/:outletId/:station", {
+    .ws("/ws/kds/:outletId/:station", {
       open(ws: any) {
         const { outletId, station } = ws.data?.params ?? {};
         if (outletId && station) {
@@ -22,7 +21,7 @@ export function wsRoutes(bus: EventBus) {
       message() {},
     })
     // POS WebSocket: waiters / cashiers subscribe per outlet
-    .ws("/restaurant/ws/pos/:outletId", {
+    .ws("/ws/pos/:outletId", {
       open(ws: any) {
         const { outletId } = ws.data?.params ?? {};
         if (outletId) ws.subscribe(`pos:${outletId}`);
@@ -34,7 +33,7 @@ export function wsRoutes(bus: EventBus) {
       message() {},
     })
     // Delivery WebSocket: dispatcher
-    .ws("/restaurant/ws/delivery/:outletId", {
+    .ws("/ws/delivery/:outletId", {
       open(ws: any) {
         const { outletId } = ws.data?.params ?? {};
         if (outletId) ws.subscribe(`delivery:${outletId}`);

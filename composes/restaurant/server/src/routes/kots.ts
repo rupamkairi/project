@@ -14,7 +14,7 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
   bumped: [],
 };
 
-export function kdsRoutes(mediator: Mediator, bus: EventBus) {
+export function createKotsRoutes(mediator: Mediator, bus: EventBus) {
   return new Elysia({ prefix: "/kds" })
     .get("/kots", async ({ request }) => {
       const session = (request as any).session;

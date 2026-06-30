@@ -1,6 +1,7 @@
 # Compose — Standards and Integration Contract
 
 A **Compose** is the application layer that turns reusable Modules into a real product.
+For the server-side contract that every compose must follow, see [server-quality.md](./server-quality.md).
 
 ---
 
@@ -107,7 +108,7 @@ composes/
     │   │   ├── db/
     │   │   │   ├── schema/   ← Compose-owned Drizzle tables
     │   │   │   └── seed/     ← Roles, templates, defaults
-    │   │   └── index.ts      ← exports {name}Compose + {Name}App
+    │   │   └── index.ts      ← exports create{Name}Compose + {Name}App
     │   ├── package.json
     │   └── tsconfig.json
     └── web/
@@ -132,21 +133,24 @@ Every compose server **must** export:
 // composes/{name}/server/src/index.ts
 import { Elysia } from "elysia";
 
-export const {name}Compose = new Elysia({ prefix: "/{name}" })
-  .use(authRoutes)
-  .use(usersRoutes)
+export function create{Name}Compose(mediator: Mediator) {
+  return new Elysia({ prefix: "/{name}" })
+    .use(createAuthRoutes(mediator))
+    .use(createUsersRoutes(mediator));
+}
 
-export type {Name}App = typeof {name}Compose
+export type {Name}App = ReturnType<typeof create{Name}Compose>;
 ```
 
 Register in `apps/server/src/index.ts`:
 
 ```typescript
-import { {name}Compose } from "@projectx/{name}-server";
+import { create{Name}Compose } from "@projectx/{name}-server";
+
+const {name}Compose = create{Name}Compose(mediator);
 
 const app = new Elysia()
-  .use(platformCompose)
-  .use({name}Compose)      // ← add here
+  .use({name}Compose) // ← add here
   .listen(3000);
 
 export type App = typeof app;

@@ -18,7 +18,7 @@ async function getStageId(orgId: string, entityType: string, stageName: string):
   return stage[0]?.id ?? null
 }
 
-export function webhookRoutes(_mediator: Mediator) {
+export function createWebhookRoutes(_mediator: Mediator) {
   return new Elysia({ prefix: "" })
 
     // ── Stripe Webhook Handler (idempotent) ──

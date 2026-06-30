@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { ecommerceAdminApi } from "../../lib/api";
-import { formatCurrency } from "../../../../storefront/src/lib/format";
+import { formatCurrency } from "../../lib/format";
 import { Mail, ShoppingBag } from "lucide-react";
 
 function AdminCustomers() {

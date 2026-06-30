@@ -27,7 +27,7 @@ function hasPermission(actor: { roles: string[] }, perm: string): boolean {
   return actor.roles.includes("lms-admin") || actor.roles.includes(perm) || actor.roles.includes("*:*")
 }
 
-export function discussionRoutes(_mediator: Mediator) {
+export function createDiscussionRoutes(_mediator: Mediator) {
   return new Elysia({ prefix: "" })
 
     // ── List discussions for a lesson ──

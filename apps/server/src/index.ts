@@ -439,14 +439,14 @@ async function main() {
   const platformCompose = createPlatformCompose(mediator);
 
   // Dynamic import to avoid circular dependency with crm-compose
-  const { createCrmRoutes } = await import("@projectx/crm-server");
-  const crmCompose = createCrmRoutes(mediator);
+  const { createCrmCompose } = await import("@projectx/crm-server");
+  const crmCompose = createCrmCompose(mediator);
 
   const { createEcommerceCompose } = await import("@projectx/ecommerce-server");
   const ecommerceCompose = createEcommerceCompose(mediator, bootRegistry.adapters);
 
   const { createErpCompose } = await import("@projectx/erp-server");
-  const erpCompose = createErpCompose(mediator, bus, bootRegistry.scheduler as any);
+  const erpCompose = createErpCompose(mediator, bus, bootRegistry.scheduler);
 
   const { createLmsCompose } = await import("@projectx/lms-server");
   const lmsCompose = createLmsCompose(mediator, bus, bootRegistry.scheduler);

@@ -37,6 +37,7 @@ Architecture: `Core → Module → Compose → Host Shell`
 | [core.md](./core.md) | Core primitives: Entity, Event, CQRS, FSM, Repository, Queue, Realtime |
 | [module.md](./module.md) | Module anatomy, directory structure, public interface contract |
 | [compose.md](./compose.md) | Compose standards, integration contract, manifest requirements |
+| [server-quality.md](./server-quality.md) | Repo-wide server contract for every compose |
 | [conventions.md](./conventions.md) | Naming rules for dirs, files, routes, exports, DB tables |
 | [monorepo.md](./monorepo.md) | Workspaces, Turborepo build order, path aliases, packages |
 
@@ -52,6 +53,7 @@ Architecture: `Core → Module → Compose → Host Shell`
 | File | Covers |
 |---|---|
 | [design-system.md](./design-system.md) | shadcn/ui, Tailwind, component usage, theming |
+| [web-quality.md](./web-quality.md) | Web code quality standard for React, TypeScript, Zustand, routing, UI, and API usage |
 
 ### Composes
 
