@@ -100,7 +100,7 @@ export function CustomerOrderStatusPage() {
       )}
 
       {isFinal && (
-        <Button className="w-full" onClick={() => navigate({ to: "/customer/menu" })}>
+        <Button className="w-full" onClick={() => navigate({ to: "/restaurants/customer/menu" })}>
           Order Again
         </Button>
       )}

@@ -6,19 +6,19 @@ import { CustomerOrderStatusPage } from "./pages/order-status";
 
 const customerMenuRoute = createRoute({
   getParentRoute: () => sharedRootRoute,
-  path: "/customer/menu",
+  path: "/restaurants/customer/menu",
   component: CustomerMenuPage,
 });
 
 const customerCartRoute = createRoute({
   getParentRoute: () => sharedRootRoute,
-  path: "/customer/cart",
+  path: "/restaurants/customer/cart",
   component: CustomerCartPage,
 });
 
 const customerOrderStatusRoute = createRoute({
   getParentRoute: () => sharedRootRoute,
-  path: "/customer/order/$id",
+  path: "/restaurants/customer/order/$id",
   component: CustomerOrderStatusPage,
 });
 

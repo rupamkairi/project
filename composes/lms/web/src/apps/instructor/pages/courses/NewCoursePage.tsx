@@ -22,7 +22,7 @@ export function NewCoursePage() {
         language,
       }),
     onSuccess: (data) => {
-      navigate({ to: `/teach/courses/${data.id}/edit` })
+      navigate({ to: `/lms/teach/courses/${data.id}/edit` })
     },
     onError: (err: any) => {
       setError(err.message ?? "Failed to create course")
@@ -42,7 +42,7 @@ export function NewCoursePage() {
   return (
     <div className="max-w-2xl">
       <button
-        onClick={() => navigate({ to: "/teach/courses" })}
+        onClick={() => navigate({ to: "/lms/teach/courses" })}
         className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4"
       >
         <ArrowLeft className="h-4 w-4" />
@@ -130,7 +130,7 @@ export function NewCoursePage() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate({ to: "/teach/courses" })}
+                onClick={() => navigate({ to: "/lms/teach/courses" })}
               >
                 Cancel
               </Button>

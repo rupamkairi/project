@@ -26,7 +26,7 @@ export function CourseCard({ course }: CourseCardProps) {
   return (
     <Card
       className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
-      onClick={() => navigate({ to: `/learn/courses/${course.slug}` })}
+      onClick={() => navigate({ to: `/lms/learn/courses/${course.slug}` })}
     >
       <div className="aspect-video bg-muted overflow-hidden">
         {course.thumbnailUrl ? (

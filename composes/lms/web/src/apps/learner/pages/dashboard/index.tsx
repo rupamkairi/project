@@ -50,7 +50,7 @@ export function LearnerDashboard() {
                 className="border rounded-lg p-4 space-y-2 cursor-pointer hover:shadow-md transition-shadow"
                 onClick={() =>
                   navigate({
-                    to: `/learn/courses/${e.courseSlug ?? e.courseId}`,
+                    to: `/lms/learn/courses/${e.courseSlug ?? e.courseId}`,
                   })
                 }
               >
@@ -108,7 +108,7 @@ export function LearnerDashboard() {
                         size="sm"
                         onClick={() =>
                           navigate({
-                            to: `/learn/courses/${e.courseSlug ?? e.courseId}`,
+                            to: `/lms/learn/courses/${e.courseSlug ?? e.courseId}`,
                           })
                         }
                       >
@@ -128,7 +128,7 @@ export function LearnerDashboard() {
           <p className="text-muted-foreground mb-4">
             You haven't enrolled in any courses yet
           </p>
-          <Button onClick={() => navigate({ to: "/learn/catalog" })}>
+          <Button onClick={() => navigate({ to: "/lms/learn/catalog" })}>
             Browse Catalog
           </Button>
         </div>

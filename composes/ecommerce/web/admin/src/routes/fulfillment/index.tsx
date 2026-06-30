@@ -39,7 +39,7 @@ function AdminFulfillment() {
             <tbody>
               {fulfillments.map((f: any) => (
                 <tr key={f.id} className="border-b last:border-0 hover:bg-muted/50">
-                  <td className="p-3 font-medium cursor-pointer" onClick={() => navigate({ to: "/admin/ecommerce/orders/$id", params: { id: f.orderId } })}>
+                  <td className="p-3 font-medium cursor-pointer" onClick={() => navigate({ to: "/ecommerce/admin/orders/$id", params: { id: f.orderId } })}>
                     {f.order?.referenceNo ?? f.orderId.slice(0, 8)}
                   </td>
                   <td className="p-3">{f.carrier ?? "—"}</td>

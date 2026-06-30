@@ -11,7 +11,7 @@ import { AdminCouponsPage } from "./pages/coupons"
 
 export const adminLayoutRoute = createRoute({
   getParentRoute: () => sharedRootRoute,
-  path: "/lms-admin",
+  path: "/lms/admin",
   component: () => <LmsLayout app="admin" />,
 })
 

@@ -28,23 +28,23 @@ import { useLmsAuthStore } from "../../stores/auth-store"
 
 const NAV_ITEMS: Record<string, NavBarItem[]> = {
   learner: [
-    { label: "Dashboard", href: "/learn/dashboard", icon: LayoutDashboard },
-    { label: "Catalog", href: "/learn/catalog", icon: Compass },
-    { label: "Certificates", href: "/learn/certificates", icon: Award },
+    { label: "Dashboard", href: "/lms/learn/dashboard", icon: LayoutDashboard },
+    { label: "Catalog", href: "/lms/learn/catalog", icon: Compass },
+    { label: "Certificates", href: "/lms/learn/certificates", icon: Award },
   ],
   instructor: [
-    { label: "Dashboard", href: "/teach/dashboard", icon: LayoutDashboard },
-    { label: "My Courses", href: "/teach/courses", icon: BookOpen },
-    { label: "Analytics", href: "/teach/analytics", icon: BarChart3 },
+    { label: "Dashboard", href: "/lms/teach/dashboard", icon: LayoutDashboard },
+    { label: "My Courses", href: "/lms/teach/courses", icon: BookOpen },
+    { label: "Analytics", href: "/lms/teach/analytics", icon: BarChart3 },
   ],
   admin: [
-    { label: "Dashboard", href: "/lms-admin/dashboard", icon: LayoutDashboard },
-    { label: "Courses", href: "/lms-admin/courses", icon: BookOpen },
-    { label: "Enrollments", href: "/lms-admin/enrollments", icon: Users },
-    { label: "Instructors", href: "/lms-admin/instructors", icon: UserCheck },
-    { label: "Analytics", href: "/lms-admin/analytics", icon: BarChart3 },
-    { label: "Coupons", href: "/lms-admin/coupons", icon: Tag },
-    { label: "Settings", href: "/lms-admin/config", icon: Settings },
+    { label: "Dashboard", href: "/lms/admin/dashboard", icon: LayoutDashboard },
+    { label: "Courses", href: "/lms/admin/courses", icon: BookOpen },
+    { label: "Enrollments", href: "/lms/admin/enrollments", icon: Users },
+    { label: "Instructors", href: "/lms/admin/instructors", icon: UserCheck },
+    { label: "Analytics", href: "/lms/admin/analytics", icon: BarChart3 },
+    { label: "Coupons", href: "/lms/admin/coupons", icon: Tag },
+    { label: "Settings", href: "/lms/admin/config", icon: Settings },
   ],
 }
 

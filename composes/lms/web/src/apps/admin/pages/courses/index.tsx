@@ -87,7 +87,7 @@ export function AdminCoursesPage() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => navigate({ to: `/lms-admin/enrollments?courseId=${c.id}` })}
+                      onClick={() => navigate({ to: `/lms/admin/enrollments?courseId=${c.id}` })}
                     >
                       Enrollments
                     </Button>

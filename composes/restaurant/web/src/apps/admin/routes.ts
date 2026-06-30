@@ -8,31 +8,31 @@ import { AdminAnalyticsPage } from "./pages/analytics";
 
 const adminDashboardRoute = createRoute({
   getParentRoute: () => sharedRootRoute,
-  path: "/restaurant/dashboard",
+  path: "/restaurants/admin/dashboard",
   component: AdminDashboardPage,
 });
 
 const adminMenuRoute = createRoute({
   getParentRoute: () => sharedRootRoute,
-  path: "/restaurant/menu",
+  path: "/restaurants/admin/menu",
   component: AdminMenuPage,
 });
 
 const adminInventoryRoute = createRoute({
   getParentRoute: () => sharedRootRoute,
-  path: "/restaurant/inventory",
+  path: "/restaurants/admin/inventory",
   component: AdminInventoryPage,
 });
 
 const adminAggregatorsRoute = createRoute({
   getParentRoute: () => sharedRootRoute,
-  path: "/restaurant/aggregators",
+  path: "/restaurants/admin/aggregators",
   component: AdminAggregatorsPage,
 });
 
 const adminAnalyticsRoute = createRoute({
   getParentRoute: () => sharedRootRoute,
-  path: "/restaurant/analytics",
+  path: "/restaurants/admin/analytics",
   component: AdminAnalyticsPage,
 });
 

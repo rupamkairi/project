@@ -1,5 +1,5 @@
 const SERVER_ROOT = (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_API_URL) || "http://localhost:10050";
-const API_BASE = SERVER_ROOT + "/restaurant";
+const API_BASE = SERVER_ROOT + "/restaurants";
 
 class ApiError extends Error {
   constructor(

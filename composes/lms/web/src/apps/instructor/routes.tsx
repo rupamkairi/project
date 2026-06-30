@@ -10,7 +10,7 @@ import { InstructorAnalyticsOverviewPage } from "./pages/analytics-overview"
 
 export const instructorLayoutRoute = createRoute({
   getParentRoute: () => sharedRootRoute,
-  path: "/teach",
+  path: "/lms/teach",
   component: () => <LmsLayout app="instructor" />,
 })
 

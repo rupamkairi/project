@@ -116,7 +116,7 @@ export function KdsBoardPage() {
   const { outletId } = useOutletStore();
   const qc = useQueryClient();
   const [selectedStation, setSelectedStation] = useState<string | null>(null);
-  const socket = useRestaurantSocket(`/restaurant/ws/kds/${outletId}/${selectedStation ?? "all"}`);
+  const socket = useRestaurantSocket(`/restaurants/ws/kds/${outletId}/${selectedStation ?? "all"}`);
 
   const { data } = useQuery({
     queryKey: ["rst-kds", outletId],

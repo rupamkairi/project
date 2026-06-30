@@ -5,13 +5,13 @@ import { DeliveryRiderPage } from "./pages/rider";
 
 const deliveryDispatchRoute = createRoute({
   getParentRoute: () => sharedRootRoute,
-  path: "/delivery/dispatch",
+  path: "/restaurants/delivery/dispatch",
   component: DeliveryDispatcherPage,
 });
 
 const deliveryRidersRoute = createRoute({
   getParentRoute: () => sharedRootRoute,
-  path: "/delivery/riders",
+  path: "/restaurants/delivery/riders",
   component: DeliveryRiderPage,
 });
 

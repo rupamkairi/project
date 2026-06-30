@@ -21,7 +21,7 @@ export function createRestaurantCompose(
   registerRestaurantHooks(bus, mediator);
   if (scheduler) registerRestaurantJobs(scheduler, mediator, bus);
 
-  return new Elysia({ prefix: "/restaurant" })
+  return new Elysia({ prefix: "/restaurants" })
     .use(createMenuRoutes(mediator, bus))
     .use(createOutletRoutes(mediator, bus))
     .use(createOrderRoutes(mediator, bus))

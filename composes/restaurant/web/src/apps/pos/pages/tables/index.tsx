@@ -55,7 +55,7 @@ export function PosTablesPage() {
     <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Tables</h1>
-        <Button size="sm" onClick={() => navigate({ to: "/pos/orders/new" })}>
+        <Button size="sm" onClick={() => navigate({ to: "/restaurants/pos/orders/new" })}>
           New Takeaway / Delivery
         </Button>
       </div>
@@ -76,9 +76,9 @@ export function PosTablesPage() {
               table={t}
               onClick={() => {
                 if (t.status === "occupied") {
-                  navigate({ to: "/pos/orders", search: { tableId: t.id } as any });
+                  navigate({ to: "/restaurants/pos/orders", search: { tableId: t.id } as any });
                 } else {
-                  navigate({ to: "/pos/orders/new", search: { tableId: t.id, type: "dine-in" } as any });
+                  navigate({ to: "/restaurants/pos/orders/new", search: { tableId: t.id, type: "dine-in" } as any });
                 }
               }}
             />

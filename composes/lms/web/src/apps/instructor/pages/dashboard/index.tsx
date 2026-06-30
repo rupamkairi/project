@@ -46,13 +46,13 @@ export function InstructorDashboard() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => navigate({ to: "/teach/analytics" })}
+              onClick={() => navigate({ to: "/lms/teach/analytics" })}
             >
               View Analytics
             </Button>
             <Button
               size="sm"
-              onClick={() => navigate({ to: "/teach/courses/new" })}
+              onClick={() => navigate({ to: "/lms/teach/courses/new" })}
             >
               New Course
             </Button>
@@ -85,7 +85,7 @@ export function InstructorDashboard() {
                       variant="ghost"
                       size="sm"
                       onClick={() =>
-                        navigate({ to: `/teach/courses/${c.id}/edit` })
+                        navigate({ to: `/lms/teach/courses/${c.id}/edit` })
                       }
                     >
                       Edit
@@ -99,7 +99,7 @@ export function InstructorDashboard() {
           <p className="p-4 text-sm text-muted-foreground text-center">
             No courses yet.{" "}
             <button
-              onClick={() => navigate({ to: "/teach/courses/new" })}
+              onClick={() => navigate({ to: "/lms/teach/courses/new" })}
               className="text-primary hover:underline"
             >
               Create your first course

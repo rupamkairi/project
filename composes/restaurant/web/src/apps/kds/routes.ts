@@ -4,7 +4,7 @@ import { KdsBoardPage } from "./pages/board";
 
 const kdsBoardRoute = createRoute({
   getParentRoute: () => sharedRootRoute,
-  path: "/kds",
+  path: "/restaurants/kds",
   component: KdsBoardPage,
 });
 

@@ -27,7 +27,7 @@ function StorefrontCategories() {
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {categories.map((cat: any) => (
-            <Card key={cat.id} className="group cursor-pointer border-0 bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800 hover:shadow-lg transition-all duration-300" onClick={() => navigate({ to: "/store/categories/$id", params: { id: cat.id } })}>
+            <Card key={cat.id} className="group cursor-pointer border-0 bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800 hover:shadow-lg transition-all duration-300" onClick={() => navigate({ to: "/ecommerce/store/categories/$id", params: { id: cat.id } })}>
               <CardContent className="p-6 text-center space-y-2">
                 <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto group-hover:scale-110 transition-transform">
                   <span className="text-2xl">📁</span>
@@ -54,7 +54,7 @@ function StorefrontCategoryDetail() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-      <Button variant="ghost" size="sm" onClick={() => navigate({ to: "/store/categories" })} className="w-fit">
+      <Button variant="ghost" size="sm" onClick={() => navigate({ to: "/ecommerce/store/categories" })} className="w-fit">
         <ArrowLeft className="h-4 w-4 mr-1" /> All Categories
       </Button>
       <h1 className="text-3xl font-bold tracking-tight">Category</h1>

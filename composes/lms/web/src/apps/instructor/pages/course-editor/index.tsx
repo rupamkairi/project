@@ -7,7 +7,7 @@ import { ModuleManager } from "./ModuleManager"
 import { PricingForm } from "./PricingForm"
 
 export function CourseEditorPage() {
-  const { id } = useParams({ from: "/teach/courses/$id/edit" })
+  const { id } = useParams({ from: "/lms/teach/courses/$id/edit" })
 
   const { data: course, refetch } = useQuery({
     queryKey: ["instructor-course", id],

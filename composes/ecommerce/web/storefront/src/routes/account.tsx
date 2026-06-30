@@ -38,8 +38,8 @@ function StorefrontAccount() {
         </div>
         <h2 className="text-xl font-semibold">Sign in required</h2>
         <p className="text-sm text-muted-foreground">Sign in to view your account and orders</p>
-        <Button asChild><Link to="/store/auth/login">Sign In</Link></Button>
-        <p className="text-sm text-muted-foreground">Don't have an account? <Link to="/store/auth/register" className="text-primary hover:underline font-medium">Register</Link></p>
+        <Button asChild><Link to="/ecommerce/store/auth/login">Sign In</Link></Button>
+        <p className="text-sm text-muted-foreground">Don't have an account? <Link to="/ecommerce/store/auth/register" className="text-primary hover:underline font-medium">Register</Link></p>
       </div>
     );
   }
@@ -47,7 +47,7 @@ function StorefrontAccount() {
   const handleLogout = () => {
     ecommerceStorefrontApi.setToken(null);
     logoutStore();
-    navigate({ to: "/store" });
+    navigate({ to: "/ecommerce/store" });
   };
 
   return (
@@ -93,7 +93,7 @@ function StorefrontAccount() {
             <p className="text-sm text-muted-foreground">Your recent orders</p>
           </div>
           {orders.length > 0 && (
-            <Button variant="ghost" size="sm" onClick={() => navigate({ to: "/store/account" })}>
+            <Button variant="ghost" size="sm" onClick={() => navigate({ to: "/ecommerce/store/account" })}>
               View All <ArrowRight className="h-3 w-3 ml-1" />
             </Button>
           )}
@@ -102,7 +102,7 @@ function StorefrontAccount() {
           <div className="text-center py-12 space-y-3 rounded-xl border border-dashed">
             <Package className="h-8 w-8 mx-auto text-muted-foreground" />
             <p className="text-muted-foreground">No orders yet</p>
-            <Button size="sm" asChild><Link to="/store/products">Start Shopping</Link></Button>
+            <Button size="sm" asChild><Link to="/ecommerce/store/products">Start Shopping</Link></Button>
           </div>
         ) : (
           <div className="rounded-xl border overflow-hidden">
@@ -116,7 +116,7 @@ function StorefrontAccount() {
                     <td className="p-3"><Badge className={STATUS_BADGES[o.status] ?? ""}>{o.status}</Badge></td>
                     <td className="p-3 text-right font-semibold">{formatCurrency(o.totalAmount)}</td>
                     <td className="p-3 text-right">
-                      <Button variant="ghost" size="sm" onClick={() => navigate({ to: "/store/account/orders/$id", params: { id: o.id } })}>
+                      <Button variant="ghost" size="sm" onClick={() => navigate({ to: "/ecommerce/store/account/orders/$id", params: { id: o.id } })}>
                         <Eye className="h-3.5 w-3.5" />
                       </Button>
                     </td>
@@ -150,7 +150,7 @@ function StorefrontAccountOrderDetail() {
   return (
     <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Link to="/store/account" className="hover:text-foreground transition-colors">Account</Link>
+        <Link to="/ecommerce/store/account" className="hover:text-foreground transition-colors">Account</Link>
         <span>/</span>
         <span className="text-foreground font-medium">{order.referenceNo ?? id.slice(0, 8)}</span>
       </div>

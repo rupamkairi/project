@@ -9,7 +9,7 @@ import { CertificatesPage } from "./pages/certificates"
 
 export const learnerLayoutRoute = createRoute({
   getParentRoute: () => sharedRootRoute,
-  path: "/learn",
+  path: "/lms/learn",
   component: () => <LmsLayout app="learner" />,
 })
 

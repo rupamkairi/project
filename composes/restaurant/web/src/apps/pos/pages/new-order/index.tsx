@@ -146,7 +146,7 @@ export function NewOrderPage() {
     onSuccess: (orderId) => {
       clear();
       qc.invalidateQueries({ queryKey: ["rst-orders"] });
-      navigate({ to: `/pos/orders/$id`, params: { id: orderId } });
+      navigate({ to: `/restaurants/pos/orders/$id`, params: { id: orderId } });
     },
   });
 

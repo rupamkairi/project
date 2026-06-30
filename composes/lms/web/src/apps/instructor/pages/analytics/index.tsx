@@ -5,7 +5,7 @@ import { StatCard } from "../../../../components/shared/StatCard";
 import { Card, CardHeader, CardTitle, CardContent, Progress } from "@projectx/ui";
 
 export function CourseAnalyticsPage() {
-  const { id } = useParams({ from: "/teach/courses/$id/analytics" });
+  const { id } = useParams({ from: "/lms/teach/courses/$id/analytics" });
 
   const { data } = useQuery({
     queryKey: ["course-analytics", id],

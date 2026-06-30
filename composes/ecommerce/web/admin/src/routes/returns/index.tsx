@@ -22,7 +22,7 @@ function AdminReturns() {
             <thead className="border-b text-left text-muted-foreground"><tr><th className="p-3 font-medium">Order</th><th className="p-3 font-medium">Reason</th><th className="p-3 font-medium">Status</th><th className="p-3 font-medium">Actions</th></tr></thead>
             <tbody>
               {returns.map((r: any) => (
-                <tr key={r.id} className="border-b last:border-0 hover:bg-muted/50 cursor-pointer" onClick={() => navigate({ to: "/admin/ecommerce/returns/$id", params: { id: r.id } })}>
+                <tr key={r.id} className="border-b last:border-0 hover:bg-muted/50 cursor-pointer" onClick={() => navigate({ to: "/ecommerce/admin/returns/$id", params: { id: r.id } })}>
                   <td className="p-3 font-medium">{r.order?.referenceNo ?? r.orderId?.slice(0, 8) ?? "—"}</td>
                   <td className="p-3 text-muted-foreground">{r.reason ?? "—"}</td>
                   <td className="p-3"><Badge className={STATUS_BADGES[r.status]}>{r.status}</Badge></td>
@@ -44,7 +44,7 @@ function AdminReturnDetail() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title={`Return ${id.slice(0, 8)}`} breadcrumbs={[{ label: "Returns", href: "/admin/ecommerce/returns" }]} />
+      <PageHeader title={`Return ${id.slice(0, 8)}`} breadcrumbs={[{ label: "Returns", href: "/ecommerce/admin/returns" }]} />
       {ret && (
         <div className="rounded-lg border p-4 space-y-2 text-sm">
           <p>Status: <Badge>{ret.status}</Badge></p>

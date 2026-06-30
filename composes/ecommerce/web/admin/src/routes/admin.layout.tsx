@@ -6,15 +6,15 @@ import { Outlet } from "@tanstack/react-router";
 import { LayoutDashboard, Package, FolderOpen, ShoppingCart, Truck, RotateCcw, Users, BarChart3, Settings } from "lucide-react";
 
 const NAV_ITEMS = [
-  { label: "Dashboard", href: "/admin/ecommerce", icon: LayoutDashboard, exact: true },
-  { label: "Products", href: "/admin/ecommerce/products", icon: Package },
-  { label: "Categories", href: "/admin/ecommerce/categories", icon: FolderOpen },
-  { label: "Orders", href: "/admin/ecommerce/orders", icon: ShoppingCart },
-  { label: "Fulfillment", href: "/admin/ecommerce/fulfillment", icon: Truck },
-  { label: "Returns", href: "/admin/ecommerce/returns", icon: RotateCcw },
-  { label: "Customers", href: "/admin/ecommerce/customers", icon: Users },
-  { label: "Analytics", href: "/admin/ecommerce/analytics", icon: BarChart3 },
-  { label: "Settings", href: "/admin/ecommerce/settings", icon: Settings },
+  { label: "Dashboard", href: "/ecommerce/admin", icon: LayoutDashboard, exact: true },
+  { label: "Products", href: "/ecommerce/admin/products", icon: Package },
+  { label: "Categories", href: "/ecommerce/admin/categories", icon: FolderOpen },
+  { label: "Orders", href: "/ecommerce/admin/orders", icon: ShoppingCart },
+  { label: "Fulfillment", href: "/ecommerce/admin/fulfillment", icon: Truck },
+  { label: "Returns", href: "/ecommerce/admin/returns", icon: RotateCcw },
+  { label: "Customers", href: "/ecommerce/admin/customers", icon: Users },
+  { label: "Analytics", href: "/ecommerce/admin/analytics", icon: BarChart3 },
+  { label: "Settings", href: "/ecommerce/admin/settings", icon: Settings },
 ];
 
 function AdminUserMenu() {
@@ -54,6 +54,6 @@ function EcommerceAdminLayout() {
 
 export const ecommerceAdminLayoutRoute = createRoute({
   getParentRoute: () => sharedRootRoute,
-  path: "/admin/ecommerce",
+  path: "/ecommerce/admin",
   component: EcommerceAdminLayout,
 });

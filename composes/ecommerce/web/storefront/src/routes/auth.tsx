@@ -24,7 +24,7 @@ function StorefrontLogin() {
     } else if (res.data) {
       ecommerceStorefrontApi.setToken(res.data.token);
       loginStore(res.data.customer, res.data.token);
-      navigate({ to: "/store/account" });
+      navigate({ to: "/ecommerce/store/account" });
     }
   };
 
@@ -54,9 +54,9 @@ function StorefrontLogin() {
           </form>
 
           <div className="text-center text-sm space-y-2">
-            <Link to="/store/auth/register" className="text-primary hover:underline font-medium">Create an account</Link>
+            <Link to="/ecommerce/store/auth/register" className="text-primary hover:underline font-medium">Create an account</Link>
             <br />
-            <Link to="/store/auth/forgot" className="text-muted-foreground hover:underline text-xs">Forgot password?</Link>
+            <Link to="/ecommerce/store/auth/forgot" className="text-muted-foreground hover:underline text-xs">Forgot password?</Link>
           </div>
         </CardContent>
       </Card>
@@ -82,7 +82,7 @@ function StorefrontRegister() {
     } else if (res.data) {
       ecommerceStorefrontApi.setToken(res.data.token);
       loginStore(res.data.customer, res.data.token);
-      navigate({ to: "/store/account" });
+      navigate({ to: "/ecommerce/store/account" });
     }
   };
 
@@ -122,7 +122,7 @@ function StorefrontRegister() {
           </form>
 
           <p className="text-center text-sm text-muted-foreground">
-            Already have an account? <Link to="/store/auth/login" className="text-primary hover:underline font-medium">Sign in</Link>
+            Already have an account? <Link to="/ecommerce/store/auth/login" className="text-primary hover:underline font-medium">Sign in</Link>
           </p>
         </CardContent>
       </Card>
@@ -152,7 +152,7 @@ function StorefrontForgotPassword() {
                 <Mail className="h-8 w-8 text-green-600" />
               </div>
               <p className="text-sm text-green-600 font-medium">Reset link sent! Check your email.</p>
-              <Button variant="outline" asChild><Link to="/store/auth/login">Back to Sign In</Link></Button>
+              <Button variant="outline" asChild><Link to="/ecommerce/store/auth/login">Back to Sign In</Link></Button>
             </div>
           ) : (
             <form onSubmit={(e) => { e.preventDefault(); setSent(true); }} className="space-y-4">
@@ -162,7 +162,7 @@ function StorefrontForgotPassword() {
               </div>
               <Button type="submit" className="w-full h-11">Send Reset Link</Button>
               <p className="text-center text-sm text-muted-foreground">
-                <Link to="/store/auth/login" className="text-primary hover:underline font-medium">Back to Sign In</Link>
+                <Link to="/ecommerce/store/auth/login" className="text-primary hover:underline font-medium">Back to Sign In</Link>
               </p>
             </form>
           )}

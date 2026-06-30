@@ -50,14 +50,14 @@ function StorefrontHome() {
               <Button
                 size="lg"
                 className="bg-white text-zinc-900 hover:bg-zinc-200"
-                onClick={() => navigate({ to: "/store/products" })}
+                onClick={() => navigate({ to: "/ecommerce/store/products" })}
               >
                 Shop Now <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
               <Button
                 size="lg"
                 variant="outline"
-                onClick={() => navigate({ to: "/store/categories" })}
+                onClick={() => navigate({ to: "/ecommerce/store/categories" })}
               >
                 Browse Categories
               </Button>
@@ -103,7 +103,7 @@ function StorefrontHome() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate({ to: "/store/categories" })}
+              onClick={() => navigate({ to: "/ecommerce/store/categories" })}
             >
               View All <ArrowRight className="h-3 w-3 ml-1" />
             </Button>
@@ -115,7 +115,7 @@ function StorefrontHome() {
                 className="group cursor-pointer border-0 bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800 hover:shadow-lg transition-all duration-300"
                 onClick={() =>
                   navigate({
-                    to: "/store/categories/$id",
+                    to: "/ecommerce/store/categories/$id",
                     params: { id: cat.id },
                   })
                 }
@@ -148,7 +148,7 @@ function StorefrontHome() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate({ to: "/store/products" })}
+            onClick={() => navigate({ to: "/ecommerce/store/products" })}
           >
             View All <ArrowRight className="h-3 w-3 ml-1" />
           </Button>
@@ -196,7 +196,7 @@ function StorefrontHome() {
             Join thousands of happy customers. Free shipping on your first
             order.
           </p>
-          <Button size="lg" onClick={() => navigate({ to: "/store/products" })}>
+          <Button size="lg" onClick={() => navigate({ to: "/ecommerce/store/products" })}>
             Start Shopping <ArrowRight className="h-4 w-4 ml-2" />
           </Button>
         </div>

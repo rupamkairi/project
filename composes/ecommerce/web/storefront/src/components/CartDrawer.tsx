@@ -124,7 +124,7 @@ function CartDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
               <span className="text-muted-foreground">Subtotal</span>
               <span className="font-semibold">{formatCurrency(subtotal)}</span>
             </div>
-            <Link to="/store/cart" onClick={onClose}>
+            <Link to="/ecommerce/store/cart" onClick={onClose}>
               <Button className="w-full h-10">
                 View Cart & Checkout <ArrowRight className="h-4 w-4 ml-2" />
               </Button>

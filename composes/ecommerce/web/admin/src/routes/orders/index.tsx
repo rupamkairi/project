@@ -34,7 +34,7 @@ function AdminOrders() {
             <thead className="border-b text-left text-muted-foreground"><tr><th className="p-3 font-medium">Order</th><th className="p-3 font-medium">Customer</th><th className="p-3 font-medium">Status</th><th className="p-3 font-medium">Total</th><th className="p-3 font-medium">Date</th><th className="p-3 font-medium"></th></tr></thead>
             <tbody>
               {orders.map((o: any) => (
-                <tr key={o.id} className="border-b last:border-0 hover:bg-muted/50 cursor-pointer" onClick={() => navigate({ to: "/admin/ecommerce/orders/$id", params: { id: o.id } })}>
+                <tr key={o.id} className="border-b last:border-0 hover:bg-muted/50 cursor-pointer" onClick={() => navigate({ to: "/ecommerce/admin/orders/$id", params: { id: o.id } })}>
                   <td className="p-3 font-medium">{o.referenceNo ?? o.id.slice(0, 8)}</td>
                   <td className="p-3">{o.person?.email ?? "—"}</td>
                   <td className="p-3"><Badge className={STATUS_BADGES[o.status]}>{o.status}</Badge></td>

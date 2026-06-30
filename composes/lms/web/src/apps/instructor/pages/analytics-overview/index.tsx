@@ -63,7 +63,7 @@ export function InstructorAnalyticsOverviewPage() {
                     variant="ghost"
                     size="sm"
                     onClick={() =>
-                      navigate({ to: `/teach/courses/${c.courseId}/analytics` })
+                      navigate({ to: `/lms/teach/courses/${c.courseId}/analytics` })
                     }
                   >
                     View

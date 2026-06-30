@@ -56,7 +56,7 @@ function EnrollCard({ course }: { course: any }) {
             variant="link"
             size="sm"
             className="p-0 h-auto"
-            onClick={() => navigate({ to: `/learn/courses/${course.slug}/continue` })}
+            onClick={() => navigate({ to: `/lms/learn/courses/${course.slug}/continue` })}
           >
             Start learning
           </Button>
@@ -146,7 +146,7 @@ function ModuleRow({ module, isLocked }: { module: any; isLocked: boolean }) {
 }
 
 export function CourseDetailPage() {
-  const { slug } = useParams({ from: "/learn/courses/$slug" })
+  const { slug } = useParams({ from: "/lms/learn/courses/$slug" })
 
   const { data: course } = useQuery({
     queryKey: ["course", slug],

@@ -24,7 +24,7 @@ function AdminCustomers() {
             <thead className="border-b text-left text-muted-foreground"><tr><th className="p-3 font-medium">Customer</th><th className="p-3 font-medium">Email</th><th className="p-3 font-medium">Orders</th><th className="p-3 font-medium">Spent</th><th className="p-3 font-medium">Registered</th></tr></thead>
             <tbody>
               {customers.map((c: any) => (
-                <tr key={c.id} className="border-b last:border-0 hover:bg-muted/50 cursor-pointer" onClick={() => navigate({ to: "/admin/ecommerce/customers/$id", params: { id: c.id } })}>
+                <tr key={c.id} className="border-b last:border-0 hover:bg-muted/50 cursor-pointer" onClick={() => navigate({ to: "/ecommerce/admin/customers/$id", params: { id: c.id } })}>
                   <td className="p-3 flex items-center gap-2">
                     <Avatar name={c.person?.name ?? c.email} size="sm" />
                     <span className="font-medium">{c.person?.name ?? "—"}</span>
@@ -50,7 +50,7 @@ function AdminCustomerDetail() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={cust?.person?.name ?? "Customer"} breadcrumbs={[{ label: "Customers", href: "/admin/ecommerce/customers" }]} />
+      <PageHeader title={cust?.person?.name ?? "Customer"} breadcrumbs={[{ label: "Customers", href: "/ecommerce/admin/customers" }]} />
       {cust && (
         <>
           <div className="flex items-center gap-3">

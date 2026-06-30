@@ -69,7 +69,7 @@ export function LmsAdminDashboard() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => navigate({ to: `/lms-admin/courses` })}
+                    onClick={() => navigate({ to: `/lms/admin/courses` })}
                   >
                     View
                   </Button>

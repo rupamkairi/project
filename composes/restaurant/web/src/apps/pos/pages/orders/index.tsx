@@ -63,7 +63,7 @@ export function PosOrdersPage() {
       <div className="flex-1 p-4 overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-lg font-semibold">Active Orders</h1>
-          <Button onClick={() => navigate({ to: "/pos/orders/new" })}>+ New Order</Button>
+          <Button onClick={() => navigate({ to: "/restaurants/pos/orders/new" })}>+ New Order</Button>
         </div>
 
         {isLoading ? (
@@ -76,7 +76,7 @@ export function PosOrdersPage() {
               <OrderRow
                 key={o.id}
                 order={o}
-                onClick={() => navigate({ to: `/pos/orders/$id`, params: { id: o.id } })}
+                onClick={() => navigate({ to: `/restaurants/pos/orders/$id`, params: { id: o.id } })}
               />
             ))}
           </div>
@@ -87,7 +87,7 @@ export function PosOrdersPage() {
       <aside className="w-64 border-l p-4 overflow-y-auto">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-medium">Tables</h3>
-          <Button size="sm" variant="ghost" onClick={() => navigate({ to: "/pos/tables" })}>
+          <Button size="sm" variant="ghost" onClick={() => navigate({ to: "/restaurants/pos/tables" })}>
             View All
           </Button>
         </div>
@@ -115,9 +115,9 @@ function TableMiniGrid({ outletId }: { outletId: string | null }) {
           key={t.id}
           onClick={() => {
             if (t.status === "occupied") {
-              navigate({ to: "/pos/orders", search: { tableId: t.id } as any });
+              navigate({ to: "/restaurants/pos/orders", search: { tableId: t.id } as any });
             } else {
-              navigate({ to: "/pos/orders/new", search: { tableId: t.id, type: "dine-in" } as any });
+              navigate({ to: "/restaurants/pos/orders/new", search: { tableId: t.id, type: "dine-in" } as any });
             }
           }}
           className={cn(

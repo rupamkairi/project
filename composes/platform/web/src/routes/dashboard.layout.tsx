@@ -13,6 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@projectx/ui"
+import type { NavBarItem } from "@projectx/ui"
 import {
   LayoutDashboard,
   Gauge,
@@ -26,12 +27,9 @@ import {
   Mail,
   Bell,
   FolderOpen,
-  ShoppingBag,
   LogOut,
-  GraduationCap,
-  BookOpen,
-  Settings,
 } from "lucide-react"
+import { platformNavItems } from "@projectx/shared-router"
 
 export const Route = createRoute({
   getParentRoute: () => sharedRootRoute,
@@ -45,25 +43,7 @@ export const Route = createRoute({
   component: DashboardLayout,
 })
 
-const NAV_ITEMS = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, exact: true },
-  { label: "Overview", href: "/dashboard/overview", icon: Gauge },
-  { label: "Persons", href: "/dashboard/persons", icon: Users },
-  { label: "Parties", href: "/dashboard/parties", icon: Building2 },
-  { label: "Locations", href: "/dashboard/locations", icon: MapPin },
-  { label: "Transactions", href: "/dashboard/transactions", icon: Receipt },
-  { label: "Pipelines", href: "/dashboard/pipelines", icon: GitBranch },
-  { label: "Activities", href: "/dashboard/activities", icon: ActivityIcon },
-  { label: "Users", href: "/dashboard/users", icon: Users },
-  { label: "Roles", href: "/dashboard/roles", icon: Shield },
-  { label: "Invites", href: "/dashboard/invites", icon: Mail },
-  { label: "Notifications", href: "/dashboard/notifications", icon: Bell },
-  { label: "Files", href: "/dashboard/files", icon: FolderOpen },
-  { label: "Ecommerce", href: "/admin/ecommerce", icon: ShoppingBag },
-  { label: "Learning", href: "/learn/dashboard", icon: GraduationCap },
-  { label: "Teaching", href: "/teach/dashboard", icon: BookOpen },
-  { label: "LMS Admin", href: "/lms-admin/dashboard", icon: Settings },
-]
+const NAV_ITEMS: NavBarItem[] = [...platformNavItems]
 
 function UserMenu() {
   const { actor, logout } = useAuthStore()

@@ -16,7 +16,7 @@ const typeIcon: Record<string, string> = {
 
 export function ModulePlayerPage() {
   const { slug, moduleId } = useParams({
-    from: "/learn/courses/$slug/modules/$moduleId",
+    from: "/lms/learn/courses/$slug/modules/$moduleId",
   })
 
   const { data: module } = useQuery({
@@ -48,7 +48,7 @@ export function ModulePlayerPage() {
               return (
                 <a
                   key={m.id}
-                  href={`/learn/courses/${slug}/modules/${m.id}`}
+                  href={`/lms/learn/courses/${slug}/modules/${m.id}`}
                   className={cn(
                     "flex items-center gap-2 px-2 py-1.5 rounded text-xs transition-colors",
                     isCurrent
@@ -131,7 +131,7 @@ export function ModulePlayerPage() {
             <div>
               {currentIndex > 0 && (
                 <a
-                  href={`/learn/courses/${slug}/modules/${modules[currentIndex - 1].id}`}
+                  href={`/lms/learn/courses/${slug}/modules/${modules[currentIndex - 1].id}`}
                   className="text-sm text-muted-foreground hover:text-foreground"
                 >
                   ← Previous
@@ -141,7 +141,7 @@ export function ModulePlayerPage() {
             <div>
               {currentIndex < modules.length - 1 && (
                 <a
-                  href={`/learn/courses/${slug}/modules/${modules[currentIndex + 1].id}`}
+                  href={`/lms/learn/courses/${slug}/modules/${modules[currentIndex + 1].id}`}
                   className="text-sm text-primary hover:underline"
                 >
                   Next →

@@ -26,7 +26,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
 
   return (
     <div className="group relative">
-      <Link to="/store/products/$id" params={{ id: product.id }} className="block">
+      <Link to="/ecommerce/store/products/$id" params={{ id: product.id }} className="block">
         <div className="aspect-square rounded-xl bg-zinc-100 dark:bg-zinc-800 overflow-hidden relative mb-3">
           {product.imageUrl ? (
             <img src={product.imageUrl} alt={product.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
@@ -48,7 +48,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
         </div>
       </Link>
       <div className="space-y-1 px-0.5">
-        <Link to="/store/products/$id" params={{ id: product.id }}>
+        <Link to="/ecommerce/store/products/$id" params={{ id: product.id }}>
           <p className="text-sm font-medium line-clamp-1 hover:text-primary transition-colors">{product.title}</p>
         </Link>
         <div className="flex items-baseline gap-1.5">

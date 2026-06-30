@@ -116,7 +116,7 @@ export function OrderDetailPage() {
     <div className="max-w-2xl mx-auto p-6 space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <button onClick={() => navigate({ to: "/pos/orders" })} className="text-xs text-muted-foreground mb-1 hover:underline">
+          <button onClick={() => navigate({ to: "/restaurants/pos/orders" })} className="text-xs text-muted-foreground mb-1 hover:underline">
             ← Back
           </button>
           <h1 className="text-2xl font-mono font-bold">{order.meta?.orderNumber ?? id.slice(0, 8)}</h1>
@@ -168,7 +168,7 @@ export function OrderDetailPage() {
               size="sm"
               variant="outline"
               className="mt-3"
-              onClick={() => navigate({ to: "/pos/orders/new", search: { addTo: id } as any })}
+              onClick={() => navigate({ to: "/restaurants/pos/orders/new", search: { addTo: id } as any })}
             >
               + Add Items
             </Button>
@@ -199,7 +199,7 @@ export function OrderDetailPage() {
         <BillSettleDialog
           bill={bill}
           onClose={() => setSettleDialogOpen(false)}
-          onSettled={() => navigate({ to: "/pos/orders" })}
+          onSettled={() => navigate({ to: "/restaurants/pos/orders" })}
         />
       )}
     </div>

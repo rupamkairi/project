@@ -31,7 +31,7 @@ function StorefrontCart() {
           </div>
           <h2 className="text-xl font-semibold">Your cart is empty</h2>
           <p className="text-sm text-muted-foreground">Looks like you haven't added anything yet</p>
-          <Button asChild><Link to="/store/products">Continue Shopping</Link></Button>
+          <Button asChild><Link to="/ecommerce/store/products">Continue Shopping</Link></Button>
         </div>
       ) : (
         <div className="grid lg:grid-cols-3 gap-8">
@@ -78,10 +78,10 @@ function StorefrontCart() {
               <Separator />
               <div className="flex justify-between font-semibold"><span>Total</span><span>{formatCurrency(subtotal)}</span></div>
               <Button size="lg" className="w-full h-12" asChild>
-                <Link to="/store/checkout">Checkout <ArrowRight className="h-4 w-4 ml-2" /></Link>
+                <Link to="/ecommerce/store/checkout">Checkout <ArrowRight className="h-4 w-4 ml-2" /></Link>
               </Button>
               <Button variant="outline" className="w-full" asChild>
-                <Link to="/store/products"><ArrowLeft className="h-4 w-4 mr-2" /> Continue Shopping</Link>
+                <Link to="/ecommerce/store/products"><ArrowLeft className="h-4 w-4 mr-2" /> Continue Shopping</Link>
               </Button>
             </div>
           </div>

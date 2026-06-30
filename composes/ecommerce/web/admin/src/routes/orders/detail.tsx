@@ -48,7 +48,7 @@ function AdminOrderDetail() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={order?.referenceNo ?? `Order ${id.slice(0, 8)}`} breadcrumbs={[{ label: "Orders", href: "/admin/ecommerce/orders" }, { label: order?.referenceNo ?? "" }]} actions={order && order.status !== "cancelled" && order.status !== "fulfilled" && <Button variant="outline" onClick={() => cancelMut.mutate()}>Cancel Order</Button>} />
+      <PageHeader title={order?.referenceNo ?? `Order ${id.slice(0, 8)}`} breadcrumbs={[{ label: "Orders", href: "/ecommerce/admin/orders" }, { label: order?.referenceNo ?? "" }]} actions={order && order.status !== "cancelled" && order.status !== "fulfilled" && <Button variant="outline" onClick={() => cancelMut.mutate()}>Cancel Order</Button>} />
 
       {order && (
         <div className="flex gap-4 text-sm">

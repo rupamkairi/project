@@ -7,25 +7,25 @@ import { PosTablesPage } from "./pages/tables";
 
 const posOrdersRoute = createRoute({
   getParentRoute: () => sharedRootRoute,
-  path: "/pos/orders",
+  path: "/restaurants/pos/orders",
   component: PosOrdersPage,
 });
 
 const posNewOrderRoute = createRoute({
   getParentRoute: () => sharedRootRoute,
-  path: "/pos/orders/new",
+  path: "/restaurants/pos/orders/new",
   component: NewOrderPage,
 });
 
 const posOrderDetailRoute = createRoute({
   getParentRoute: () => sharedRootRoute,
-  path: "/pos/orders/$id",
+  path: "/restaurants/pos/orders/$id",
   component: OrderDetailPage,
 });
 
 const posTablesRoute = createRoute({
   getParentRoute: () => sharedRootRoute,
-  path: "/pos/tables",
+  path: "/restaurants/pos/tables",
   component: PosTablesPage,
 });
 

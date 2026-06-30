@@ -95,7 +95,7 @@ export function CustomerMenuPage() {
       {cartQty > 0 && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-lg z-20">
           <button
-            onClick={() => navigate({ to: "/customer/cart" })}
+            onClick={() => navigate({ to: "/restaurants/customer/cart" })}
             className="w-full bg-primary text-primary-foreground rounded-xl py-3 px-4 flex items-center justify-between"
           >
             <span className="text-sm font-bold bg-primary-foreground/20 rounded-md px-2 py-0.5">{cartQty}</span>

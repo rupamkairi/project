@@ -52,7 +52,7 @@ export function InstructorCoursesPage() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem
-              onClick={() => navigate({ to: `/teach/courses/${row.original.id}/edit` })}
+              onClick={() => navigate({ to: `/lms/teach/courses/${row.original.id}/edit` })}
             >
               Edit
             </DropdownMenuItem>
@@ -64,7 +64,7 @@ export function InstructorCoursesPage() {
               </DropdownMenuItem>
             )}
             <DropdownMenuItem
-              onClick={() => navigate({ to: `/teach/courses/${row.original.id}/analytics` })}
+              onClick={() => navigate({ to: `/lms/teach/courses/${row.original.id}/analytics` })}
             >
               Analytics
             </DropdownMenuItem>
@@ -83,7 +83,7 @@ export function InstructorCoursesPage() {
             Manage your courses
           </p>
         </div>
-        <Button size="sm" onClick={() => navigate({ to: "/teach/courses/new" })}>
+        <Button size="sm" onClick={() => navigate({ to: "/lms/teach/courses/new" })}>
           <Plus className="h-4 w-4 mr-1.5" />
           New Course
         </Button>

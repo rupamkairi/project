@@ -51,7 +51,7 @@ function AdminProductDetail() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={product?.title ?? "Product Detail"} breadcrumbs={[{ label: "Products", href: "/admin/ecommerce/products" }, { label: product?.title ?? "" }]} actions={product && <><Badge className={product.status === "published" ? "bg-green-100 text-green-700" : "bg-zinc-100 text-zinc-600"}>{product.status}</Badge></>} />
+      <PageHeader title={product?.title ?? "Product Detail"} breadcrumbs={[{ label: "Products", href: "/ecommerce/admin/products" }, { label: product?.title ?? "" }]} actions={product && <><Badge className={product.status === "published" ? "bg-green-100 text-green-700" : "bg-zinc-100 text-zinc-600"}>{product.status}</Badge></>} />
 
       <Tabs defaultValue="overview">
         <TabsList>

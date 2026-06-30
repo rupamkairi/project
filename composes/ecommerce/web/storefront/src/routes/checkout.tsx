@@ -34,7 +34,7 @@ function StorefrontCheckout() {
         </div>
         <h2 className="text-xl font-semibold">Nothing to check out</h2>
         <p className="text-sm text-muted-foreground">Add items to your cart first</p>
-        <Button asChild><Link to="/store/products">Start Shopping</Link></Button>
+        <Button asChild><Link to="/ecommerce/store/products">Start Shopping</Link></Button>
       </div>
     );
   }
@@ -158,8 +158,8 @@ function StorefrontCheckout() {
             <div className="flex justify-between font-semibold"><span>Total Charged</span><span>{formatCurrency(total)}</span></div>
           </div>
           <div className="flex gap-3 justify-center">
-            <Button asChild><Link to="/store/products">Continue Shopping</Link></Button>
-            <Button variant="outline" asChild><Link to="/store/account">View Orders</Link></Button>
+            <Button asChild><Link to="/ecommerce/store/products">Continue Shopping</Link></Button>
+            <Button variant="outline" asChild><Link to="/ecommerce/store/account">View Orders</Link></Button>
           </div>
         </div>
       )}

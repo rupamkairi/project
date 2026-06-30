@@ -151,6 +151,8 @@ export type { NavBarProps, NavBarItem } from "./components/nav-bar"
 export { StatusBadge, statusBadgeVariants } from "./components/status-badge"
 export type { StatusBadgeProps } from "./components/status-badge"
 
+export { ComposeDashboard } from "./components/compose-dashboard"
+
 // ─── Utility ─────────────────────────────────────────────────────────────────
 
 export { cn } from "./lib/utils"

@@ -40,13 +40,13 @@ function StorefrontProductDetail() {
   if (!product) return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 text-center">
       <p className="text-lg text-muted-foreground">Product not found</p>
-      <Button variant="outline" className="mt-4" asChild><Link to="/store/products">Back to Products</Link></Button>
+      <Button variant="outline" className="mt-4" asChild><Link to="/ecommerce/store/products">Back to Products</Link></Button>
     </div>
   );
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-      <Link to="/store/products" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6">
+      <Link to="/ecommerce/store/products" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6">
         <ArrowLeft className="h-4 w-4" /> Back to Products
       </Link>
 

@@ -22,16 +22,16 @@ function StorefrontLayout() {
               <button className="md:hidden -ml-2 p-2" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
                 <Menu className="h-5 w-5" />
               </button>
-              <Link to="/store" className="flex items-center gap-2">
+              <Link to="/ecommerce/store" className="flex items-center gap-2">
                 <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
                   <Package className="h-4 w-4 text-primary-foreground" />
                 </div>
                 <span className="text-lg font-bold tracking-tight hidden sm:block">Storefront</span>
               </Link>
               <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
-                <Link to="/store/products" className="text-muted-foreground hover:text-foreground transition-colors">Products</Link>
-                <Link to="/store/categories" className="text-muted-foreground hover:text-foreground transition-colors">Categories</Link>
-                <Link to="/store/search" className="text-muted-foreground hover:text-foreground transition-colors">Search</Link>
+                <Link to="/ecommerce/store/products" className="text-muted-foreground hover:text-foreground transition-colors">Products</Link>
+                <Link to="/ecommerce/store/categories" className="text-muted-foreground hover:text-foreground transition-colors">Categories</Link>
+                <Link to="/ecommerce/store/search" className="text-muted-foreground hover:text-foreground transition-colors">Search</Link>
               </nav>
             </div>
 
@@ -40,12 +40,12 @@ function StorefrontLayout() {
               <Input
                 className="pl-9 h-9 bg-muted/50 border-0 focus-visible:bg-background"
                 placeholder="Search products..."
-                onFocus={() => navigate({ to: "/store/search" })}
+                onFocus={() => navigate({ to: "/ecommerce/store/search" })}
               />
             </div>
 
             <div className="flex items-center gap-2">
-              <Link to="/store/account" className="p-2 text-muted-foreground hover:text-foreground transition-colors">
+              <Link to="/ecommerce/store/account" className="p-2 text-muted-foreground hover:text-foreground transition-colors">
                 <User className="h-5 w-5" />
               </Link>
               <button onClick={() => setCartOpen(true)} className="relative p-2 text-muted-foreground hover:text-foreground transition-colors">
@@ -62,10 +62,10 @@ function StorefrontLayout() {
 
         {mobileMenuOpen && (
           <div className="md:hidden border-t bg-background px-4 py-3 space-y-2">
-            <Link to="/store/products" className="block text-sm font-medium py-1.5" onClick={() => setMobileMenuOpen(false)}>Products</Link>
-            <Link to="/store/categories" className="block text-sm font-medium py-1.5" onClick={() => setMobileMenuOpen(false)}>Categories</Link>
-            <Link to="/store/search" className="block text-sm font-medium py-1.5" onClick={() => setMobileMenuOpen(false)}>Search</Link>
-            <Link to="/store/account" className="block text-sm font-medium py-1.5" onClick={() => setMobileMenuOpen(false)}>Account</Link>
+            <Link to="/ecommerce/store/products" className="block text-sm font-medium py-1.5" onClick={() => setMobileMenuOpen(false)}>Products</Link>
+            <Link to="/ecommerce/store/categories" className="block text-sm font-medium py-1.5" onClick={() => setMobileMenuOpen(false)}>Categories</Link>
+            <Link to="/ecommerce/store/search" className="block text-sm font-medium py-1.5" onClick={() => setMobileMenuOpen(false)}>Search</Link>
+            <Link to="/ecommerce/store/account" className="block text-sm font-medium py-1.5" onClick={() => setMobileMenuOpen(false)}>Account</Link>
           </div>
         )}
       </header>
@@ -91,17 +91,17 @@ function StorefrontLayout() {
             <div className="space-y-3">
               <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Shop</h4>
               <nav className="flex flex-col gap-2">
-                <Link to="/store/products" className="text-sm text-muted-foreground hover:text-foreground transition-colors">All Products</Link>
-                <Link to="/store/categories" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Categories</Link>
-                <Link to="/store/search" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Search</Link>
+                <Link to="/ecommerce/store/products" className="text-sm text-muted-foreground hover:text-foreground transition-colors">All Products</Link>
+                <Link to="/ecommerce/store/categories" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Categories</Link>
+                <Link to="/ecommerce/store/search" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Search</Link>
               </nav>
             </div>
             <div className="space-y-3">
               <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Account</h4>
               <nav className="flex flex-col gap-2">
-                <Link to="/store/account" className="text-sm text-muted-foreground hover:text-foreground transition-colors">My Account</Link>
-                <Link to="/store/account" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Order History</Link>
-                <Link to="/store/cart" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Cart</Link>
+                <Link to="/ecommerce/store/account" className="text-sm text-muted-foreground hover:text-foreground transition-colors">My Account</Link>
+                <Link to="/ecommerce/store/account" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Order History</Link>
+                <Link to="/ecommerce/store/cart" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Cart</Link>
               </nav>
             </div>
             <div className="space-y-3">
@@ -131,6 +131,6 @@ function StorefrontLayout() {
 
 export const ecommerceStorefrontLayoutRoute = createRoute({
   getParentRoute: () => sharedRootRoute,
-  path: "/store",
+  path: "/ecommerce/store",
   component: StorefrontLayout,
 });

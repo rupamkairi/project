@@ -17,7 +17,7 @@ export function CourseProgressCard({ enrollment }: CourseProgressCardProps) {
   return (
     <Card
       className="cursor-pointer hover:bg-accent/50 transition-colors"
-      onClick={() => navigate({ to: `/learn/courses/${enrollment.courseSlug}/continue` })}
+      onClick={() => navigate({ to: `/lms/learn/courses/${enrollment.courseSlug}/continue` })}
     >
       <CardContent className="flex items-center gap-4 p-3">
         {enrollment.thumbnailUrl && (

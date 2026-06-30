@@ -33,7 +33,7 @@ export function CustomerCartPage() {
     },
     onSuccess: (orderId) => {
       clear();
-      navigate({ to: "/customer/order/$id", params: { id: orderId } });
+      navigate({ to: "/restaurants/customer/order/$id", params: { id: orderId } });
     },
   });
 
@@ -42,7 +42,7 @@ export function CustomerCartPage() {
       <div className="max-w-lg mx-auto px-4 py-12 text-center">
         <p className="text-4xl mb-4">🛒</p>
         <p className="text-muted-foreground">Your cart is empty</p>
-        <Button className="mt-4" onClick={() => navigate({ to: "/customer/menu" })}>Back to Menu</Button>
+        <Button className="mt-4" onClick={() => navigate({ to: "/restaurants/customer/menu" })}>Back to Menu</Button>
       </div>
     );
   }
@@ -50,7 +50,7 @@ export function CustomerCartPage() {
   return (
     <div className="max-w-lg mx-auto px-4 py-6 space-y-6 pb-24">
       <div className="flex items-center gap-2">
-        <button onClick={() => navigate({ to: "/customer/menu" })} className="text-muted-foreground text-sm hover:underline">
+        <button onClick={() => navigate({ to: "/restaurants/customer/menu" })} className="text-muted-foreground text-sm hover:underline">
           ← Menu
         </button>
         <h1 className="text-lg font-bold">Your Cart</h1>
