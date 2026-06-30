@@ -15,6 +15,7 @@ import {
   FileText,
   Mail,
   ChevronRight,
+  UserRound,
   type LucideIcon,
 } from "lucide-react";
 
@@ -61,6 +62,12 @@ const sections: Section[] = [
     description: "Send and track user invitations",
     href: "/dashboard/invites",
     Icon: Mail,
+  },
+  {
+    title: "CRM",
+    description: "Contacts, deals, leads, campaigns, and support tickets",
+    href: "/crm",
+    Icon: UserRound,
   },
 ];
 

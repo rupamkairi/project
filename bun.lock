@@ -59,6 +59,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@hookform/resolvers": "^5.2.2",
+        "@projectx/crm-web": "workspace:*",
         "@projectx/platform-web": "workspace:*",
         "@projectx/shared-router": "workspace:*",
         "@projectx/ui": "workspace:*",
@@ -106,6 +107,25 @@
       "devDependencies": {
         "@projectx/config": "workspace:*",
         "@types/bun": "^1.3.9",
+        "typescript": "^5.3.3",
+      },
+    },
+    "composes/crm/web": {
+      "name": "@projectx/crm-web",
+      "version": "0.1.0",
+      "dependencies": {
+        "@projectx/platform-web": "workspace:*",
+        "@projectx/shared-router": "workspace:*",
+        "@projectx/ui": "workspace:*",
+        "@tanstack/react-router": "^1.161.3",
+        "react": "^19.2.0",
+        "react-dom": "^19.2.0",
+        "zustand": "^5.0.11",
+      },
+      "devDependencies": {
+        "@projectx/config": "workspace:*",
+        "@types/react": "^19.2.7",
+        "@types/react-dom": "^19.2.3",
         "typescript": "^5.3.3",
       },
     },
@@ -719,6 +739,8 @@
     "@projectx/config": ["@projectx/config@workspace:packages/config"],
 
     "@projectx/crm-server": ["@projectx/crm-server@workspace:composes/crm/server"],
+
+    "@projectx/crm-web": ["@projectx/crm-web@workspace:composes/crm/web"],
 
     "@projectx/platform-server": ["@projectx/platform-server@workspace:composes/platform/server"],
 
