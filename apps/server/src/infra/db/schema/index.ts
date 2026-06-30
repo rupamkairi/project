@@ -119,7 +119,6 @@ export {
   type CrmEmailThread,
   type CrmEmailMessage,
 };
-
 // LMS schema
 export {
   lmsCourseDetail,

@@ -28,6 +28,9 @@ import {
   FolderOpen,
   ShoppingBag,
   LogOut,
+  GraduationCap,
+  BookOpen,
+  Settings,
 } from "lucide-react"
 
 export const Route = createRoute({
@@ -57,6 +60,9 @@ const NAV_ITEMS = [
   { label: "Notifications", href: "/dashboard/notifications", icon: Bell },
   { label: "Files", href: "/dashboard/files", icon: FolderOpen },
   { label: "Ecommerce", href: "/admin/ecommerce", icon: ShoppingBag },
+  { label: "Learning", href: "/learn/dashboard", icon: GraduationCap },
+  { label: "Teaching", href: "/teach/dashboard", icon: BookOpen },
+  { label: "LMS Admin", href: "/lms-admin/dashboard", icon: Settings },
 ]
 
 function UserMenu() {

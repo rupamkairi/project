@@ -1,0 +1,31 @@
+{
+  "name": "@projectx/lms-web",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "LMS Compose Web - Learner, Instructor, and Admin apps",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist node_modules"
+  },
+  "dependencies": {
+    "@projectx/shared-router": "workspace:*",
+    "@projectx/ui": "workspace:*",
+    "@tanstack/react-query": "^5.90.21",
+    "@tanstack/react-router": "^1.161.3",
+    "lucide-react": "^0.577.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "zustand": "^5.0.11"
+  },
+  "devDependencies": {
+    "@projectx/config": "workspace:*",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "^5.3.3"
+  }
+}

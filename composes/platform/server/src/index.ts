@@ -31,6 +31,9 @@ export function createPlatformCompose(mediator: Mediator) {
       "/platform/auth/reset-password",
       "/ecommerce/store",
       "/health",
+      "/lms/verify/",
+      "/lms/stripe/webhook",
+      "/lms/courses",
     ],
 
     onLogin: (email, password, ip, userAgent, expiresAt) =>
