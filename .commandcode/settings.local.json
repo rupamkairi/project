@@ -1,0 +1,19 @@
+{
+  "disabledSkills": [
+    "building-components",
+    "compose-spec",
+    "compose-todo",
+    "grill-with-docs",
+    "improve-codebase-architecture",
+    "prototype",
+    "tdd",
+    "to-issues",
+    "to-prd",
+    "ui-styling",
+    "ui-ux-pro-max",
+    "vite-advanced",
+    "web-design-guidelines",
+    "write-a-skill",
+    "zoom-out"
+  ]
+}
