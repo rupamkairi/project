@@ -40,7 +40,7 @@ function HrPage() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader><CardTitle className="text-base">On Leave Today</CardTitle></CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">On Leave Today</CardTitle></CardHeader>
           <CardContent>
             <p className="text-3xl font-bold">—</p>
             <p className="text-xs text-muted-foreground mt-1">Fetch from attendance</p>
