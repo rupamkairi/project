@@ -5,6 +5,10 @@
 → **[docs/instructions/for-agents.md](./docs/instructions/for-agents.md)** — Complete reading order table + shell integration contract  
 → **[docs/instructions/architectural-rules.md](./docs/instructions/architectural-rules.md)** — Non-negotiable rules
 
+## General Instructions
+
+The Project has already a dev server running. Never run package.json dev commands from root or any decending directory.
+
 ## Planning Mode
 
 When running in Plan Mode or when asked to create a plan:
