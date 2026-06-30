@@ -19,7 +19,6 @@ export * from "./geo";
 export * from "./analytics";
 export * from "./storage";
 // Compose detail tables
-export * from "../../../../../../composes/restaurant/server/src/db/schema/restaurant.js";
 export * from "./search";
 
 // Restaurant schema - re-exported from compose
@@ -35,8 +34,8 @@ import {
   rstRecipes,
   rstRecipeIngredients,
   rstReservations,
-  rstAggregatorOrders,
-} from "@projectx/restaurant-compose/db/schema/restaurant";
+  rstAggregatorMappings,
+} from "@projectx/restaurant-server/db/schema/restaurant";
 
 export {
   rstCategories,
@@ -50,7 +49,7 @@ export {
   rstRecipes,
   rstRecipeIngredients,
   rstReservations,
-  rstAggregatorOrders,
+  rstAggregatorMappings,
 };
 
 // Platform schema - re-exported from compose
