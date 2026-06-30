@@ -28,8 +28,29 @@ function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  const demoLogins = [
+    {
+      label: "Admin Login",
+      email: "admin@platform.local",
+      password: "admin123",
+    },
+    {
+      label: "Dev Login",
+      email: "dev@platform.local",
+      password: "dev123",
+    },
+  ] as const;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    clearError();
+    const success = await login(email, password);
+    if (success) {
+      navigate({ to: "/dashboard" });
+    }
+  };
+
+  const handleDemoLogin = async (email: string, password: string) => {
     clearError();
     const success = await login(email, password);
     if (success) {
@@ -81,20 +102,32 @@ function LoginPage() {
             </Button>
           </form>
 
-          <div className="rounded-md border bg-muted/50 p-3 text-sm text-muted-foreground">
-            <p className="font-medium text-foreground mb-1">
-              development credentials
+          <div className="rounded-md border bg-muted/50 p-3 text-sm">
+            <p className="mb-3 font-medium text-foreground">
+              Demo logins
             </p>
-            <p>
-              Email:{" "}
-              <span className="font-mono text-foreground">
-                dev@platform.local
-              </span>
-            </p>
-            <p>
-              Password:{" "}
-              <span className="font-mono text-foreground">dev123</span>
-            </p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {demoLogins.map((demo) => (
+                <Button
+                  key={demo.email}
+                  type="button"
+                  variant="outline"
+                  className="h-auto justify-start border-dashed p-3 text-left"
+                  onClick={() => handleDemoLogin(demo.email, demo.password)}
+                  disabled={isLoading}
+                >
+                  <div className="space-y-1">
+                    <p className="font-medium text-foreground">{demo.label}</p>
+                    <p className="font-mono text-xs text-muted-foreground">
+                      {demo.email}
+                    </p>
+                    <p className="font-mono text-xs text-muted-foreground">
+                      {demo.password}
+                    </p>
+                  </div>
+                </Button>
+              ))}
+            </div>
           </div>
         </CardContent>
       </Card>

@@ -43,7 +43,7 @@ async function postStockLedger(
   });
 }
 
-export function createGoodsReceiptRoutes(mediator: Mediator) {
+export function createGrnRoutes(mediator: Mediator) {
   return new Elysia({ prefix: "/goods-receipts" })
     .get("/", async (ctx) => {
       const actor = (ctx as any).actor;

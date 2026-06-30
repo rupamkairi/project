@@ -6,7 +6,7 @@ import { transactions } from "@db/schema/commerce";
 
 export function registerErpJobs(scheduler: Scheduler) {
   // Daily: depreciate assets
-  scheduler.add("erp.depreciate-assets", "0 2 * * *", async () => {
+  scheduler.define("erp.depreciate-assets", "0 2 * * *", async () => {
     const assets = await db.select().from(erpAsset)
       .where(and(eq(erpAsset.status, "active")));
 
@@ -40,7 +40,7 @@ export function registerErpJobs(scheduler: Scheduler) {
   });
 
   // Daily: flag overdue invoices
-  scheduler.add("erp.flag-overdue-invoices", "0 6 * * *", async () => {
+  scheduler.define("erp.flag-overdue-invoices", "0 6 * * *", async () => {
     const today = new Date();
     const invoices = await db.select().from(transactions)
       .where(and(eq(transactions.type, "invoice")));
@@ -59,7 +59,7 @@ export function registerErpJobs(scheduler: Scheduler) {
   });
 
   // Monthly on 25th: create draft payroll run
-  scheduler.add("erp.create-monthly-payroll", "0 9 25 * *", async () => {
+  scheduler.define("erp.create-monthly-payroll", "0 9 25 * *", async () => {
     const now = new Date();
     const period = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
@@ -73,7 +73,7 @@ export function registerErpJobs(scheduler: Scheduler) {
   });
 
   // Daily: send stock reorder alerts
-  scheduler.add("erp.stock-reorder-alerts", "0 8 * * *", async () => {
+  scheduler.define("erp.stock-reorder-alerts", "0 8 * * *", async () => {
     // Aggregated by inventory module; job just ensures check runs daily
     // Real impl: mediator.dispatch("erp.CheckReorderLevels", { all: true })
   });

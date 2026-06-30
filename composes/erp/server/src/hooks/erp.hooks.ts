@@ -1,54 +1,100 @@
-import type { EventBus } from "@core";
+import { createDomainEvent, type EventBus } from "@core";
 
 export function registerErpHooks(bus: EventBus) {
   // PO approved -> notify procurement officer
-  bus.on("erp.po.approved", async (event: any) => {
-    await bus.emit("notification.send", {
-      userId: event.createdBy,
-      message: `PO ${event.refNo} approved`,
-      type: "success",
-    });
+  bus.subscribe("erp.po.approved", async (event: any) => {
+    const payload = event.payload ?? event;
+    await bus.publish(createDomainEvent(
+      "notification.send",
+      payload.poId ?? payload.id ?? crypto.randomUUID(),
+      "erp.po",
+      {
+        userId: payload.createdBy,
+        message: `PO ${payload.refNo} approved`,
+        type: "success",
+      },
+      payload.orgId,
+      { actorId: payload.createdBy, correlationId: payload.correlationId, source: "erp" },
+    ));
   });
 
   // GRN confirmed -> check reorder levels
-  bus.on("erp.grn.confirmed", async (event: any) => {
-    await bus.emit("erp.inventory.check-reorder", {
-      warehouseId: event.warehouseId,
-      itemIds: event.items?.map((i: any) => i.itemId) ?? [],
-    });
+  bus.subscribe("erp.grn.confirmed", async (event: any) => {
+    const payload = event.payload ?? event;
+    await bus.publish(createDomainEvent(
+      "erp.inventory.check-reorder",
+      payload.grnId ?? payload.id ?? crypto.randomUUID(),
+      "erp.grn",
+      {
+        warehouseId: payload.warehouseId,
+        itemIds: payload.items?.map((i: any) => i.itemId) ?? [],
+      },
+      payload.orgId,
+      { correlationId: payload.correlationId, source: "erp" },
+    ));
   });
 
   // Invoice 3-way match passed -> auto-schedule payment
-  bus.on("erp.invoice.matched", async (event: any) => {
-    await bus.emit("erp.payment.due", {
-      invoiceId: event.invoiceId,
-      dueDate: event.dueDate,
-      amount: event.amount,
-    });
+  bus.subscribe("erp.invoice.matched", async (event: any) => {
+    const payload = event.payload ?? event;
+    await bus.publish(createDomainEvent(
+      "erp.payment.due",
+      payload.invoiceId ?? payload.id ?? crypto.randomUUID(),
+      "erp.invoice",
+      {
+        invoiceId: payload.invoiceId,
+        dueDate: payload.dueDate,
+        amount: payload.amount,
+      },
+      payload.orgId,
+      { correlationId: payload.correlationId, source: "erp" },
+    ));
   });
 
   // Payroll submitted -> emit for ledger posting
-  bus.on("erp.payroll.submitted", async (event: any) => {
-    await bus.emit("erp.finance.post-payroll-je", {
-      payrollRunId: event.payrollRunId,
-      period: event.period,
-      totalNet: event.totalNet,
-    });
+  bus.subscribe("erp.payroll.submitted", async (event: any) => {
+    const payload = event.payload ?? event;
+    await bus.publish(createDomainEvent(
+      "erp.finance.post-payroll-je",
+      payload.payrollRunId ?? payload.id ?? crypto.randomUUID(),
+      "erp.payroll",
+      {
+        payrollRunId: payload.payrollRunId,
+        period: payload.period,
+        totalNet: payload.totalNet,
+      },
+      payload.orgId,
+      { correlationId: payload.correlationId, source: "erp" },
+    ));
   });
 
   // Work order completed -> check BOM and reorder
-  bus.on("erp.workorder.completed", async (event: any) => {
-    await bus.emit("erp.inventory.check-reorder", {
-      itemIds: event.outputItemIds ?? [],
-    });
+  bus.subscribe("erp.workorder.completed", async (event: any) => {
+    const payload = event.payload ?? event;
+    await bus.publish(createDomainEvent(
+      "erp.inventory.check-reorder",
+      payload.workOrderId ?? payload.id ?? crypto.randomUUID(),
+      "erp.workorder",
+      { itemIds: payload.outputItemIds ?? [] },
+      payload.orgId,
+      { correlationId: payload.correlationId, source: "erp" },
+    ));
   });
 
   // Period close -> lock all draft JEs warning
-  bus.on("erp.period.closing", async (event: any) => {
-    await bus.emit("notification.broadcast", {
-      orgId: event.orgId,
-      message: `Period ${event.period} closing in 24 hours. Submit all draft journal entries.`,
-      type: "warning",
-    });
+  bus.subscribe("erp.period.closing", async (event: any) => {
+    const payload = event.payload ?? event;
+    await bus.publish(createDomainEvent(
+      "notification.broadcast",
+      payload.orgId ?? crypto.randomUUID(),
+      "erp.period",
+      {
+        orgId: payload.orgId,
+        message: `Period ${payload.period} closing in 24 hours. Submit all draft journal entries.`,
+        type: "warning",
+      },
+      payload.orgId,
+      { correlationId: payload.correlationId, source: "erp" },
+    ));
   });
 }

@@ -168,27 +168,27 @@ export async function followUpReminders(orgId: string): Promise<{ due: { activit
 // ---------------------------------------------------------------------------
 
 export interface CrmJobScheduler {
-  register(id: string, cron: string, handler: () => Promise<void>): void;
+  define(id: string, cron: string, handler: () => Promise<void>): void;
 }
 
 export function registerCrmJobs(scheduler: CrmJobScheduler, orgIds: string[]): void {
   // daily 08:00
-  scheduler.register("crm.check-deal-rotting", "0 8 * * *", async () => {
+  scheduler.define("crm.check-deal-rotting", "0 8 * * *", async () => {
     for (const orgId of orgIds) await checkDealRotting(orgId);
   });
 
   // weekly Sunday 00:00
-  scheduler.register("crm.lead-score-decay", "0 0 * * 0", async () => {
+  scheduler.define("crm.lead-score-decay", "0 0 * * 0", async () => {
     for (const orgId of orgIds) await leadScoreDecay(orgId);
   });
 
   // every 4 hours
-  scheduler.register("crm.refresh-segment-counts", "0 */4 * * *", async () => {
+  scheduler.define("crm.refresh-segment-counts", "0 */4 * * *", async () => {
     for (const orgId of orgIds) await refreshSegmentCounts(orgId);
   });
 
   // every 30 minutes — callers handle notification dispatch
-  scheduler.register("crm.follow-up-reminders", "*/30 * * * *", async () => {
+  scheduler.define("crm.follow-up-reminders", "*/30 * * * *", async () => {
     for (const orgId of orgIds) {
       const { due } = await followUpReminders(orgId);
       // Notification dispatch is left to the notification plugin integration.

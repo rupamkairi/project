@@ -6,7 +6,7 @@ import { and, eq } from "drizzle-orm";
 
 export function registerRestaurantJobs(scheduler: Scheduler, mediator: Mediator, bus: EventBus): void {
   // Every 2min: auto-assign unassigned deliveries
-  scheduler.register("rst.delivery.auto-assign", "*/2 * * * *", async () => {
+  scheduler.define("rst.delivery.auto-assign", "*/2 * * * *", async () => {
     const unassigned = await db.query.rstDeliveries.findMany({
       where: eq(rstDeliveries.status, "unassigned"),
     });

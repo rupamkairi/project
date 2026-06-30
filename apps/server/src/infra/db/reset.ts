@@ -1,33 +1,46 @@
-import { neon } from "@neondatabase/serverless";
+import { Client } from "pg";
 import { config } from "dotenv";
 import { resolve } from "path";
 
 config({ path: resolve(import.meta.dir, "../../../../.env") });
 
-const sql = neon(process.env.DATABASE_URL!);
-
 async function reset() {
-  console.log("Fetching all tables in public schema...");
+  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  await client.connect();
 
-  const tables = await sql`
-    SELECT tablename
-    FROM pg_tables
-    WHERE schemaname = 'public'
-    ORDER BY tablename
-  `;
+  try {
+    console.log("Fetching all tables in public schema...");
 
-  if (tables.length === 0) {
-    console.log("No tables found — DB already empty.");
-    return;
+    const result = await client.query<{ tablename: string }>(
+      `
+        SELECT tablename
+        FROM pg_tables
+        WHERE schemaname = 'public'
+        ORDER BY tablename
+      `,
+    );
+
+    if (result.rows.length === 0) {
+      console.log("No tables found — DB already empty.");
+      return;
+    }
+
+    console.log(`Truncating ${result.rows.length} tables:`);
+    result.rows.forEach((t) => console.log(`  - ${t.tablename}`));
+
+    const names = result.rows.map((t) => `"public"."${t.tablename}"`).join(", ");
+
+    await client.query("BEGIN");
+    await client.query(`TRUNCATE TABLE ${names} CASCADE`);
+    await client.query("COMMIT");
+
+    console.log("✓ All tables truncated.");
+  } catch (err) {
+    await client.query("ROLLBACK").catch(() => {});
+    throw err;
+  } finally {
+    await client.end();
   }
-
-  console.log(`Dropping ${tables.length} tables:`);
-  tables.forEach((t) => console.log(`  - ${t.tablename}`));
-
-  const names = tables.map((t) => `"${t.tablename}"`).join(", ");
-  await sql.unsafe(`DROP TABLE IF EXISTS ${names} CASCADE`);
-
-  console.log("✓ All tables dropped.");
 }
 
 reset().catch((err) => {
