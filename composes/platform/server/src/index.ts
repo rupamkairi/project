@@ -29,6 +29,8 @@ export function createPlatformCompose(mediator: Mediator) {
       "/platform/auth/register",
       "/platform/auth/forgot-password",
       "/platform/auth/reset-password",
+      "/ecommerce/store",
+      "/health",
     ],
 
     onLogin: (email, password, ip, userAgent, expiresAt) =>

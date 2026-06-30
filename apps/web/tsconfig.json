@@ -5,6 +5,10 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
+      "@projectx/ecommerce-admin": ["../../composes/ecommerce/web/admin/src"],
+      "@projectx/ecommerce-admin/*": ["../../composes/ecommerce/web/admin/src/*"],
+      "@projectx/ecommerce-storefront": ["../../composes/ecommerce/web/storefront/src"],
+      "@projectx/ecommerce-storefront/*": ["../../composes/ecommerce/web/storefront/src/*"],
       "@projectx/platform-web": ["../../composes/platform/web/src"],
       "@projectx/platform-web/*": ["../../composes/platform/web/src/*"]
     }

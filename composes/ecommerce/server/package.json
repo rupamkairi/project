@@ -1,0 +1,26 @@
+{
+  "name": "@projectx/ecommerce-server",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "Ecommerce Compose Server - Headless ecommerce with products, cart, checkout, orders, fulfillment",
+  "exports": {
+    ".": "./src/index.ts",
+    "./db/schema/ecommerce": "./src/db/schema/index.ts"
+  },
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist node_modules"
+  },
+  "dependencies": {
+    "elysia": "^1.4.25",
+    "drizzle-orm": "^0.45.1",
+    "@projectx/plugin-payment-server": "workspace:*"
+  },
+  "devDependencies": {
+    "@projectx/config": "workspace:*",
+    "@types/bun": "^1.3.9",
+    "typescript": "^5.3.3"
+  }
+}

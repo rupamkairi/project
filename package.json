@@ -5,6 +5,7 @@
     "apps/*",
     "composes/*/server",
     "composes/*/web",
+    "composes/*/web/*",
     "plugins/*/server",
     "plugins/*/web",
     "packages/*"

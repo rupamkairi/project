@@ -7,4 +7,9 @@
 @source "../../../plugins/notification/web/src";
 @source "../../../plugins/storage/web/src";
 @source "../../../composes/crm/web/src";
+@source "../../../composes/ecommerce/web/admin/src";
+@source "../../../composes/ecommerce/web/storefront/src";
+@source "../../../composes/erp/web/src";
+@source "../../../composes/lms/web/src";
+@source "../../../composes/restaurant/web/src";
 @source ".";

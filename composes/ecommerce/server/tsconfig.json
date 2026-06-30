@@ -1,0 +1,20 @@
+{
+  "extends": "@projectx/config/tsconfig/server",
+  "compilerOptions": {
+    "outDir": "dist",
+    "baseUrl": ".",
+    "types": ["bun"],
+    "lib": ["ESNext"],
+    "paths": {
+      "@projectx/ecommerce-server": ["./src/index.ts"],
+      "@projectx/ecommerce-server/*": ["./src/*"],
+      "@core": ["../../../apps/server/src/core/index.ts"],
+      "@core/*": ["../../../apps/server/src/core/*"],
+      "@modules/*": ["../../../apps/server/src/modules/*"],
+      "@infra/*": ["../../../apps/server/src/infra/*"],
+      "@db/*": ["../../../apps/server/src/infra/db/*"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

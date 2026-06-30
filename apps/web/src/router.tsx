@@ -1,6 +1,11 @@
 import { Route as indexRoute } from "@/routes/index";
-import { platformRoutes } from "@projectx/platform-web";
 import { crmRoutes } from "@projectx/crm-web";
+import { ecommerceAdminRoutes } from "@projectx/ecommerce-admin";
+import { ecommerceStorefrontRoutes } from "@projectx/ecommerce-storefront";
+import { erpRoutes } from "@projectx/erp-web";
+import { lmsRoutes } from "@projectx/lms-web";
+import { platformRoutes } from "@projectx/platform-web";
+import { restaurantRoutes } from "@projectx/restaurant-web";
 import { sharedRootRoute } from "@projectx/shared-router";
 import { createRouter } from "@tanstack/react-router";
 
@@ -8,6 +13,11 @@ const routeTree = sharedRootRoute.addChildren([
   indexRoute,
   ...platformRoutes,
   crmRoutes,
+  ...ecommerceAdminRoutes,
+  ...ecommerceStorefrontRoutes,
+  ...erpRoutes,
+  ...lmsRoutes,
+  ...restaurantRoutes,
 ]);
 
 export const router = createRouter({
