@@ -6,4 +6,5 @@
 @source "../../../composes/platform/web/src";
 @source "../../../plugins/notification/web/src";
 @source "../../../plugins/storage/web/src";
+@source "../../../composes/crm/web/src";
 @source ".";

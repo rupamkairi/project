@@ -38,3 +38,38 @@ export {
   type PltComposeConfig,
   type PltOrganizationSetting,
 };
+
+// CRM schema - re-exported from compose
+import {
+  crmLead,
+  crmDeal,
+  crmSegment,
+  crmCampaign,
+  crmCampaignContact,
+  crmEmailThread,
+  crmEmailMessage,
+  type CrmLead,
+  type CrmDeal,
+  type CrmSegment,
+  type CrmCampaign,
+  type CrmCampaignContact,
+  type CrmEmailThread,
+  type CrmEmailMessage,
+} from "@projectx/crm-server/db/schema/crm";
+
+export {
+  crmLead,
+  crmDeal,
+  crmSegment,
+  crmCampaign,
+  crmCampaignContact,
+  crmEmailThread,
+  crmEmailMessage,
+  type CrmLead,
+  type CrmDeal,
+  type CrmSegment,
+  type CrmCampaign,
+  type CrmCampaignContact,
+  type CrmEmailThread,
+  type CrmEmailMessage,
+};

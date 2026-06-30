@@ -17,3 +17,10 @@
 - Use TypeScript strict mode. No semicolons, single quotes, trailing commas (Prettier). kebab-case files, PascalCase components, camelCase functions/variables. Confidence: 1.0
 - Use Bun test (not Jest/Vitest). Core tests must pass before changes to core. Confidence: 1.0
 - Docs are source of truth — when code and docs conflict, docs win. Plans go in plans/{task-slug}.{agent}.plan.md. Confidence: 1.0
+
+# Taste (Continuously Learned by [CommandCode][cmd])
+
+[cmd]: https://commandcode.ai/
+
+# Communication
+- Caveman mode: respond tersely, no filler words, all technical substance preserved. Confidence: 0.80

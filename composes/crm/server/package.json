@@ -1,0 +1,26 @@
+{
+  "name": "@projectx/crm-server",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "CRM Compose Server - Contacts, accounts, leads, deals, activities, pipelines, campaigns",
+  "exports": {
+    ".": "./src/index.ts",
+    "./db/schema/crm": "./src/db/schema/crm.ts",
+    "./db/seed/crm": "./src/db/seed/crm.ts"
+  },
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist node_modules"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.45.1",
+    "elysia": "^1.4.25"
+  },
+  "devDependencies": {
+    "@projectx/config": "workspace:*",
+    "@types/bun": "^1.3.9",
+    "typescript": "^5.3.3"
+  }
+}
