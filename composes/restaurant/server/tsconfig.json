@@ -1,0 +1,13 @@
+{
+  "extends": "@projectx/config/tsconfig/server",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@core": ["../../../apps/server/src/core/index.ts"],
+      "@core/*": ["../../../apps/server/src/core/*"]
+    }
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
+}

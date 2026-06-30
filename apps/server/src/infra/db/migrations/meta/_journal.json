@@ -43,6 +43,13 @@
       "when": 1782366912250,
       "tag": "0005_windy_zarek",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1782384806075,
+      "tag": "0006_slippery_wendell_rand",
+      "breakpoints": true
     }
   ]
 }

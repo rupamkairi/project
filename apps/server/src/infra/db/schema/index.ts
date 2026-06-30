@@ -18,6 +18,7 @@ export * from "./notification";
 export * from "./geo";
 export * from "./analytics";
 export * from "./storage";
+// Compose detail tables
 export * from "./search";
 
 // Ecommerce schema - re-exported from compose
