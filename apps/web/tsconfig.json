@@ -5,12 +5,20 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
+      "@projectx/crm-web": ["../../composes/crm/web/src"],
+      "@projectx/crm-web/*": ["../../composes/crm/web/src/*"],
       "@projectx/ecommerce-admin": ["../../composes/ecommerce/web/admin/src"],
       "@projectx/ecommerce-admin/*": ["../../composes/ecommerce/web/admin/src/*"],
       "@projectx/ecommerce-storefront": ["../../composes/ecommerce/web/storefront/src"],
       "@projectx/ecommerce-storefront/*": ["../../composes/ecommerce/web/storefront/src/*"],
+      "@projectx/erp-web": ["../../composes/erp/web/src"],
+      "@projectx/erp-web/*": ["../../composes/erp/web/src/*"],
+      "@projectx/lms-web": ["../../composes/lms/web/src"],
+      "@projectx/lms-web/*": ["../../composes/lms/web/src/*"],
       "@projectx/platform-web": ["../../composes/platform/web/src"],
-      "@projectx/platform-web/*": ["../../composes/platform/web/src/*"]
+      "@projectx/platform-web/*": ["../../composes/platform/web/src/*"],
+      "@projectx/restaurant-web": ["../../composes/restaurant/web/src"],
+      "@projectx/restaurant-web/*": ["../../composes/restaurant/web/src/*"]
     }
   },
   "include": ["src"]

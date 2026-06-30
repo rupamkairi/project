@@ -63,7 +63,6 @@ export {
   type EcoFulfillmentItem,
   type EcoCart,
 } from "@projectx/ecommerce-server/db/schema/index";
-
 // ERP schema - re-exported from compose
 export * from "@projectx/erp-server/db/schema/erp";
 

@@ -453,7 +453,6 @@ async function main() {
 
   const { createRestaurantCompose } = await import("@projectx/restaurant-server");
   const restaurantCompose = createRestaurantCompose(mediator, bus, bootRegistry.scheduler);
-
   let app: any = new Elysia()
     // Plugins
     .use(cors())
