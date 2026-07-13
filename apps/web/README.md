@@ -22,6 +22,6 @@ This app is a **shell**. All feature logic lives in:
 - `composes/{name}/web/` — compose route trees + manifests registered here
 
 Read before working here:
-- [docs/instructions/README.md](../../docs/instructions/README.md) — agent reading order
-- [docs/setup/web.md](../../docs/setup/web.md) — web architecture, routing, auth
-- [docs/design-system.md](../../docs/design-system.md) — UI components, Tailwind, theming
+- [docs/README.md](../../docs/README.md) — repository orientation
+- [docs/architecture.md](../../docs/architecture.md) — live runtime map
+- [docs/development.md](../../docs/development.md) — workspace commands and policy

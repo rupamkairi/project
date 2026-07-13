@@ -1,9 +1,8 @@
 # ProjectX Agent Guide
 
-→ **[docs/instructions/README.md](./docs/instructions/README.md)** — Agent reading order and orientation  
-→ **[docs/README.md](./docs/README.md)** — Full documentation index  
-→ **[docs/instructions/for-agents.md](./docs/instructions/for-agents.md)** — Complete reading order table + shell integration contract  
-→ **[docs/instructions/architectural-rules.md](./docs/instructions/architectural-rules.md)** — Non-negotiable rules
+→ **[docs/README.md](./docs/README.md)** — concise repository orientation
+→ **[docs/architecture.md](./docs/architecture.md)** — live package and runtime map
+→ **[docs/development.md](./docs/development.md)** — commands and documentation policy
 
 ## General Instructions
 

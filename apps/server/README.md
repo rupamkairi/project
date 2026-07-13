@@ -25,7 +25,6 @@ This app is a **shell**. All feature logic lives in:
 - `composes/{name}/server/` — compose plugins mounted here
 
 Read before working here:
-- [docs/instructions/README.md](../../docs/instructions/README.md) — agent reading order
-- [docs/setup/server.md](../../docs/setup/server.md) — server architecture + infra setup
-- [docs/core.md](../../docs/core.md) — core primitives reference
-- [docs/instructions/tooling.md](../../docs/instructions/tooling.md) — Bun, DB, TypeDoc commands
+- [docs/README.md](../../docs/README.md) — repository orientation
+- [docs/architecture.md](../../docs/architecture.md) — live runtime map
+- [docs/development.md](../../docs/development.md) — Bun, database, and API artifact commands

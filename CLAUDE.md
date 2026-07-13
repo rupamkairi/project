@@ -9,8 +9,9 @@ alwaysApply: true
 
 Start here before any task:
 
-- **[docs/instructions/README.md](./docs/instructions/README.md)** — agent reading order (4 steps)
-- **[docs/README.md](./docs/README.md)** — full documentation index
+- **[docs/README.md](./docs/README.md)** — repository orientation
+- **[docs/architecture.md](./docs/architecture.md)** — live package and runtime map
+- **[docs/development.md](./docs/development.md)** — commands and documentation policy
 
 ---
 
@@ -37,8 +38,6 @@ When running in Plan Mode or when asked to create a plan:
 
 ## Architectural rules
 
-Full rules: **[docs/instructions/architectural-rules.md](./docs/instructions/architectural-rules.md)**
-
 Non-negotiable:
 
 - **Core** — zero business logic, zero domain vocabulary, zero vendor deps
@@ -51,13 +50,13 @@ Non-negotiable:
 
 ## Tooling
 
-Use Bun — not Node.js, npm, or pnpm. Full reference: **[docs/instructions/tooling.md](./docs/instructions/tooling.md)**
+Use Bun — not Node.js, npm, or pnpm. See **[docs/development.md](./docs/development.md)** for repository commands.
 
 ---
 
 ## Conventions
 
-All naming (dirs, files, routes, exports, DB tables): **[docs/conventions.md](./docs/conventions.md)**
+Use the existing local package and route conventions; source code is canonical.
 
 ---
 
@@ -71,4 +70,4 @@ App is assumed running. Implement only.
 
 ## Core principle
 
-**Docs win over code.** If code and docs conflict, docs are the target. Code is transitional.
+**Code wins over docs.** If code and docs conflict, update the documentation to reflect the implementation.
