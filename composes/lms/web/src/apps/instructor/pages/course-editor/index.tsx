@@ -1,16 +1,24 @@
-import { useParams } from "@tanstack/react-router"
-import { useQuery, useMutation } from "@tanstack/react-query"
-import { lmsApi } from "../../../../api/lms-client"
-import { Tabs, TabsList, TabsTrigger, TabsContent, StatusBadge, Button, Spinner } from "@projectx/ui"
-import { CourseDetailsForm } from "./CourseDetailsForm"
-import { ModuleManager } from "./ModuleManager"
-import { PricingForm } from "./PricingForm"
+import { useParams } from '@tanstack/react-router'
+import { useQuery, useMutation } from '@tanstack/react-query'
+import { lmsApi } from '../../../../api/lms-client'
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+  StatusBadge,
+  Button,
+  Spinner,
+} from '@projectx/ui'
+import { CourseDetailsForm } from './CourseDetailsForm'
+import { ModuleManager } from './ModuleManager'
+import { PricingForm } from './PricingForm'
 
 export function CourseEditorPage() {
-  const { id } = useParams({ from: "/lms/teach/courses/$id/edit" })
+  const { id } = useParams({ from: '/lms/teach/courses/$id/edit' })
 
   const { data: course, refetch } = useQuery({
-    queryKey: ["instructor-course", id],
+    queryKey: ['instructor-course', id],
     queryFn: () => lmsApi.get<any>(`/instructor/courses/${id}`),
   })
 
@@ -31,16 +39,13 @@ export function CourseEditorPage() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-3">
-          <h1 className="text-xl font-semibold">{course.title ?? "Untitled Course"}</h1>
+          <h1 className="text-xl font-semibold">{course.title ?? 'Untitled Course'}</h1>
           <StatusBadge status={course.status} />
         </div>
         <div className="flex gap-2">
-          {course.status === "draft" && (
-            <Button
-              onClick={() => submitForReview.mutate()}
-              disabled={submitForReview.isPending}
-            >
-              {submitForReview.isPending ? "Submitting..." : "Submit for Review"}
+          {course.status === 'draft' && (
+            <Button onClick={() => submitForReview.mutate()} disabled={submitForReview.isPending}>
+              {submitForReview.isPending ? 'Submitting...' : 'Submit for Review'}
             </Button>
           )}
         </div>

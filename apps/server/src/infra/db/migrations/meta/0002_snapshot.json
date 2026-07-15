@@ -665,10 +665,7 @@
       "compositePrimaryKeys": {
         "actor_roles_actor_id_role_id_pk": {
           "name": "actor_roles_actor_id_role_id_pk",
-          "columns": [
-            "actor_id",
-            "role_id"
-          ]
+          "columns": ["actor_id", "role_id"]
         }
       },
       "uniqueConstraints": {},
@@ -6357,145 +6354,72 @@
     "public.actor_status": {
       "name": "actor_status",
       "schema": "public",
-      "values": [
-        "pending",
-        "active",
-        "suspended",
-        "deleted"
-      ]
+      "values": ["pending", "active", "suspended", "deleted"]
     },
     "public.actor_type": {
       "name": "actor_type",
       "schema": "public",
-      "values": [
-        "human",
-        "system",
-        "api_key"
-      ]
+      "values": ["human", "system", "api_key"]
     },
     "public.cat_item_status": {
       "name": "cat_item_status",
       "schema": "public",
-      "values": [
-        "draft",
-        "active",
-        "archived"
-      ]
+      "values": ["draft", "active", "archived"]
     },
     "public.cat_price_list_status": {
       "name": "cat_price_list_status",
       "schema": "public",
-      "values": [
-        "draft",
-        "active",
-        "archived"
-      ]
+      "values": ["draft", "active", "archived"]
     },
     "public.inv_location_type": {
       "name": "inv_location_type",
       "schema": "public",
-      "values": [
-        "warehouse",
-        "store",
-        "shelf",
-        "virtual"
-      ]
+      "values": ["warehouse", "store", "shelf", "virtual"]
     },
     "public.ldg_account_type": {
       "name": "ldg_account_type",
       "schema": "public",
-      "values": [
-        "asset",
-        "liability",
-        "revenue",
-        "expense",
-        "equity"
-      ]
+      "values": ["asset", "liability", "revenue", "expense", "equity"]
     },
     "public.ldg_tx_status": {
       "name": "ldg_tx_status",
       "schema": "public",
-      "values": [
-        "pending",
-        "posted",
-        "voided"
-      ]
+      "values": ["pending", "posted", "voided"]
     },
     "public.wf_instance_status": {
       "name": "wf_instance_status",
       "schema": "public",
-      "values": [
-        "pending",
-        "active",
-        "completed",
-        "cancelled"
-      ]
+      "values": ["pending", "active", "completed", "cancelled"]
     },
     "public.wf_task_status": {
       "name": "wf_task_status",
       "schema": "public",
-      "values": [
-        "open",
-        "in_progress",
-        "completed",
-        "failed",
-        "skipped"
-      ]
+      "values": ["open", "in_progress", "completed", "failed", "skipped"]
     },
     "public.sch_booking_status": {
       "name": "sch_booking_status",
       "schema": "public",
-      "values": [
-        "pending",
-        "confirmed",
-        "checked_in",
-        "completed",
-        "cancelled",
-        "no_show"
-      ]
+      "values": ["pending", "confirmed", "checked_in", "completed", "cancelled", "no_show"]
     },
     "public.sch_slot_status": {
       "name": "sch_slot_status",
       "schema": "public",
-      "values": [
-        "available",
-        "partially_booked",
-        "fully_booked",
-        "cancelled",
-        "expired"
-      ]
+      "values": ["available", "partially_booked", "fully_booked", "cancelled", "expired"]
     },
     "public.doc_status": {
       "name": "doc_status",
       "schema": "public",
-      "values": [
-        "draft",
-        "under_review",
-        "approved",
-        "archived"
-      ]
+      "values": ["draft", "under_review", "approved", "archived"]
     },
     "public.ntf_channel": {
       "name": "ntf_channel",
       "schema": "public",
-      "values": [
-        "email",
-        "sms",
-        "push",
-        "whatsapp",
-        "webhook",
-        "in_app"
-      ]
+      "values": ["email", "sms", "push", "whatsapp", "webhook", "in_app"]
     },
     "public.ntf_log_status": {
       "name": "ntf_log_status",
       "schema": "public",
-      "values": [
-        "pending",
-        "sent",
-        "failed",
-        "read"
-      ]
+      "values": ["pending", "sent", "failed", "read"]
     }
   },
   "schemas": {},

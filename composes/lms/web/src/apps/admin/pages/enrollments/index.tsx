@@ -1,50 +1,46 @@
-import { useState } from "react"
-import { useQuery, useMutation } from "@tanstack/react-query"
-import { lmsApi } from "../../../../api/lms-client"
-import { Button, Input, Label } from "@projectx/ui"
-import { formatDate } from "../../../../components/shared/PriceDisplay"
-import { Upload } from "lucide-react"
+import { useState } from 'react'
+import { useQuery, useMutation } from '@tanstack/react-query'
+import { lmsApi } from '../../../../api/lms-client'
+import { Button, Input, Label } from '@projectx/ui'
+import { formatDate } from '../../../../components/shared/PriceDisplay'
+import { Upload } from 'lucide-react'
 
 export function AdminEnrollmentsPage() {
-  const [courseId, setCourseId] = useState("")
-  const [learnerId, setLearnerId] = useState("")
-  const [bulkCourseId, setBulkCourseId] = useState("")
-  const [learnerIdsCsv, setLearnerIdsCsv] = useState("")
+  const [courseId, setCourseId] = useState('')
+  const [learnerId, setLearnerId] = useState('')
+  const [bulkCourseId, setBulkCourseId] = useState('')
+  const [learnerIdsCsv, setLearnerIdsCsv] = useState('')
 
   const { data, refetch } = useQuery({
-    queryKey: ["admin-enrollments", courseId],
+    queryKey: ['admin-enrollments', courseId],
     queryFn: () =>
-      lmsApi.get<any>(
-        courseId
-          ? `/admin/enrollments?courseId=${courseId}`
-          : "/admin/enrollments",
-      ),
+      lmsApi.get<any>(courseId ? `/admin/enrollments?courseId=${courseId}` : '/admin/enrollments'),
   })
 
   const enrollSingle = useMutation({
     mutationFn: () =>
-      lmsApi.post("/admin/enrollments", {
+      lmsApi.post('/admin/enrollments', {
         courseId,
         learnerId,
       }),
     onSuccess: () => {
-      setLearnerId("")
+      setLearnerId('')
       refetch()
     },
   })
 
   const bulkEnroll = useMutation({
     mutationFn: () =>
-      lmsApi.post("/admin/enrollments/bulk", {
+      lmsApi.post('/admin/enrollments/bulk', {
         courseId: bulkCourseId,
         learnerIds: learnerIdsCsv
-          .split(",")
+          .split(',')
           .map((s) => s.trim())
           .filter(Boolean),
       }),
     onSuccess: () => {
-      setBulkCourseId("")
-      setLearnerIdsCsv("")
+      setBulkCourseId('')
+      setLearnerIdsCsv('')
       refetch()
     },
   })
@@ -55,16 +51,16 @@ export function AdminEnrollmentsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-semibold">Enrollments</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Manage course enrollments
-        </p>
+        <p className="text-sm text-muted-foreground mt-1">Manage course enrollments</p>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div className="border rounded-lg p-4 space-y-3">
           <h3 className="text-sm font-medium">Single Enrollment</h3>
           <div className="space-y-1.5">
-            <Label htmlFor="single-course" className="text-xs">Course ID</Label>
+            <Label htmlFor="single-course" className="text-xs">
+              Course ID
+            </Label>
             <Input
               id="single-course"
               value={courseId}
@@ -74,7 +70,9 @@ export function AdminEnrollmentsPage() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="single-learner" className="text-xs">Learner ID</Label>
+            <Label htmlFor="single-learner" className="text-xs">
+              Learner ID
+            </Label>
             <Input
               id="single-learner"
               value={learnerId}
@@ -88,14 +86,14 @@ export function AdminEnrollmentsPage() {
             onClick={() => enrollSingle.mutate()}
             disabled={enrollSingle.isPending || !courseId || !learnerId}
           >
-            {enrollSingle.isPending ? "Enrolling..." : "Enroll"}
+            {enrollSingle.isPending ? 'Enrolling...' : 'Enroll'}
           </Button>
           {enrollSingle.isSuccess && (
             <p className="text-xs text-green-600">Enrolled successfully</p>
           )}
           {enrollSingle.isError && (
             <p className="text-xs text-red-500">
-              {(enrollSingle.error as any)?.message ?? "Failed"}
+              {(enrollSingle.error as any)?.message ?? 'Failed'}
             </p>
           )}
         </div>
@@ -103,7 +101,9 @@ export function AdminEnrollmentsPage() {
         <div className="border rounded-lg p-4 space-y-3">
           <h3 className="text-sm font-medium">Bulk Enrollment</h3>
           <div className="space-y-1.5">
-            <Label htmlFor="bulk-course" className="text-xs">Course ID</Label>
+            <Label htmlFor="bulk-course" className="text-xs">
+              Course ID
+            </Label>
             <Input
               id="bulk-course"
               value={bulkCourseId}
@@ -113,7 +113,9 @@ export function AdminEnrollmentsPage() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="bulk-learners" className="text-xs">Learner IDs (comma-separated)</Label>
+            <Label htmlFor="bulk-learners" className="text-xs">
+              Learner IDs (comma-separated)
+            </Label>
             <Input
               id="bulk-learners"
               value={learnerIdsCsv}
@@ -139,22 +141,16 @@ export function AdminEnrollmentsPage() {
               </>
             )}
           </Button>
-          {bulkEnroll.isSuccess && (
-            <p className="text-xs text-green-600">Enrolled successfully</p>
-          )}
+          {bulkEnroll.isSuccess && <p className="text-xs text-green-600">Enrolled successfully</p>}
           {bulkEnroll.isError && (
-            <p className="text-xs text-red-500">
-              {(bulkEnroll.error as any)?.message ?? "Failed"}
-            </p>
+            <p className="text-xs text-red-500">{(bulkEnroll.error as any)?.message ?? 'Failed'}</p>
           )}
         </div>
       </div>
 
       <div className="rounded-md border overflow-hidden">
         <div className="p-3 border-b bg-muted/30">
-          <p className="text-sm font-medium">
-            Enrollment History ({enrollments.length})
-          </p>
+          <p className="text-sm font-medium">Enrollment History ({enrollments.length})</p>
         </div>
         {enrollments.length > 0 ? (
           <table className="w-full text-sm">
@@ -171,24 +167,18 @@ export function AdminEnrollmentsPage() {
               {enrollments.map((e: any) => (
                 <tr key={e.id} className="border-t hover:bg-muted/30">
                   <td className="p-3">{e.learnerName ?? e.learnerId}</td>
-                  <td className="p-3 text-muted-foreground">
-                    {e.courseTitle ?? e.courseId}
-                  </td>
-                  <td className="p-3">{e.status ?? "active"}</td>
+                  <td className="p-3 text-muted-foreground">{e.courseTitle ?? e.courseId}</td>
+                  <td className="p-3">{e.status ?? 'active'}</td>
                   <td className="p-3">
-                    {e.progress != null ? `${Math.round(e.progress * 100)}%` : "—"}
+                    {e.progress != null ? `${Math.round(e.progress * 100)}%` : '—'}
                   </td>
-                  <td className="p-3 text-muted-foreground">
-                    {formatDate(e.createdAt)}
-                  </td>
+                  <td className="p-3 text-muted-foreground">{formatDate(e.createdAt)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         ) : (
-          <p className="p-4 text-sm text-muted-foreground text-center">
-            No enrollments found
-          </p>
+          <p className="p-4 text-sm text-muted-foreground text-center">No enrollments found</p>
         )}
       </div>
     </div>

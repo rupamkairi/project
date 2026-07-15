@@ -4,6 +4,8 @@
 → **[docs/architecture.md](./docs/architecture.md)** — live package and runtime map
 → **[docs/development.md](./docs/development.md)** — commands and documentation policy
 
+→ **[docs/agents/](./docs/agents/)** — issue tracker, triage labels, and domain glossary (see CLAUDE.md "Agent Skills")
+
 ## General Instructions
 
 The Project has already a dev server running. Never run package.json dev commands from root or any decending directory.

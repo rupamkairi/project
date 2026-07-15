@@ -1,16 +1,16 @@
-import { useQuery } from "@tanstack/react-query"
-import { lmsApi } from "../../../../api/lms-client"
-import { StatCard } from "../../../../components/shared/StatCard"
-import { AmountDisplay } from "../../../../components/shared/PriceDisplay"
-import { Button } from "@projectx/ui"
-import { useNavigate } from "@tanstack/react-router"
+import { useQuery } from '@tanstack/react-query'
+import { lmsApi } from '../../../../api/lms-client'
+import { StatCard } from '../../../../components/shared/StatCard'
+import { AmountDisplay } from '../../../../components/shared/PriceDisplay'
+import { Button } from '@projectx/ui'
+import { useNavigate } from '@tanstack/react-router'
 
 export function InstructorAnalyticsOverviewPage() {
   const navigate = useNavigate()
 
   const { data } = useQuery({
-    queryKey: ["instructor-overview"],
-    queryFn: () => lmsApi.get<any>("/instructor/analytics/overview"),
+    queryKey: ['instructor-overview'],
+    queryFn: () => lmsApi.get<any>('/instructor/analytics/overview'),
   })
 
   const courses = data?.courses ?? []
@@ -19,21 +19,13 @@ export function InstructorAnalyticsOverviewPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-semibold">Analytics</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Overview across all your courses
-        </p>
+        <p className="text-sm text-muted-foreground mt-1">Overview across all your courses</p>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
         <StatCard label="Total Students" value={data?.totalStudents ?? 0} />
-        <StatCard
-          label="Avg Rating"
-          value={`★ ${data?.avgRating?.toFixed(1) ?? "—"}`}
-        />
-        <StatCard
-          label="Revenue (MTD)"
-          value={<AmountDisplay amount={data?.mtdRevenue} />}
-        />
+        <StatCard label="Avg Rating" value={`★ ${data?.avgRating?.toFixed(1) ?? '—'}`} />
+        <StatCard label="Revenue (MTD)" value={<AmountDisplay amount={data?.mtdRevenue} />} />
       </div>
 
       <div className="rounded-md border overflow-hidden">
@@ -54,7 +46,7 @@ export function InstructorAnalyticsOverviewPage() {
                 <td className="p-3">{c.title}</td>
                 <td className="p-3">{c.enrollments ?? 0}</td>
                 <td className="p-3">{c.completionRate ?? 0}%</td>
-                <td className="p-3">★ {c.rating?.toFixed(1) ?? "—"}</td>
+                <td className="p-3">★ {c.rating?.toFixed(1) ?? '—'}</td>
                 <td className="p-3">
                   <AmountDisplay amount={c.revenue} />
                 </td>
@@ -62,9 +54,7 @@ export function InstructorAnalyticsOverviewPage() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() =>
-                      navigate({ to: `/lms/teach/courses/${c.courseId}/analytics` })
-                    }
+                    onClick={() => navigate({ to: `/lms/teach/courses/${c.courseId}/analytics` })}
                   >
                     View
                   </Button>

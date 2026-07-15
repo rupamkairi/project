@@ -1,36 +1,36 @@
-import type { Mediator } from "@core";
+import type { Mediator } from '@core'
 
 export async function onPaymentReceived(
   orderId: string,
   amount: { amount: number; currency: string },
   gatewayRef: string,
-  mediator: Mediator
+  mediator: Mediator,
 ): Promise<void> {
   await mediator.dispatch({
-    type: "ledger.recordPayment",
+    type: 'ledger.recordPayment',
     orderId,
     amount,
     gatewayRef,
-    orgId: "",
-    actorId: "system",
+    orgId: '',
+    actorId: 'system',
     correlationId: crypto.randomUUID(),
-  } as any);
+  } as any)
 
   await mediator.dispatch({
-    type: "ecommerce.markOrderPaid",
+    type: 'ecommerce.markOrderPaid',
     orderId,
     gatewayRef,
-    orgId: "",
-    actorId: "system",
+    orgId: '',
+    actorId: 'system',
     correlationId: crypto.randomUUID(),
-  } as any);
+  } as any)
 
   await mediator.dispatch({
-    type: "workflow.startProcess",
-    templateId: "ORDER_FULFILLMENT",
+    type: 'workflow.startProcess',
+    templateId: 'ORDER_FULFILLMENT',
     contextId: orderId,
-    orgId: "",
-    actorId: "system",
+    orgId: '',
+    actorId: 'system',
     correlationId: crypto.randomUUID(),
-  } as any);
+  } as any)
 }

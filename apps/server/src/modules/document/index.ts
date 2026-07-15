@@ -1,12 +1,12 @@
 // Document Module
 
-import type { AppModule, BootRegistry } from "@core";
+import type { AppModule, BootRegistry } from '@core'
 
 export const DocumentModule: AppModule = {
   manifest: {
-    id: "document",
-    version: "0.1.0",
-    dependsOn: ["identity"],
+    id: 'document',
+    version: '0.1.0',
+    dependsOn: ['identity'],
     entities: [],
     idPrefixes: {},
     events: [],
@@ -26,4 +26,4 @@ export const DocumentModule: AppModule = {
   async shutdown(): Promise<void> {
     // Cleanup
   },
-};
+}

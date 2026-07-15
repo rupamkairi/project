@@ -1,0 +1,33 @@
+{
+  "name": "@projectx/hospitality-web",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "Hospitality Management Compose Web — routes, API client, and UI",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist node_modules",
+    "lint": "eslint .",
+    "format:check": "prettier --check .",
+    "format:write": "prettier --write ."
+  },
+  "dependencies": {
+    "@projectx/plugin-auth-web": "workspace:*",
+    "@projectx/platform-web": "workspace:*",
+    "@projectx/shared-router": "workspace:*",
+    "@projectx/ui": "workspace:*",
+    "@tanstack/react-router": "^1.161.3",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "zustand": "^5.0.11"
+  },
+  "devDependencies": {
+    "@projectx/config": "workspace:*",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "^5.3.3"
+  }
+}

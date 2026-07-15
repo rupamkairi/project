@@ -10,10 +10,10 @@
  */
 
 /** ULID-format unique identifier. */
-export type ID = string;
+export type ID = string
 
 /** Unix epoch milliseconds — no Date objects in Core. */
-export type Timestamp = number;
+export type Timestamp = number
 
 /** Flexible metadata bag. */
-export type Meta = Record<string, string | number | boolean | null>;
+export type Meta = Record<string, string | number | boolean | null>

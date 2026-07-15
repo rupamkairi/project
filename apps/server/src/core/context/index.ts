@@ -7,21 +7,21 @@
  * @packageDocumentation
  */
 
-import type { Entity, ID, Timestamp } from "../entity";
-import { generateId } from "../entity";
-import type { Command, Query } from "../cqrs";
-import type { DomainEvent } from "../event";
-import type { RuleEngine } from "../rule";
-import type { FSMEngine } from "../state";
-import type { Repository } from "../repository";
-import type { Queue, Scheduler } from "../queue";
-import type { RealTimeGateway } from "../realtime";
-import type { AdapterRegistry } from "../adapters";
+import type { Entity, ID, Timestamp } from '../entity'
+import { generateId } from '../entity'
+import type { Command, Query } from '../cqrs'
+import type { DomainEvent } from '../event'
+import type { RuleEngine } from '../rule'
+import type { FSMEngine } from '../state'
+import type { Repository } from '../repository'
+import type { Queue, Scheduler } from '../queue'
+import type { RealTimeGateway } from '../realtime'
+import type { AdapterRegistry } from '../adapters'
 
 // Logger lives in primitives — re-exported here so any consumer importing from
 // context still works without changes.
-export type { Logger } from "../primitives/logger";
-import type { Logger } from "../primitives/logger";
+export type { Logger } from '../primitives/logger'
+import type { Logger } from '../primitives/logger'
 
 /**
  * System context for command/query execution.
@@ -36,45 +36,45 @@ export interface SystemContext {
    * Current actor information
    */
   actor: {
-    id: ID;
-    roles: string[];
-    orgId: ID;
-    type: "human" | "system" | "api-key";
-  };
+    id: ID
+    roles: string[]
+    orgId: ID
+    type: 'human' | 'system' | 'api-key'
+  }
 
   /**
    * Organization information
    */
   org: {
-    id: ID;
-    slug: string;
-    settings: Record<string, unknown>;
-  };
+    id: ID
+    slug: string
+    settings: Record<string, unknown>
+  }
 
   /**
    * Correlation ID for tracing related operations
    */
-  correlationId: ID;
+  correlationId: ID
 
   /**
    * Request ID for this specific operation
    */
-  requestId: ID;
+  requestId: ID
 
   /**
    * Timestamp when execution started (Unix epoch ms)
    */
-  startedAt: Timestamp;
+  startedAt: Timestamp
 
   /**
    * Client IP address (optional, present on HTTP requests)
    */
-  ip?: string;
+  ip?: string
 
   /**
    * Client user-agent string (optional, present on HTTP requests)
    */
-  userAgent?: string;
+  userAgent?: string
 
   /**
    * Dispatches a command (auto-fills actorId, orgId, correlationId).
@@ -83,9 +83,7 @@ export interface SystemContext {
    * @param cmd - Command without actor/org/correlation fields
    * @returns Handler result
    */
-  dispatch<R = unknown>(
-    cmd: Omit<Command, "actorId" | "orgId" | "correlationId">,
-  ): Promise<R>;
+  dispatch<R = unknown>(cmd: Omit<Command, 'actorId' | 'orgId' | 'correlationId'>): Promise<R>
 
   /**
    * Sends a query (auto-fills actorId, orgId).
@@ -94,33 +92,31 @@ export interface SystemContext {
    * @param q - Query without actor/org fields
    * @returns Handler result
    */
-  query<R = unknown>(q: Omit<Query, "actorId" | "orgId">): Promise<R>;
+  query<R = unknown>(q: Omit<Query, 'actorId' | 'orgId'>): Promise<R>
 
   /**
    * Publishes a domain event (auto-fills actorId, orgId, correlationId).
    *
    * @param event - Event without actor/org/correlation fields
    */
-  publish(
-    event: Omit<DomainEvent, "actorId" | "orgId" | "correlationId">,
-  ): Promise<void>;
+  publish(event: Omit<DomainEvent, 'actorId' | 'orgId' | 'correlationId'>): Promise<void>
 
   /**
    * Publishes multiple domain events.
    *
    * @param events - Full domain events to publish
    */
-  publishBatch(events: DomainEvent[]): Promise<void>;
+  publishBatch(events: DomainEvent[]): Promise<void>
 
   /**
    * Rule engine for business logic evaluation
    */
-  rules: RuleEngine;
+  rules: RuleEngine
 
   /**
    * FSM engine for state machine execution
    */
-  fsm: FSMEngine;
+  fsm: FSMEngine
 
   /**
    * Repository factory — returns a repository scoped to orgId automatically
@@ -128,32 +124,32 @@ export interface SystemContext {
    * @param entityName - Entity name
    * @returns Org-scoped repository
    */
-  repo<T extends Entity>(entityName: string): Repository<T>;
+  repo<T extends Entity>(entityName: string): Repository<T>
 
   /**
    * Queue for background job processing
    */
-  queue: Queue;
+  queue: Queue
 
   /**
    * Scheduler for recurring jobs
    */
-  scheduler: Scheduler;
+  scheduler: Scheduler
 
   /**
    * Real-time gateway for WebSocket/push
    */
-  realtime: RealTimeGateway;
+  realtime: RealTimeGateway
 
   /**
    * Adapter registry for external integrations
    */
-  adapters: AdapterRegistry;
+  adapters: AdapterRegistry
 
   /**
    * Logger for structured logging
    */
-  logger: Logger;
+  logger: Logger
 }
 
 /**
@@ -165,111 +161,108 @@ export interface SystemContextOptions {
   /**
    * Actor ID (default: "system")
    */
-  actorId?: ID;
+  actorId?: ID
 
   /**
    * Actor roles
    */
-  roles?: string[];
+  roles?: string[]
 
   /**
    * Organization ID (default: "system")
    */
-  orgId?: ID;
+  orgId?: ID
 
   /**
    * Organization slug
    */
-  orgSlug?: string;
+  orgSlug?: string
 
   /**
    * Organization settings
    */
-  orgSettings?: Record<string, unknown>;
+  orgSettings?: Record<string, unknown>
 
   /**
    * Actor type (default: "system")
    */
-  actorType?: "human" | "system" | "api-key";
+  actorType?: 'human' | 'system' | 'api-key'
 
   /**
    * Correlation ID (auto-generated if not provided)
    */
-  correlationId?: ID;
+  correlationId?: ID
 
   /**
    * Request ID (auto-generated if not provided)
    */
-  requestId?: ID;
+  requestId?: ID
 
   /**
    * Client IP address
    */
-  ip?: string;
+  ip?: string
 
   /**
    * Client user-agent string
    */
-  userAgent?: string;
+  userAgent?: string
 
   /**
    * Mediator for command/query dispatch
    */
   mediator?: {
-    dispatch: <R = unknown>(cmd: Command) => Promise<R>;
-    query: <R = unknown>(q: Query) => Promise<R>;
-  };
+    dispatch: <R = unknown>(cmd: Command) => Promise<R>
+    query: <R = unknown>(q: Query) => Promise<R>
+  }
 
   /**
    * Event bus for event publishing
    */
   eventBus?: {
-    publish: (event: DomainEvent) => Promise<void>;
-    publishBatch?: (events: DomainEvent[]) => Promise<void>;
-  };
+    publish: (event: DomainEvent) => Promise<void>
+    publishBatch?: (events: DomainEvent[]) => Promise<void>
+  }
 
   /**
    * Rule engine instance
    */
-  rules?: RuleEngine;
+  rules?: RuleEngine
 
   /**
    * FSM engine instance
    */
-  fsm?: FSMEngine;
+  fsm?: FSMEngine
 
   /**
    * Queue instance
    */
-  queue?: Queue;
+  queue?: Queue
 
   /**
    * Logger instance
    */
-  logger?: Logger;
+  logger?: Logger
 
   /**
    * Scheduler instance
    */
-  scheduler?: Scheduler;
+  scheduler?: Scheduler
 
   /**
    * Real-time gateway instance
    */
-  realtime?: RealTimeGateway;
+  realtime?: RealTimeGateway
 
   /**
    * Adapter registry instance
    */
-  adapters?: AdapterRegistry;
+  adapters?: AdapterRegistry
 
   /**
    * Repository factory — receives orgId + entityName and returns a scoped Repository
    */
-  repoFactory?: <T extends Entity>(
-    orgId: ID,
-    entityName: string,
-  ) => Repository<T>;
+  repoFactory?: <T extends Entity>(orgId: ID, entityName: string) => Repository<T>
 }
 
 /**
@@ -301,13 +294,13 @@ export interface SystemContextOptions {
  * @category Core
  */
 export function createSystemContext(opts: SystemContextOptions): SystemContext {
-  const actorId = opts.actorId ?? "system";
-  const orgId = opts.orgId ?? "system";
-  const correlationId = opts.correlationId ?? generateId();
-  const requestId = opts.requestId ?? generateId();
+  const actorId = opts.actorId ?? 'system'
+  const orgId = opts.orgId ?? 'system'
+  const correlationId = opts.correlationId ?? generateId()
+  const requestId = opts.requestId ?? generateId()
 
   function notConfigured(name: string): never {
-    throw new Error(`${name}: not configured (wire it at module boot)`);
+    throw new Error(`${name}: not configured (wire it at module boot)`)
   }
 
   return {
@@ -315,108 +308,106 @@ export function createSystemContext(opts: SystemContextOptions): SystemContext {
       id: actorId,
       roles: opts.roles ?? [],
       orgId: orgId,
-      type: opts.actorType ?? "system",
+      type: opts.actorType ?? 'system',
     },
     org: {
       id: orgId,
-      slug: opts.orgSlug ?? "system",
+      slug: opts.orgSlug ?? 'system',
       settings: opts.orgSettings ?? {},
     },
     correlationId,
     requestId,
     startedAt: Date.now() as Timestamp,
-    ip: opts.ip,
-    userAgent: opts.userAgent,
+    ...(opts.ip !== undefined && { ip: opts.ip }),
+    ...(opts.userAgent !== undefined && { userAgent: opts.userAgent }),
 
     dispatch: async function <R = unknown>(
-      cmd: Omit<Command, "actorId" | "orgId" | "correlationId">,
+      cmd: Omit<Command, 'actorId' | 'orgId' | 'correlationId'>,
     ): Promise<R> {
       if (!opts.mediator) {
-        throw new Error("Mediator not configured in context");
+        throw new Error('Mediator not configured in context')
       }
       return opts.mediator.dispatch({
         ...cmd,
         actorId,
         orgId,
         correlationId,
-      } as Command);
+      } as Command)
     },
 
-    query: async function <R = unknown>(
-      q: Omit<Query, "actorId" | "orgId">,
-    ): Promise<R> {
+    query: async function <R = unknown>(q: Omit<Query, 'actorId' | 'orgId'>): Promise<R> {
       if (!opts.mediator) {
-        throw new Error("Mediator not configured in context");
+        throw new Error('Mediator not configured in context')
       }
       return opts.mediator.query({
         ...q,
         actorId,
         orgId,
-      } as Query);
+      } as Query)
     },
 
     publish: async function (
-      event: Omit<DomainEvent, "actorId" | "orgId" | "correlationId">,
+      event: Omit<DomainEvent, 'actorId' | 'orgId' | 'correlationId'>,
     ): Promise<void> {
       if (!opts.eventBus) {
-        throw new Error("EventBus not configured in context");
+        throw new Error('EventBus not configured in context')
       }
       await opts.eventBus.publish({
         ...event,
         actorId,
         orgId,
         correlationId,
-      } as DomainEvent);
+      } as DomainEvent)
     },
 
     publishBatch: async function (events: DomainEvent[]): Promise<void> {
       if (!opts.eventBus) {
-        throw new Error("EventBus not configured in context");
+        throw new Error('EventBus not configured in context')
       }
       if (opts.eventBus.publishBatch) {
-        await opts.eventBus.publishBatch(events);
+        await opts.eventBus.publishBatch(events)
       } else {
         for (const event of events) {
-          await opts.eventBus.publish(event);
+          await opts.eventBus.publish(event)
         }
       }
     },
 
     get rules(): RuleEngine {
-      if (!opts.rules) notConfigured("SystemContext.rules");
-      return opts.rules;
+      if (!opts.rules) notConfigured('SystemContext.rules')
+      return opts.rules
     },
 
     get fsm(): FSMEngine {
-      if (!opts.fsm) notConfigured("SystemContext.fsm");
-      return opts.fsm;
+      if (!opts.fsm) notConfigured('SystemContext.fsm')
+      return opts.fsm
     },
 
     get queue(): Queue {
-      if (!opts.queue) notConfigured("SystemContext.queue");
-      return opts.queue;
+      if (!opts.queue) notConfigured('SystemContext.queue')
+      return opts.queue
     },
 
     get scheduler(): Scheduler {
-      if (!opts.scheduler) notConfigured("SystemContext.scheduler");
-      return opts.scheduler;
+      if (!opts.scheduler) notConfigured('SystemContext.scheduler')
+      return opts.scheduler
     },
 
     get realtime(): RealTimeGateway {
-      if (!opts.realtime) notConfigured("SystemContext.realtime");
-      return opts.realtime;
+      if (!opts.realtime) notConfigured('SystemContext.realtime')
+      return opts.realtime
     },
 
     get adapters(): AdapterRegistry {
-      if (!opts.adapters) notConfigured("SystemContext.adapters");
-      return opts.adapters;
+      if (!opts.adapters) notConfigured('SystemContext.adapters')
+      return opts.adapters
     },
 
     repo<T extends Entity>(entityName: string): Repository<T> {
-      if (!opts.repoFactory) notConfigured("SystemContext.repo");
-      return opts.repoFactory<T>(orgId, entityName);
+      if (!opts.repoFactory) notConfigured('SystemContext.repo')
+      return opts.repoFactory<T>(orgId, entityName)
     },
 
     logger: opts.logger ?? (console as unknown as Logger),
-  };
+  }
 }

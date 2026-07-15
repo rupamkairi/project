@@ -3,12 +3,12 @@
  * Safe to run on a DB that already has the foundation schema (0000-0003 equivalent).
  * Uses neon-http (same as app runtime) to avoid WebSocket issues.
  */
-import { neon } from "@neondatabase/serverless";
+import { neon } from '@neondatabase/serverless'
 
-const url = process.env.DATABASE_URL;
-if (!url) throw new Error("DATABASE_URL not set");
+const url = process.env.DATABASE_URL
+if (!url) throw new Error('DATABASE_URL not set')
 
-const sql = neon(url);
+const sql = neon(url)
 
 const ERP_DDL = `
 -- ERP tables (created with IF NOT EXISTS for idempotency)
@@ -404,33 +404,32 @@ CREATE TABLE IF NOT EXISTS "erp_gst_returns" (
   "filed_at" timestamp,
   "created_at" timestamp DEFAULT now()
 );
-`;
+`
 
-const statements = ERP_DDL
-  .split(";")
+const statements = ERP_DDL.split(';')
   .map((s) => s.trim())
-  .filter((s) => s.length > 0 && !s.startsWith("--"));
+  .filter((s) => s.length > 0 && !s.startsWith('--'))
 
-console.log(`Applying ${statements.length} ERP DDL statements...`);
+console.log(`Applying ${statements.length} ERP DDL statements...`)
 
-let applied = 0;
-let skipped = 0;
-let failed = 0;
+let applied = 0
+let skipped = 0
+let failed = 0
 
 for (const stmt of statements) {
   try {
-    await sql.query(stmt + ";");
-    applied++;
+    await sql.query(stmt + ';')
+    applied++
   } catch (err: any) {
-    if (err?.message?.includes("already exists")) {
-      skipped++;
+    if (err?.message?.includes('already exists')) {
+      skipped++
     } else {
-      console.error(`Failed: ${stmt.slice(0, 80)}...\n  Error: ${err?.message}`);
-      failed++;
+      console.error(`Failed: ${stmt.slice(0, 80)}...\n  Error: ${err?.message}`)
+      failed++
     }
   }
 }
 
-console.log(`Done. Applied: ${applied}, Skipped (exists): ${skipped}, Failed: ${failed}`);
-if (failed > 0) process.exit(1);
-process.exit(0);
+console.log(`Done. Applied: ${applied}, Skipped (exists): ${skipped}, Failed: ${failed}`)
+if (failed > 0) process.exit(1)
+process.exit(0)

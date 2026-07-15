@@ -9,14 +9,14 @@
  */
 
 // Logger — canonical location
-export type { Logger } from "./logger";
+export type { Logger } from './logger'
 
 // Result type — canonical location
 // Note: Result depends on CoreError from errors/index.ts, which in turn
 // imports from primitives — to avoid a circular dependency the import in
 // result.ts goes directly to ../errors (not through this barrel).
-export type { Result } from "./result";
-export { Ok, Err } from "./result";
+export type { Result } from './result'
+export { Ok, Err } from './result'
 
 /**
  * Monetary value with currency.
@@ -41,14 +41,14 @@ export interface Money {
    * - 100 = ₹1.00 INR
    * - 50 = €0.50 EUR
    */
-  amount: number;
+  amount: number
 
   /**
    * ISO 4217 currency code
    *
    * Examples: "USD", "EUR", "INR", "GBP"
    */
-  currency: string;
+  currency: string
 }
 
 /**
@@ -72,14 +72,12 @@ export interface Money {
  */
 export function moneyAdd(a: Money, b: Money): Money {
   if (a.currency !== b.currency) {
-    throw new Error(
-      `Cannot add different currencies: ${a.currency} and ${b.currency}`,
-    );
+    throw new Error(`Cannot add different currencies: ${a.currency} and ${b.currency}`)
   }
   return {
     amount: a.amount + b.amount,
     currency: a.currency,
-  };
+  }
 }
 
 /**
@@ -95,14 +93,12 @@ export function moneyAdd(a: Money, b: Money): Money {
  */
 export function moneySubtract(a: Money, b: Money): Money {
   if (a.currency !== b.currency) {
-    throw new Error(
-      `Cannot subtract different currencies: ${a.currency} and ${b.currency}`,
-    );
+    throw new Error(`Cannot subtract different currencies: ${a.currency} and ${b.currency}`)
   }
   return {
     amount: a.amount - b.amount,
     currency: a.currency,
-  };
+  }
 }
 
 /**
@@ -124,7 +120,7 @@ export function moneyMultiply(m: Money, factor: number): Money {
   return {
     amount: Math.round(m.amount * factor),
     currency: m.currency,
-  };
+  }
 }
 
 /**
@@ -134,23 +130,23 @@ export function moneyMultiply(m: Money, factor: number): Money {
  * @see https://en.wikipedia.org/wiki/ISO_4217#List_of_ISO_4217_currency_codes
  */
 const ZERO_DECIMAL_CURRENCIES = new Set([
-  "JPY",
-  "KRW",
-  "VND",
-  "BIF",
-  "CLP",
-  "GNF",
-  "ISK",
-  "KMF",
-  "MGA",
-  "PYG",
-  "RWF",
-  "UGX",
-  "UZS",
-  "XAF",
-  "XOF",
-  "XPF",
-]);
+  'JPY',
+  'KRW',
+  'VND',
+  'BIF',
+  'CLP',
+  'GNF',
+  'ISK',
+  'KMF',
+  'MGA',
+  'PYG',
+  'RWF',
+  'UGX',
+  'UZS',
+  'XAF',
+  'XOF',
+  'XPF',
+])
 
 /**
  * Formats a monetary value as a localized currency string.
@@ -172,14 +168,12 @@ const ZERO_DECIMAL_CURRENCIES = new Set([
  *
  * @category Core
  */
-export function moneyFormat(m: Money, locale: string = "en-US"): string {
-  const amount = ZERO_DECIMAL_CURRENCIES.has(m.currency.toUpperCase())
-    ? m.amount
-    : m.amount / 100;
+export function moneyFormat(m: Money, locale: string = 'en-US'): string {
+  const amount = ZERO_DECIMAL_CURRENCIES.has(m.currency.toUpperCase()) ? m.amount : m.amount / 100
   return new Intl.NumberFormat(locale, {
-    style: "currency",
+    style: 'currency',
     currency: m.currency,
-  }).format(amount);
+  }).format(amount)
 }
 
 /**
@@ -206,27 +200,27 @@ export interface PaginatedResult<T> {
   /**
    * Array of items for the current page
    */
-  data: T[];
+  data: T[]
 
   /**
    * Total number of items across all pages
    */
-  total: number;
+  total: number
 
   /**
    * Current page number (1-indexed)
    */
-  page: number;
+  page: number
 
   /**
    * Number of items per page
    */
-  limit: number;
+  limit: number
 
   /**
    * Whether there are more pages after the current one
    */
-  hasNext: boolean;
+  hasNext: boolean
 }
 
 /**
@@ -246,12 +240,12 @@ export interface SortSpec {
   /**
    * Field name to sort by
    */
-  field: string;
+  field: string
 
   /**
    * Sort order
    */
-  order: "asc" | "desc";
+  order: 'asc' | 'desc'
 }
 
 /**
@@ -272,17 +266,17 @@ export interface PageOptions {
   /**
    * Page number (1-indexed, default: 1)
    */
-  page?: number;
+  page?: number
 
   /**
    * Number of items per page (default: 20)
    */
-  limit?: number;
+  limit?: number
 
   /**
    * Sort specifications
    */
-  sort?: SortSpec[];
+  sort?: SortSpec[]
 }
 
 /**
@@ -309,7 +303,7 @@ export function createPaginatedResult<T>(
     page,
     limit,
     hasNext: page * limit < total,
-  };
+  }
 }
 
 /**
@@ -324,5 +318,5 @@ export function getDefaultPageOptions(): PageOptions {
     page: 1,
     limit: 20,
     sort: [],
-  };
+  }
 }

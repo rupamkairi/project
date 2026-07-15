@@ -1,5 +1,5 @@
-import { useQuery, useMutation } from "@tanstack/react-query"
-import { lmsApi } from "../../../../api/lms-client"
+import { useQuery, useMutation } from '@tanstack/react-query'
+import { lmsApi } from '../../../../api/lms-client'
 import {
   Button,
   DataTable,
@@ -8,16 +8,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuContent,
-} from "@projectx/ui"
-import { useNavigate } from "@tanstack/react-router"
-import { Plus, MoreHorizontal } from "lucide-react"
+} from '@projectx/ui'
+import { useNavigate } from '@tanstack/react-router'
+import { Plus, MoreHorizontal } from 'lucide-react'
 
 export function InstructorCoursesPage() {
   const navigate = useNavigate()
 
   const { data, refetch } = useQuery({
-    queryKey: ["instructor-courses"],
-    queryFn: () => lmsApi.get<any>("/instructor/courses"),
+    queryKey: ['instructor-courses'],
+    queryFn: () => lmsApi.get<any>('/instructor/courses'),
   })
 
   const submitForReview = useMutation({
@@ -28,21 +28,21 @@ export function InstructorCoursesPage() {
   const courses = data?.courses ?? []
 
   const columns = [
-    { accessorKey: "title", header: "Title" },
+    { accessorKey: 'title', header: 'Title' },
     {
-      accessorKey: "status",
-      header: "Status",
+      accessorKey: 'status',
+      header: 'Status',
       cell: ({ row }: any) => <StatusBadge status={row.original.status} />,
     },
-    { accessorKey: "enrolledCount", header: "Enrolled" },
+    { accessorKey: 'enrolledCount', header: 'Enrolled' },
     {
-      accessorKey: "rating",
-      header: "Rating",
+      accessorKey: 'rating',
+      header: 'Rating',
       cell: ({ row }: any) =>
-        row.original.rating > 0 ? `★ ${row.original.rating.toFixed(1)}` : "—",
+        row.original.rating > 0 ? `★ ${row.original.rating.toFixed(1)}` : '—',
     },
     {
-      id: "actions",
+      id: 'actions',
       cell: ({ row }: any) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -56,10 +56,8 @@ export function InstructorCoursesPage() {
             >
               Edit
             </DropdownMenuItem>
-            {row.original.status === "draft" && (
-              <DropdownMenuItem
-                onClick={() => submitForReview.mutate(row.original.id)}
-              >
+            {row.original.status === 'draft' && (
+              <DropdownMenuItem onClick={() => submitForReview.mutate(row.original.id)}>
                 Submit for Review
               </DropdownMenuItem>
             )}
@@ -79,11 +77,9 @@ export function InstructorCoursesPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-xl font-semibold">My Courses</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Manage your courses
-          </p>
+          <p className="text-sm text-muted-foreground mt-1">Manage your courses</p>
         </div>
-        <Button size="sm" onClick={() => navigate({ to: "/lms/teach/courses/new" })}>
+        <Button size="sm" onClick={() => navigate({ to: '/lms/teach/courses/new' })}>
           <Plus className="h-4 w-4 mr-1.5" />
           New Course
         </Button>

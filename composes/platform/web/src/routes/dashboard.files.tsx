@@ -1,14 +1,14 @@
-import { useState, useEffect, useCallback } from "react"
-import { createRoute } from "@tanstack/react-router"
-import { Route as dashboardLayoutRoute } from "./dashboard.layout"
-import { FileUpload } from "@projectx/plugin-storage-web/components/file-upload"
-import { platformApi } from "../lib/api/platform"
-import { FileIcon, Trash2, Download, Loader2 } from "lucide-react"
-import { Button, PageHeader } from "@projectx/ui"
+import { useState, useEffect, useCallback } from 'react'
+import { createRoute } from '@tanstack/react-router'
+import { Route as dashboardLayoutRoute } from './dashboard.layout'
+import { FileUpload } from '@projectx/plugin-storage-web/components/file-upload'
+import { platformApi } from '../lib/api/platform'
+import { FileIcon, Trash2, Download, Loader2 } from 'lucide-react'
+import { Button, PageHeader } from '@projectx/ui'
 
 export const Route = createRoute({
   getParentRoute: () => dashboardLayoutRoute,
-  path: "/files",
+  path: '/files',
   component: FilesPage,
 })
 
@@ -41,25 +41,25 @@ function FilesPage() {
   const handleDownload = async (fileId: string) => {
     const result = await platformApi.getDownloadUrl(fileId)
     if (result.data?.url) {
-      window.open(result.data.url, "_blank")
+      window.open(result.data.url, '_blank')
     }
   }
 
   const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return "0 Bytes"
+    if (bytes === 0) return '0 Bytes'
     const k = 1024
-    const sizes = ["Bytes", "KB", "MB", "GB"]
+    const sizes = ['Bytes', 'KB', 'MB', 'GB']
     const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
   }
 
   const formatDate = (date: string | Date) =>
-    new Date(date).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
+    new Date(date).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     })
 
   return (
@@ -70,8 +70,8 @@ function FilesPage() {
         api={platformApi as any}
         onUploadComplete={handleUploadComplete}
         accept={{
-          "image/*": [".png", ".jpg", ".jpeg", ".gif", ".webp"],
-          "application/pdf": [".pdf"],
+          'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.webp'],
+          'application/pdf': ['.pdf'],
         }}
         maxSize={10 * 1024 * 1024}
       />
@@ -80,7 +80,7 @@ function FilesPage() {
         <div className="bg-muted/50 px-4 py-3 border-b">
           <h2 className="font-medium text-sm">Uploaded Files</h2>
           <p className="text-xs text-muted-foreground">
-            {files.length} file{files.length !== 1 ? "s" : ""}
+            {files.length} file{files.length !== 1 ? 's' : ''}
           </p>
         </div>
 
@@ -104,7 +104,10 @@ function FilesPage() {
                 className="flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <FileIcon className="w-4 h-4 text-muted-foreground flex-shrink-0" strokeWidth={1.75} />
+                  <FileIcon
+                    className="w-4 h-4 text-muted-foreground flex-shrink-0"
+                    strokeWidth={1.75}
+                  />
                   <div className="min-w-0">
                     <p className="text-sm font-medium truncate">{file.name}</p>
                     <p className="text-xs text-muted-foreground">

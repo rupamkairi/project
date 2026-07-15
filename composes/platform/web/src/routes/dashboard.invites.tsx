@@ -1,7 +1,7 @@
-import { createRoute } from "@tanstack/react-router"
-import { Route as dashboardLayoutRoute } from "./dashboard.layout"
-import { useState, useEffect } from "react"
-import { platformApi } from "../lib/api/platform"
+import { createRoute } from '@tanstack/react-router'
+import { Route as dashboardLayoutRoute } from './dashboard.layout'
+import { useState, useEffect } from 'react'
+import { platformApi } from '../lib/api/platform'
 import {
   PageHeader,
   Button,
@@ -22,20 +22,20 @@ import {
   StatusBadge,
   ConfirmDialog,
   Skeleton,
-} from "@projectx/ui"
-import { Plus, Search, RefreshCcw, Trash2, Copy, Check } from "lucide-react"
+} from '@projectx/ui'
+import { Plus, Search, RefreshCcw, Trash2, Copy, Check } from 'lucide-react'
 
 export const Route = createRoute({
   getParentRoute: () => dashboardLayoutRoute,
-  path: "/invites",
+  path: '/invites',
   component: InvitesPage,
 })
 
 const STATUS_FILTERS = [
-  { label: "All", value: "" },
-  { label: "Pending", value: "pending" },
-  { label: "Accepted", value: "accepted" },
-  { label: "Expired", value: "expired" },
+  { label: 'All', value: '' },
+  { label: 'Pending', value: 'pending' },
+  { label: 'Accepted', value: 'accepted' },
+  { label: 'Expired', value: 'expired' },
 ]
 
 function InvitesPage() {
@@ -43,12 +43,12 @@ function InvitesPage() {
   const [roles, setRoles] = useState<any[]>([])
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 1 })
   const [isLoading, setIsLoading] = useState(true)
-  const [search, setSearch] = useState("")
-  const [statusFilter, setStatusFilter] = useState("")
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
 
   const [showModal, setShowModal] = useState(false)
   const [showLinkModal, setShowLinkModal] = useState(false)
-  const [inviteLink, setInviteLink] = useState("")
+  const [inviteLink, setInviteLink] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [copied, setCopied] = useState(false)
   const [confirmRevoke, setConfirmRevoke] = useState<{ open: boolean; inviteId: string | null }>({
@@ -56,7 +56,7 @@ function InvitesPage() {
     inviteId: null,
   })
 
-  const [formData, setFormData] = useState({ email: "", roleIds: [] as string[] })
+  const [formData, setFormData] = useState({ email: '', roleIds: [] as string[] })
 
   const loadInvites = async (page = 1) => {
     setIsLoading(true)
@@ -64,7 +64,7 @@ function InvitesPage() {
       page,
       limit: 20,
       search,
-      status: statusFilter || undefined,
+      ...(statusFilter ? { status: statusFilter } : {}),
     })
     if (data) {
       setInvites(data.data)
@@ -101,12 +101,10 @@ function InvitesPage() {
       roleIds: formData.roleIds,
     })
     if (data && !error) {
-      setInviteLink(
-        data.inviteLink || `${window.location.origin}/register?token=${data.token}`,
-      )
+      setInviteLink(data.inviteLink || `${window.location.origin}/register?token=${data.token}`)
       setShowLinkModal(true)
       setShowModal(false)
-      setFormData({ email: "", roleIds: [] })
+      setFormData({ email: '', roleIds: [] })
       loadInvites(pagination.page)
     }
     setIsSubmitting(false)
@@ -115,9 +113,7 @@ function InvitesPage() {
   const handleResend = async (id: string) => {
     const { data } = await platformApi.resendInvite(id)
     if (data) {
-      setInviteLink(
-        data.inviteLink || `${window.location.origin}/register?token=${data.token}`,
-      )
+      setInviteLink(data.inviteLink || `${window.location.origin}/register?token=${data.token}`)
       setShowLinkModal(true)
     }
   }
@@ -165,7 +161,7 @@ function InvitesPage() {
           {STATUS_FILTERS.map((f) => (
             <Button
               key={f.value}
-              variant={statusFilter === f.value ? "default" : "outline"}
+              variant={statusFilter === f.value ? 'default' : 'outline'}
               size="sm"
               onClick={() => handleStatusFilter(f.value)}
             >
@@ -191,11 +187,21 @@ function InvitesPage() {
             {isLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  <TableCell><Skeleton className="h-4 w-40" /></TableCell>
-                  <TableCell><Skeleton className="h-5 w-16" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-40" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-16" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-24" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-24" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-20" />
+                  </TableCell>
                   <TableCell />
                 </TableRow>
               ))
@@ -217,8 +223,8 @@ function InvitesPage() {
                       ? roles
                           .filter((r) => invite.roleIds.includes(r.id))
                           .map((r) => r.name)
-                          .join(", ")
-                      : "No roles"}
+                          .join(', ')
+                      : 'No roles'}
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">
                     {invite.invitedBy}
@@ -227,7 +233,7 @@ function InvitesPage() {
                     {new Date(invite.expiresAt).toLocaleDateString()}
                   </TableCell>
                   <TableCell>
-                    {invite.status === "pending" && (
+                    {invite.status === 'pending' && (
                       <div className="flex justify-end items-center gap-1">
                         <Button
                           variant="ghost"
@@ -242,9 +248,7 @@ function InvitesPage() {
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7 text-destructive hover:text-destructive"
-                          onClick={() =>
-                            setConfirmRevoke({ open: true, inviteId: invite.id })
-                          }
+                          onClick={() => setConfirmRevoke({ open: true, inviteId: invite.id })}
                           title="Revoke"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -323,16 +327,11 @@ function InvitesPage() {
               </div>
             </div>
             <DialogFooter className="pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setShowModal(false)}
-              >
+              <Button type="button" variant="outline" size="sm" onClick={() => setShowModal(false)}>
                 Cancel
               </Button>
               <Button type="submit" size="sm" disabled={isSubmitting}>
-                {isSubmitting ? "Sending..." : "Send Invite"}
+                {isSubmitting ? 'Sending...' : 'Send Invite'}
               </Button>
             </DialogFooter>
           </form>

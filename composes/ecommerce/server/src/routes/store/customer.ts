@@ -1,59 +1,59 @@
-import { Elysia } from "elysia";
-import type { Mediator } from "@core";
+import { Elysia } from 'elysia'
+import type { Mediator } from '@core'
 
 export function createCustomerRoutes(mediator: Mediator) {
-  return new Elysia({ prefix: "/account" })
-    .get("/orders", async ({ query }) => {
-      const { page = 1, limit = 20 } = query;
+  return new Elysia({ prefix: '/account' })
+    .get('/orders', async ({ query }) => {
+      const { page = 1, limit = 20 } = query
       return mediator.query({
-        type: "commerce.listTransactions",
-        params: { type: "order", page, limit },
-        actorId: "anonymous",
-        orgId: "",
-      });
+        type: 'commerce.listTransactions',
+        params: { type: 'order', page, limit },
+        actorId: 'anonymous',
+        orgId: '',
+      })
     })
-    .get("/orders/:id", async ({ params }) => {
+    .get('/orders/:id', async ({ params }) => {
       return mediator.query({
-        type: "commerce.getTransaction",
+        type: 'commerce.getTransaction',
         params: { id: params.id },
-        actorId: "anonymous",
-        orgId: "",
-      });
+        actorId: 'anonymous',
+        orgId: '',
+      })
     })
-    .get("/addresses", async () => {
+    .get('/addresses', async () => {
       return mediator.query({
-        type: "geo.listAddresses",
+        type: 'geo.listAddresses',
         params: {},
-        actorId: "anonymous",
-        orgId: "",
-      });
+        actorId: 'anonymous',
+        orgId: '',
+      })
     })
-    .post("/addresses", async ({ body }) => {
+    .post('/addresses', async ({ body }) => {
       return mediator.dispatch({
-        type: "geo.createAddress",
+        type: 'geo.createAddress',
         payload: body,
-        actorId: "anonymous",
-        orgId: "",
+        actorId: 'anonymous',
+        orgId: '',
         correlationId: crypto.randomUUID(),
-      });
+      })
     })
-    .patch("/addresses/:id", async ({ params, body }) => {
+    .patch('/addresses/:id', async ({ params, body }) => {
       return mediator.dispatch({
-        type: "geo.updateAddress",
+        type: 'geo.updateAddress',
         id: params.id,
         payload: body,
-        actorId: "anonymous",
-        orgId: "",
+        actorId: 'anonymous',
+        orgId: '',
         correlationId: crypto.randomUUID(),
-      });
+      })
     })
-    .delete("/addresses/:id", async ({ params }) => {
+    .delete('/addresses/:id', async ({ params }) => {
       return mediator.dispatch({
-        type: "geo.deleteAddress",
+        type: 'geo.deleteAddress',
         id: params.id,
-        actorId: "anonymous",
-        orgId: "",
+        actorId: 'anonymous',
+        orgId: '',
         correlationId: crypto.randomUUID(),
-      });
-    });
+      })
+    })
 }

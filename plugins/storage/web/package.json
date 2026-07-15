@@ -9,15 +9,25 @@
     "./components/*": "./src/components/*.tsx"
   },
   "dependencies": {
+    "@projectx/plugin-auth-web": "workspace:*",
     "@projectx/ui": "workspace:*",
     "lucide-react": "^0.577.0",
     "react": "^19.0.0",
     "react-dropzone": "^14.2.3"
   },
   "devDependencies": {
-    "@projectx/config": "workspace:*"
+    "@projectx/config": "workspace:*",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "^5.9.3"
   },
   "peerDependencies": {
     "@projectx/shared-router": "workspace:*"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format:check": "prettier --check .",
+    "format:write": "prettier --write ."
   }
 }

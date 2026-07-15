@@ -1,38 +1,38 @@
-import type { StateMachine } from "@core";
+import type { StateMachine } from '@core'
 
-type ActorState = "pending" | "active" | "suspended" | "deleted";
-type ActorEvent = "activate" | "suspend" | "reactivate" | "delete";
+type ActorState = 'pending' | 'active' | 'suspended' | 'deleted'
+type ActorEvent = 'activate' | 'suspend' | 'reactivate' | 'delete'
 
 export const ActorFSM: StateMachine<ActorState, ActorEvent> = {
-  id: "actor:lifecycle",
-  entityType: "Actor",
-  initial: "pending",
+  id: 'actor:lifecycle',
+  entityType: 'Actor',
+  initial: 'pending',
   states: {
     pending: {
-      label: "Pending",
+      label: 'Pending',
       on: {
-        activate: { target: "active" },
+        activate: { target: 'active' },
       },
     },
     active: {
-      label: "Active",
+      label: 'Active',
       on: {
-        suspend: { target: "suspended" },
+        suspend: { target: 'suspended' },
       },
     },
     suspended: {
-      label: "Suspended",
+      label: 'Suspended',
       on: {
-        reactivate: { target: "active" },
-        delete: { target: "deleted" },
+        reactivate: { target: 'active' },
+        delete: { target: 'deleted' },
       },
     },
     deleted: {
-      label: "Deleted",
+      label: 'Deleted',
       terminal: true,
     },
   },
   meta: {
-    description: "Actor lifecycle: pending → active ↔ suspended → deleted",
+    description: 'Actor lifecycle: pending → active ↔ suspended → deleted',
   },
-};
+}

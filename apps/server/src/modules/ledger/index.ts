@@ -1,11 +1,11 @@
 // Ledger Module
 
-import type { AppModule, BootRegistry } from "@core";
+import type { AppModule, BootRegistry } from '@core'
 
 export const LedgerModule: AppModule = {
   manifest: {
-    id: "ledger",
-    version: "0.1.0",
+    id: 'ledger',
+    version: '0.1.0',
     dependsOn: [],
     entities: [],
     idPrefixes: {},
@@ -26,4 +26,4 @@ export const LedgerModule: AppModule = {
   async shutdown(): Promise<void> {
     // Cleanup
   },
-};
+}

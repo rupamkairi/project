@@ -1,10 +1,10 @@
-import { Card, CardContent } from "@projectx/ui";
-import type { ReactNode } from "react";
+import { Card, CardContent } from '@projectx/ui'
+import type { ReactNode } from 'react'
 
 interface StatCardProps {
-  label: string;
-  value: string | number | ReactNode;
-  className?: string;
+  label: string
+  value: string | number | ReactNode
+  className?: string
 }
 
 export function StatCard({ label, value, className }: StatCardProps) {
@@ -15,5 +15,5 @@ export function StatCard({ label, value, className }: StatCardProps) {
         <p className="text-2xl font-semibold tabular-nums mt-1">{value}</p>
       </CardContent>
     </Card>
-  );
+  )
 }

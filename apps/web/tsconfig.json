@@ -18,8 +18,14 @@
       "@projectx/platform-web": ["../../composes/platform/web/src"],
       "@projectx/platform-web/*": ["../../composes/platform/web/src/*"],
       "@projectx/restaurant-web": ["../../composes/restaurant/web/src"],
-      "@projectx/restaurant-web/*": ["../../composes/restaurant/web/src/*"]
+      "@projectx/restaurant-web/*": ["../../composes/restaurant/web/src/*"],
+      "@projectx/hospitality-web": ["../../composes/hospitality/web/src"],
+      "@projectx/hospitality-web/*": ["../../composes/hospitality/web/src/*"],
+      "@projectx/workplace-web": ["../../composes/workplace/web/src"],
+      "@projectx/workplace-web/*": ["../../composes/workplace/web/src/*"],
+      "@projectx/project-management-web": ["../../composes/project-management/web/src"],
+      "@projectx/project-management-web/*": ["../../composes/project-management/web/src/*"]
     }
   },
-  "include": ["src"]
+  "include": ["src", "vite.config.ts"]
 }

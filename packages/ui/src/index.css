@@ -1,5 +1,5 @@
 /* Standalone entry — includes Tailwind init + design tokens.
    Consuming apps should import tokens.css instead and init Tailwind themselves. */
-@import "tailwindcss";
-@import "./tokens.css";
+@import 'tailwindcss';
+@import './tokens.css';
 @source ".";

@@ -13,18 +13,23 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist node_modules"
+    "clean": "rm -rf dist node_modules",
+    "lint": "eslint .",
+    "format:check": "prettier --check .",
+    "format:write": "prettier --write ."
   },
   "dependencies": {
-    "react": "^19.0.0",
     "zustand": "^5.0.11"
   },
   "devDependencies": {
     "@projectx/config": "workspace:*",
+    "@tanstack/react-router": "^1.161.3",
     "@types/react": "^19.0.0",
+    "react": "^19.0.0",
     "typescript": "^5.3.3"
   },
   "peerDependencies": {
+    "@tanstack/react-router": "^1.161.3",
     "react": "^19.0.0"
   }
 }

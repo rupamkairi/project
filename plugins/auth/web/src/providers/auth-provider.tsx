@@ -1,46 +1,29 @@
-import { useEffect, type ReactNode } from "react";
-import { useAuthStore } from "../lib/store";
-import { createAuthClient } from "../lib/api";
+import { useEffect, useRef, type ReactNode } from 'react'
+import { useAuthStore } from '../lib/store'
 
-interface AuthProviderProps {
-  children: ReactNode;
-  apiBase: string;
+function resolveApiBase(explicit?: string): string {
+  if (explicit) return explicit
+  const env = (import.meta as unknown as { env?: Record<string, string | undefined> }).env
+  return env?.VITE_API_URL || 'http://localhost:10050'
 }
 
-export function AuthProvider({ children, apiBase }: AuthProviderProps) {
-  const { token, setAuth, clearAuth, setLoading } = useAuthStore();
+interface AuthProviderProps {
+  children: ReactNode
+  apiBase?: string
+}
 
-  const client = createAuthClient({
-    baseUrl: apiBase,
-    getToken: () => useAuthStore.getState().token,
-    onUnauthorized: clearAuth,
-  });
+// Mounted once above the router. Configures the API root, migrates any legacy
+// `platform_token` into the shared session, and initializes authentication a
+// single time.
+export function AuthProvider({ children, apiBase }: AuthProviderProps) {
+  const initialize = useAuthStore((s) => s.initialize)
+  const initialized = useRef(false)
 
   useEffect(() => {
-    if (!token) return;
+    if (initialized.current) return
+    initialized.current = true
+    void initialize(resolveApiBase(apiBase))
+  }, [initialize, apiBase])
 
-    setLoading(true);
-    client
-      .me()
-      .then((me) => {
-        const existing = useAuthStore.getState().user;
-        if (existing) {
-          setAuth(
-            {
-              id: me.actorId,
-              orgId: me.orgId,
-              roles: me.roles,
-              sessionId: me.sessionId,
-            },
-            token,
-            useAuthStore.getState().refreshToken ?? undefined,
-          );
-        }
-      })
-      .catch(() => clearAuth())
-      .finally(() => setLoading(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  return <>{children}</>;
+  return <>{children}</>
 }

@@ -13,21 +13,21 @@
  * @category Core
  */
 export type Op =
-  | "eq" // Equal
-  | "neq" // Not equal
-  | "gt" // Greater than
-  | "gte" // Greater than or equal
-  | "lt" // Less than
-  | "lte" // Less than or equal
-  | "in" // In array
-  | "nin" // Not in array
-  | "contains" // Array/string field contains value
-  | "containsAll" // Array field contains all values
-  | "matches" // Regex match
-  | "exists" // Field exists
-  | "empty" // Array or string is empty
-  | "withinDays" // Date field within N days of now
-  | "spatialWithin"; // Geo point within polygon (uses PostGIS)
+  | 'eq' // Equal
+  | 'neq' // Not equal
+  | 'gt' // Greater than
+  | 'gte' // Greater than or equal
+  | 'lt' // Less than
+  | 'lte' // Less than or equal
+  | 'in' // In array
+  | 'nin' // Not in array
+  | 'contains' // Array/string field contains value
+  | 'containsAll' // Array field contains all values
+  | 'matches' // Regex match
+  | 'exists' // Field exists
+  | 'empty' // Array or string is empty
+  | 'withinDays' // Date field within N days of now
+  | 'spatialWithin' // Geo point within polygon (uses PostGIS)
 
 /**
  * Rule expression definition.
@@ -67,7 +67,7 @@ export type RuleExpr =
   | { or: RuleExpr[] }
   | { not: RuleExpr }
   | { ref: string }
-  | { kind: "template"; template: string; params: Record<string, unknown> };
+  | { kind: 'template'; template: string; params: Record<string, unknown> }
 
 /**
  * Rule evaluation explanation with detailed breakdown.
@@ -78,7 +78,7 @@ export interface RuleExplanation {
   /**
    * Whether the rule passed overall
    */
-  passed: boolean;
+  passed: boolean
 
   /**
    * List of conditions that failed
@@ -87,28 +87,28 @@ export interface RuleExplanation {
     /**
      * Field being evaluated
      */
-    field: string;
+    field: string
 
     /**
      * Operator used
      */
-    op: Op | string;
+    op: Op | string
 
     /**
      * Expected value
      */
-    expected: unknown;
+    expected: unknown
 
     /**
      * Actual value from context
      */
-    actual: unknown;
+    actual: unknown
 
     /**
      * Human-readable failure message
      */
-    message: string;
-  }>;
+    message: string
+  }>
 }
 
 /**
@@ -120,12 +120,12 @@ export interface CompiledRule {
   /**
    * Evaluates the compiled rule against a context.
    */
-  evaluate(context: Record<string, unknown>): boolean;
+  evaluate(context: Record<string, unknown>): boolean
 
   /**
    * Explains which conditions failed for the given context.
    */
-  explain(context: Record<string, unknown>): RuleExplanation;
+  explain(context: Record<string, unknown>): RuleExplanation
 }
 
 /**
@@ -141,7 +141,7 @@ export interface RuleEngine {
    * @param context - Context object with field values
    * @returns True if rule passes
    */
-  evaluate(expr: RuleExpr, context: Record<string, unknown>): boolean;
+  evaluate(expr: RuleExpr, context: Record<string, unknown>): boolean
 
   /**
    * Compiles a rule expression for repeated evaluation.
@@ -149,7 +149,7 @@ export interface RuleEngine {
    * @param expr - Rule expression to compile
    * @returns Compiled rule with evaluate and explain methods
    */
-  compile(expr: RuleExpr): CompiledRule;
+  compile(expr: RuleExpr): CompiledRule
 
   /**
    * Registers a reusable rule.
@@ -157,7 +157,7 @@ export interface RuleEngine {
    * @param id - Rule identifier
    * @param expr - Rule expression
    */
-  register(id: string, expr: RuleExpr): void;
+  register(id: string, expr: RuleExpr): void
 
   /**
    * Resolves a registered rule by ID.
@@ -165,14 +165,14 @@ export interface RuleEngine {
    * @param id - Rule ID
    * @returns Rule expression or undefined
    */
-  resolve(id: string): RuleExpr | undefined;
+  resolve(id: string): RuleExpr | undefined
 
   /**
    * Removes a registered rule by ID.
    *
    * @param id - Rule ID to remove
    */
-  unregister(id: string): void;
+  unregister(id: string): void
 
   /**
    * Explains why a rule passed or failed.
@@ -181,7 +181,7 @@ export interface RuleEngine {
    * @param context - Context object
    * @returns Detailed explanation
    */
-  explain(expr: RuleExpr, context: Record<string, unknown>): RuleExplanation;
+  explain(expr: RuleExpr, context: Record<string, unknown>): RuleExplanation
 }
 
 /**
@@ -218,123 +218,120 @@ export interface RuleEngine {
  * @category Core
  */
 export function createRuleEngine(): RuleEngine {
-  const registeredRules = new Map<string, RuleExpr>();
+  const registeredRules = new Map<string, RuleExpr>()
 
-  function evaluateInternal(
-    expr: RuleExpr,
-    context: Record<string, unknown>,
-  ): boolean {
+  function evaluateInternal(expr: RuleExpr, context: Record<string, unknown>): boolean {
     // Handle reference
-    if ("ref" in expr) {
-      const ref = registeredRules.get(expr.ref);
-      if (!ref) return false;
-      return evaluateInternal(ref, context);
+    if ('ref' in expr) {
+      const ref = registeredRules.get(expr.ref)
+      if (!ref) return false
+      return evaluateInternal(ref, context)
     }
 
     // Handle template rule — evaluate by looking up by template name with params
-    if ("kind" in expr && expr.kind === "template") {
-      const tmpl = registeredRules.get(expr.template);
-      if (!tmpl) return false;
+    if ('kind' in expr && expr.kind === 'template') {
+      const tmpl = registeredRules.get(expr.template)
+      if (!tmpl) return false
       // Merge params into context for template evaluation
-      const merged = { ...context, ...expr.params };
-      return evaluateInternal(tmpl, merged);
+      const merged = { ...context, ...expr.params }
+      return evaluateInternal(tmpl, merged)
     }
 
     // Handle negation
-    if ("not" in expr) {
-      return !evaluateInternal(expr.not, context);
+    if ('not' in expr) {
+      return !evaluateInternal(expr.not, context)
     }
 
     // Handle conjunction
-    if ("and" in expr) {
-      return expr.and.every((e) => evaluateInternal(e, context));
+    if ('and' in expr) {
+      return expr.and.every((e) => evaluateInternal(e, context))
     }
 
     // Handle disjunction
-    if ("or" in expr) {
-      return expr.or.some((e) => evaluateInternal(e, context));
+    if ('or' in expr) {
+      return expr.or.some((e) => evaluateInternal(e, context))
     }
 
     // Handle field comparison
-    if ("field" in expr && "op" in expr) {
-      const actual = getNestedValue(context, expr.field);
-      return compare(actual, expr.op, expr.value);
+    if ('field' in expr && 'op' in expr) {
+      const actual = getNestedValue(context, expr.field)
+      return compare(actual, expr.op, expr.value)
     }
 
-    return false;
+    return false
   }
 
   function explainInternal(
     expr: RuleExpr,
     context: Record<string, unknown>,
-    failures: RuleExplanation["failures"],
+    failures: RuleExplanation['failures'],
   ): boolean {
     // Handle reference
-    if ("ref" in expr) {
-      const ref = registeredRules.get(expr.ref);
+    if ('ref' in expr) {
+      const ref = registeredRules.get(expr.ref)
       if (!ref) {
         failures.push({
           field: expr.ref,
-          op: "ref",
-          expected: "registered rule",
-          actual: "not found",
+          op: 'ref',
+          expected: 'registered rule',
+          actual: 'not found',
           message: `Rule "${expr.ref}" is not registered`,
-        });
-        return false;
+        })
+        return false
       }
-      return explainInternal(ref, context, failures);
+      return explainInternal(ref, context, failures)
     }
 
     // Handle template rule
-    if ("kind" in expr && expr.kind === "template") {
-      const tmpl = registeredRules.get(expr.template);
+    if ('kind' in expr && expr.kind === 'template') {
+      const tmpl = registeredRules.get(expr.template)
       if (!tmpl) {
         failures.push({
           field: expr.template,
-          op: "template",
-          expected: "registered template",
-          actual: "not found",
+          op: 'template',
+          expected: 'registered template',
+          actual: 'not found',
           message: `Template "${expr.template}" is not registered`,
-        });
-        return false;
+        })
+        return false
       }
-      const merged = { ...context, ...expr.params };
-      return explainInternal(tmpl, merged, failures);
+      const merged = { ...context, ...expr.params }
+      return explainInternal(tmpl, merged, failures)
     }
 
     // Handle negation
-    if ("not" in expr) {
-      const innerFailures: RuleExplanation["failures"] = [];
-      const innerPassed = explainInternal(expr.not, context, innerFailures);
-      const result = !innerPassed;
+    if ('not' in expr) {
+      const innerFailures: RuleExplanation['failures'] = []
+      const innerPassed = explainInternal(expr.not, context, innerFailures)
+      const result = !innerPassed
       if (!result) {
         failures.push({
-          field: "not",
-          op: "not",
-          expected: "inner rule to fail",
-          actual: "inner rule passed",
-          message: "NOT condition failed: inner rule passed when it should not",
-        });
+          field: 'not',
+          op: 'not',
+          expected: 'inner rule to fail',
+          actual: 'inner rule passed',
+          message: 'NOT condition failed: inner rule passed when it should not',
+        })
       }
-      return result;
+      return result
     }
 
     // Handle conjunction
-    if ("and" in expr) {
-      const results = expr.and.map((e) => explainInternal(e, context, failures));
-      return results.every((r) => r);
+    if ('and' in expr) {
+      const results = expr.and.map((e) => explainInternal(e, context, failures))
+      return results.every((r) => r)
     }
 
     // Handle disjunction
-    if ("or" in expr) {
-      const results = expr.or.map((e) => explainInternal(e, context, failures));
-      return results.some((r) => r);
+    if ('or' in expr) {
+      const results = expr.or.map((e) => explainInternal(e, context, failures))
+      return results.some((r) => r)
     }
 
     // Handle field comparison
-    if ("field" in expr && "op" in expr) {
-      const actual = getNestedValue(context, expr.field);
-      const passed = compare(actual, expr.op, expr.value);
+    if ('field' in expr && 'op' in expr) {
+      const actual = getNestedValue(context, expr.field)
+      const passed = compare(actual, expr.op, expr.value)
       if (!passed) {
         failures.push({
           field: expr.field,
@@ -342,48 +339,48 @@ export function createRuleEngine(): RuleEngine {
           expected: expr.value,
           actual,
           message: `Field "${expr.field}" failed op "${expr.op}": expected ${JSON.stringify(expr.value)}, got ${JSON.stringify(actual)}`,
-        });
+        })
       }
-      return passed;
+      return passed
     }
 
-    return false;
+    return false
   }
 
   return {
     evaluate(expr: RuleExpr, context: Record<string, unknown>): boolean {
-      return evaluateInternal(expr, context);
+      return evaluateInternal(expr, context)
     },
 
     compile(expr: RuleExpr): CompiledRule {
       return {
         evaluate: (ctx: Record<string, unknown>) => evaluateInternal(expr, ctx),
         explain: (ctx: Record<string, unknown>) => {
-          const failures: RuleExplanation["failures"] = [];
-          const passed = explainInternal(expr, ctx, failures);
-          return { passed, failures };
+          const failures: RuleExplanation['failures'] = []
+          const passed = explainInternal(expr, ctx, failures)
+          return { passed, failures }
         },
-      };
+      }
     },
 
     register(id: string, expr: RuleExpr): void {
-      registeredRules.set(id, expr);
+      registeredRules.set(id, expr)
     },
 
     resolve(id: string): RuleExpr | undefined {
-      return registeredRules.get(id);
+      return registeredRules.get(id)
     },
 
     unregister(id: string): void {
-      registeredRules.delete(id);
+      registeredRules.delete(id)
     },
 
     explain(expr: RuleExpr, context: Record<string, unknown>): RuleExplanation {
-      const failures: RuleExplanation["failures"] = [];
-      const passed = explainInternal(expr, context, failures);
-      return { passed, failures };
+      const failures: RuleExplanation['failures'] = []
+      const passed = explainInternal(expr, context, failures)
+      return { passed, failures }
     },
-  };
+  }
 }
 
 /**
@@ -396,12 +393,12 @@ export function createRuleEngine(): RuleEngine {
  * @internal
  */
 function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
-  return path.split(".").reduce((acc: unknown, part: string) => {
-    if (acc && typeof acc === "object" && part in acc) {
-      return (acc as Record<string, unknown>)[part];
+  return path.split('.').reduce((acc: unknown, part: string) => {
+    if (acc && typeof acc === 'object' && part in acc) {
+      return (acc as Record<string, unknown>)[part]
     }
-    return undefined;
-  }, obj);
+    return undefined
+  }, obj)
 }
 
 /**
@@ -416,78 +413,55 @@ function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
  */
 function compare(actual: unknown, op: Op, expected: unknown): boolean {
   switch (op) {
-    case "eq":
-      return actual === expected;
-    case "neq":
-      return actual !== expected;
-    case "gt":
-      return (
-        typeof actual === "number" &&
-        typeof expected === "number" &&
-        actual > expected
-      );
-    case "gte":
-      return (
-        typeof actual === "number" &&
-        typeof expected === "number" &&
-        actual >= expected
-      );
-    case "lt":
-      return (
-        typeof actual === "number" &&
-        typeof expected === "number" &&
-        actual < expected
-      );
-    case "lte":
-      return (
-        typeof actual === "number" &&
-        typeof expected === "number" &&
-        actual <= expected
-      );
-    case "in":
-      return Array.isArray(expected) && expected.includes(actual);
-    case "nin":
-      return Array.isArray(expected) && !expected.includes(actual);
-    case "contains":
-      if (Array.isArray(actual)) return actual.includes(expected);
-      return (
-        typeof actual === "string" &&
-        typeof expected === "string" &&
-        actual.includes(expected)
-      );
-    case "containsAll":
+    case 'eq':
+      return actual === expected
+    case 'neq':
+      return actual !== expected
+    case 'gt':
+      return typeof actual === 'number' && typeof expected === 'number' && actual > expected
+    case 'gte':
+      return typeof actual === 'number' && typeof expected === 'number' && actual >= expected
+    case 'lt':
+      return typeof actual === 'number' && typeof expected === 'number' && actual < expected
+    case 'lte':
+      return typeof actual === 'number' && typeof expected === 'number' && actual <= expected
+    case 'in':
+      return Array.isArray(expected) && expected.includes(actual)
+    case 'nin':
+      return Array.isArray(expected) && !expected.includes(actual)
+    case 'contains':
+      if (Array.isArray(actual)) return actual.includes(expected)
+      return typeof actual === 'string' && typeof expected === 'string' && actual.includes(expected)
+    case 'containsAll':
       // Array field must contain all values in expected array
-      if (!Array.isArray(actual) || !Array.isArray(expected)) return false;
-      return expected.every((v) => actual.includes(v));
-    case "matches":
-      if (typeof actual === "string" && expected instanceof RegExp) {
-        return expected.test(actual);
+      if (!Array.isArray(actual) || !Array.isArray(expected)) return false
+      return expected.every((v) => actual.includes(v))
+    case 'matches':
+      if (typeof actual === 'string' && expected instanceof RegExp) {
+        return expected.test(actual)
       }
-      return false;
-    case "exists":
-      return actual !== undefined && actual !== null;
-    case "empty":
-      if (actual === null || actual === undefined) return true;
-      if (typeof actual === "string") return actual.length === 0;
-      if (Array.isArray(actual)) return actual.length === 0;
-      if (typeof actual === "object") return Object.keys(actual).length === 0;
-      return false;
-    case "withinDays": {
+      return false
+    case 'exists':
+      return actual !== undefined && actual !== null
+    case 'empty':
+      if (actual === null || actual === undefined) return true
+      if (typeof actual === 'string') return actual.length === 0
+      if (Array.isArray(actual)) return actual.length === 0
+      if (typeof actual === 'object') return Object.keys(actual).length === 0
+      return false
+    case 'withinDays': {
       // Check that actual (a date string or timestamp) is within N days of now
-      if (typeof expected !== "number") return false;
-      const date =
-        actual instanceof Date
-          ? actual
-          : new Date(actual as string | number);
-      if (isNaN(date.getTime())) return false;
-      const diffMs = Math.abs(Date.now() - date.getTime());
-      const diffDays = diffMs / (1000 * 60 * 60 * 24);
-      return diffDays <= expected;
+      if (typeof expected !== 'number') return false
+      const date = actual instanceof Date ? actual : new Date(actual as string | number)
+      if (isNaN(date.getTime())) return false
+      const diffMs = Math.abs(Date.now() - date.getTime())
+      const diffDays = diffMs / (1000 * 60 * 60 * 24)
+      return diffDays <= expected
     }
-    case "spatialWithin":
+    case 'spatialWithin':
       // TODO: geo engine not available yet — always false until PostGIS integration
-      return false;
+      return false
     default:
-      return false;
+      return false
   }
 }

@@ -1,10 +1,10 @@
-import * as React from "react"
-import { Link } from "@tanstack/react-router"
-import { Menu } from "lucide-react"
-import type { LucideIcon } from "lucide-react"
-import { cn } from "../lib/utils"
-import { Button } from "./ui/button"
-import { Sheet, SheetContent, SheetTitle } from "./ui/sheet"
+import * as React from 'react'
+import { Link } from '@tanstack/react-router'
+import { Menu } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import { cn } from '../lib/utils'
+import { Button } from './ui/button'
+import { Sheet, SheetContent, SheetTitle } from './ui/sheet'
 
 export interface NavBarItem {
   label: string
@@ -21,14 +21,11 @@ export interface NavBarProps {
 }
 
 const navLinkBase = cn(
-  "text-sm font-medium transition-colors",
-  "text-muted-foreground hover:text-foreground",
+  'text-sm font-medium transition-colors',
+  'text-muted-foreground hover:text-foreground',
 )
 
-const navLinkActive = cn(
-  "text-sm font-medium transition-colors",
-  "text-foreground",
-)
+const navLinkActive = cn('text-sm font-medium transition-colors', 'text-foreground')
 
 function NavLinks({ items }: { items: NavBarItem[] }) {
   return (
@@ -37,7 +34,7 @@ function NavLinks({ items }: { items: NavBarItem[] }) {
         <Link
           key={item.href}
           to={item.href}
-          activeOptions={{ exact: item.exact }}
+          {...(item.exact === undefined ? {} : { activeOptions: { exact: item.exact } })}
           className={navLinkBase}
           activeProps={{ className: navLinkActive }}
         >
@@ -53,10 +50,7 @@ export function NavBar({ logo, items = [], actions, className }: NavBarProps) {
 
   return (
     <header
-      className={cn(
-        "h-12 border-b bg-background flex items-center px-4 gap-6 shrink-0",
-        className,
-      )}
+      className={cn('h-12 border-b bg-background flex items-center px-4 gap-6 shrink-0', className)}
     >
       {/* Mobile hamburger */}
       <Button
@@ -87,24 +81,20 @@ export function NavBar({ logo, items = [], actions, className }: NavBarProps) {
         <SheetContent side="left" className="w-56 p-0">
           <SheetTitle className="sr-only">Navigation</SheetTitle>
           <div className="flex flex-col p-4 gap-1">
-            {logo && (
-              <div className="flex items-center gap-2 h-10 mb-2">{logo}</div>
-            )}
+            {logo && <div className="flex items-center gap-2 h-10 mb-2">{logo}</div>}
             <nav className="flex flex-col gap-1">
               {items.map((item) => (
                 <Link
                   key={item.href}
                   to={item.href}
-                  activeOptions={{ exact: item.exact }}
-                  className={cn(navLinkBase, "px-2 py-1.5 rounded-md hover:bg-accent")}
+                  {...(item.exact === undefined ? {} : { activeOptions: { exact: item.exact } })}
+                  className={cn(navLinkBase, 'px-2 py-1.5 rounded-md hover:bg-accent')}
                   activeProps={{
-                    className: cn(navLinkActive, "px-2 py-1.5 rounded-md bg-accent"),
+                    className: cn(navLinkActive, 'px-2 py-1.5 rounded-md bg-accent'),
                   }}
                   onClick={() => setMobileOpen(false)}
                 >
-                  {item.icon && (
-                    <item.icon className="h-4 w-4 shrink-0" strokeWidth={1.75} />
-                  )}
+                  {item.icon && <item.icon className="h-4 w-4 shrink-0" strokeWidth={1.75} />}
                   {item.label}
                 </Link>
               ))}

@@ -10,9 +10,13 @@
   "scripts": {
     "test": "bun test",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist node_modules"
+    "clean": "rm -rf dist node_modules",
+    "lint": "eslint .",
+    "format:check": "prettier --check .",
+    "format:write": "prettier --write ."
   },
   "dependencies": {
+    "@projectx/plugin-auth-web": "workspace:*",
     "@projectx/shared-router": "workspace:*",
     "@projectx/ui": "workspace:*",
     "@tanstack/react-query": "^5.90.21",

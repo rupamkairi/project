@@ -1,25 +1,25 @@
-export * from "./helpers";
-export * from "./events";
-export * from "./outbox";
-export * from "./identity";
-export * from "./catalog";
-export * from "./inventory";
+export * from './helpers'
+export * from './events'
+export * from './outbox'
+export * from './identity'
+export * from './catalog'
+export * from './inventory'
 // Foundation master tables (unprefixed, cross-compose — see docs/master-tables.md)
-export * from "./party";
-export * from "./location";
-export * from "./pipeline";
-export * from "./commerce";
-export * from "./activity";
-export * from "./ledger";
-export * from "./workflow";
-export * from "./scheduling";
-export * from "./document";
-export * from "./notification";
-export * from "./geo";
-export * from "./analytics";
-export * from "./storage";
+export * from './party'
+export * from './location'
+export * from './pipeline'
+export * from './commerce'
+export * from './activity'
+export * from './ledger'
+export * from './workflow'
+export * from './scheduling'
+export * from './document'
+export * from './notification'
+export * from './geo'
+export * from './analytics'
+export * from './storage'
 // Compose detail tables
-export * from "./search";
+export * from './search'
 
 // Ecommerce schema - re-exported from compose
 export {
@@ -63,9 +63,12 @@ export {
   type EcoFulfillment,
   type EcoFulfillmentItem,
   type EcoCart,
-} from "@projectx/ecommerce-server/db/schema/index";
+} from '@projectx/ecommerce-server/db/schema/index'
 // ERP schema - re-exported from compose
-export * from "@projectx/erp-server/db/schema/erp";
+export * from '@projectx/erp-server/db/schema/erp'
+
+// Workplace schema - re-exported from compose
+export * from '@projectx/workplace-server/db/schema/workplace'
 
 // Platform schema - re-exported from compose
 import {
@@ -75,7 +78,7 @@ import {
   type PltSetting,
   type PltComposeConfig,
   type PltOrganizationSetting,
-} from "@projectx/platform-server/db/schema/platform";
+} from '@projectx/platform-server/db/schema/platform'
 
 export {
   pltSettings,
@@ -84,7 +87,7 @@ export {
   type PltSetting,
   type PltComposeConfig,
   type PltOrganizationSetting,
-};
+}
 
 // CRM schema - re-exported from compose
 import {
@@ -102,7 +105,7 @@ import {
   type CrmCampaignContact,
   type CrmEmailThread,
   type CrmEmailMessage,
-} from "@projectx/crm-server/db/schema/crm";
+} from '@projectx/crm-server/db/schema/crm'
 
 export {
   crmLead,
@@ -119,7 +122,7 @@ export {
   type CrmCampaignContact,
   type CrmEmailThread,
   type CrmEmailMessage,
-};
+}
 // LMS schema
 export {
   lmsCourseDetail,
@@ -150,7 +153,7 @@ export {
   courseReviewStatusEnum,
   waitlistStatusEnum,
   couponDiscountTypeEnum,
-} from "@projectx/lms-server/db/schema/lms";
+} from '@projectx/lms-server/db/schema/lms'
 
 // Restaurant schema - re-exported from compose
 import {
@@ -159,14 +162,27 @@ import {
   rstModifierGroups,
   rstKot,
   rstKotItems,
-  rstDeliveries,
   rstShifts,
   rstShiftAssignments,
   rstRecipes,
   rstRecipeIngredients,
   rstReservations,
   rstAggregatorMappings,
-} from "@projectx/restaurant-server/db/schema/restaurant";
+  rstMenuPeriods,
+  rstItemVariants,
+  rstItemAllergens,
+  rstStockMovements,
+  rstEquipment,
+  rstEquipmentLogs,
+  rstPartners,
+  rstStaff,
+  rstBills,
+  rstBillPayments,
+  rstBillSplits,
+  rstDiscounts,
+  rstOrderHistory,
+  rstWaitlist,
+} from '@projectx/restaurant-server/db/schema/restaurant'
 
 export {
   rstCategories,
@@ -174,11 +190,24 @@ export {
   rstModifierGroups,
   rstKot,
   rstKotItems,
-  rstDeliveries,
   rstShifts,
   rstShiftAssignments,
   rstRecipes,
   rstRecipeIngredients,
   rstReservations,
   rstAggregatorMappings,
-};
+  rstMenuPeriods,
+  rstItemVariants,
+  rstItemAllergens,
+  rstStockMovements,
+  rstEquipment,
+  rstEquipmentLogs,
+  rstPartners,
+  rstStaff,
+  rstBills,
+  rstBillPayments,
+  rstBillSplits,
+  rstDiscounts,
+  rstOrderHistory,
+  rstWaitlist,
+}

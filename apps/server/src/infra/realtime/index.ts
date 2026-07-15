@@ -1,2 +1,2 @@
 // Realtime infrastructure exports
-export * from "./gateway";
+export * from './gateway'

@@ -1,24 +1,28 @@
-import { type ReactNode } from "react";
-import { useAuth } from "../hooks/use-auth";
+import { useEffect, type ReactNode } from 'react'
+import { useNavigate } from '@tanstack/react-router'
+import { useAuthStore } from '../lib/store'
 
 interface AuthGuardProps {
-  children: ReactNode;
-  fallback?: ReactNode;
-  redirectTo?: string;
+  children: ReactNode
+  fallback?: ReactNode
+  redirectTo?: string
 }
 
-export function AuthGuard({ children, fallback = null, redirectTo }: AuthGuardProps) {
-  const { isAuthenticated, isLoading } = useAuth();
+// Router-aware guard. Every hook is called unconditionally; the redirect happens
+// inside a single unconditional effect once initialization has settled.
+export function AuthGuard({ children, fallback = null, redirectTo = '/login' }: AuthGuardProps) {
+  const navigate = useNavigate()
+  const status = useAuthStore((s) => s.status)
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const isLoading = useAuthStore((s) => s.isLoading)
 
-  if (isLoading) return null;
-
-  if (!isAuthenticated) {
-    if (redirectTo && typeof window !== "undefined") {
-      window.location.href = redirectTo;
-      return null;
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      void navigate({ to: redirectTo, replace: true })
     }
-    return <>{fallback}</>;
-  }
+  }, [isLoading, isAuthenticated, navigate, redirectTo])
 
-  return <>{children}</>;
+  if (isLoading || status === 'unavailable') return <>{fallback}</>
+  if (!isAuthenticated) return <>{fallback}</>
+  return <>{children}</>
 }

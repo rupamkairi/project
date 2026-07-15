@@ -1,16 +1,16 @@
-import type { Mediator } from "@core";
+import type { Mediator } from '@core'
 
 export async function onReturnReceived(
   returnId: string,
   orderId: string,
-  mediator: Mediator
+  mediator: Mediator,
 ): Promise<void> {
   await mediator.dispatch({
-    type: "ecommerce.processReturnRefund",
+    type: 'ecommerce.processReturnRefund',
     returnId,
     orderId,
-    orgId: "",
-    actorId: "system",
+    orgId: '',
+    actorId: 'system',
     correlationId: crypto.randomUUID(),
-  } as any);
+  } as any)
 }

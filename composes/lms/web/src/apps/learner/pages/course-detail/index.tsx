@@ -1,30 +1,34 @@
-import { useState } from "react"
-import { useParams, useNavigate } from "@tanstack/react-router"
-import { useQuery, useMutation } from "@tanstack/react-query"
-import { lmsApi } from "../../../../api/lms-client"
-import { Button, Card, CardContent, Input, Badge, Progress, cn, Spinner } from "@projectx/ui"
-import { StarRating } from "../../../../components/shared/StarRating"
-import { PriceDisplay, formatDate } from "../../../../components/shared/PriceDisplay"
-import { ModuleIcon } from "../../../../components/shared/ModuleIcon"
+import { useState } from 'react'
+import { useParams, useNavigate } from '@tanstack/react-router'
+import { useQuery, useMutation } from '@tanstack/react-query'
+import { lmsApi } from '../../../../api/lms-client'
+import { Button, Card, CardContent, Input, Badge, Progress, cn, Spinner } from '@projectx/ui'
+import { StarRating } from '../../../../components/shared/StarRating'
+import { PriceDisplay, formatDate } from '../../../../components/shared/PriceDisplay'
+import { ModuleIcon } from '../../../../components/shared/ModuleIcon'
 
 function EnrollCard({ course }: { course: any }) {
   const navigate = useNavigate()
-  const [coupon, setCoupon] = useState("")
+  const [coupon, setCoupon] = useState('')
 
   const enroll = useMutation({
     mutationFn: () =>
-      lmsApi.post("/enrollments", {
+      lmsApi.post('/enrollments', {
         courseId: course.id,
         couponCode: coupon || undefined,
       }),
   })
 
-  const effectivePrice = parseFloat(course?.price ?? "0")
+  const effectivePrice = parseFloat(course?.price ?? '0')
 
   return (
     <Card className="p-4 space-y-3 h-fit">
       <div className="text-2xl font-bold">
-        {effectivePrice === 0 ? "Free" : <PriceDisplay amount={course.price} currency={course.currency} />}
+        {effectivePrice === 0 ? (
+          'Free'
+        ) : (
+          <PriceDisplay amount={course.price} currency={course.currency} />
+        )}
       </div>
       {course.compareAtPrice && parseFloat(course.compareAtPrice) > effectivePrice && (
         <p className="text-sm text-muted-foreground line-through">
@@ -41,17 +45,13 @@ function EnrollCard({ course }: { course: any }) {
         />
       </div>
 
-      <Button
-        className="w-full"
-        disabled={enroll.isPending}
-        onClick={() => enroll.mutateAsync()}
-      >
-        {enroll.isPending ? "Enrolling..." : effectivePrice === 0 ? "Enroll Free" : "Enroll Now"}
+      <Button className="w-full" disabled={enroll.isPending} onClick={() => enroll.mutateAsync()}>
+        {enroll.isPending ? 'Enrolling...' : effectivePrice === 0 ? 'Enroll Free' : 'Enroll Now'}
       </Button>
 
       {enroll.isSuccess && (
         <p className="text-sm text-green-600 font-medium">
-          Enrolled!{" "}
+          Enrolled!{' '}
           <Button
             variant="link"
             size="sm"
@@ -65,7 +65,7 @@ function EnrollCard({ course }: { course: any }) {
 
       {enroll.isError && (
         <p className="text-sm text-red-500">
-          {(enroll.error as any)?.message ?? "Enrollment failed"}
+          {(enroll.error as any)?.message ?? 'Enrollment failed'}
         </p>
       )}
 
@@ -80,7 +80,7 @@ function EnrollCard({ course }: { course: any }) {
 
 function ReviewsSection({ courseId }: { courseId: string }) {
   const { data } = useQuery({
-    queryKey: ["reviews", courseId],
+    queryKey: ['reviews', courseId],
     queryFn: () => lmsApi.get<any>(`/courses/${courseId}/reviews`),
   })
 
@@ -106,7 +106,9 @@ function ReviewsSection({ courseId }: { courseId: string }) {
                   value={total > 0 ? ((distribution[stars] ?? 0) / total) * 100 : 0}
                   className="flex-1 h-2"
                 />
-                <span className="text-xs text-muted-foreground w-8">{distribution[stars] ?? 0}</span>
+                <span className="text-xs text-muted-foreground w-8">
+                  {distribution[stars] ?? 0}
+                </span>
               </div>
             ))}
           </div>
@@ -131,7 +133,7 @@ function ReviewsSection({ courseId }: { courseId: string }) {
 
 function ModuleRow({ module, isLocked }: { module: any; isLocked: boolean }) {
   return (
-    <div className={cn("flex items-center gap-3 p-3 rounded border", isLocked && "opacity-60")}>
+    <div className={cn('flex items-center gap-3 p-3 rounded border', isLocked && 'opacity-60')}>
       <ModuleIcon type={module.type} className="text-sm w-6 text-center" />
       <span className="flex-1 text-sm">{module.title}</span>
       <span className="text-xs text-muted-foreground">{module.estimatedMinutes}min</span>
@@ -146,10 +148,10 @@ function ModuleRow({ module, isLocked }: { module: any; isLocked: boolean }) {
 }
 
 export function CourseDetailPage() {
-  const { slug } = useParams({ from: "/lms/learn/courses/$slug" })
+  const { slug } = useParams({ from: '/lms/learn/courses/$slug' })
 
   const { data: course } = useQuery({
-    queryKey: ["course", slug],
+    queryKey: ['course', slug],
     queryFn: () => lmsApi.get<any>(`/courses/${slug}`),
   })
 
@@ -172,7 +174,9 @@ export function CourseDetailPage() {
           )}
           <h1 className="text-3xl font-bold">{course.title}</h1>
           <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
-            <span>★ {course.rating?.toFixed(1)} ({course.reviewCount ?? 0} reviews)</span>
+            <span>
+              ★ {course.rating?.toFixed(1)} ({course.reviewCount ?? 0} reviews)
+            </span>
             <span>{course.enrolledCount ?? 0} enrolled</span>
             <span className="capitalize">{course.level}</span>
             <span>{course.language?.toUpperCase()}</span>

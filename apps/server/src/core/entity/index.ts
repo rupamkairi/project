@@ -13,7 +13,7 @@
  * @packageDocumentation
  */
 
-import { ulid } from "ulid";
+import { ulid } from 'ulid'
 
 // ---------------------------------------------------------------------------
 // Primitive types — defined here for backward compatibility.
@@ -35,7 +35,7 @@ import { ulid } from "ulid";
  *
  * @category Core
  */
-export type ID = string;
+export type ID = string
 
 /**
  * Timestamp as Unix epoch in milliseconds.
@@ -47,14 +47,14 @@ export type ID = string;
  *
  * @category Core
  */
-export type Timestamp = number;
+export type Timestamp = number
 
 /**
  * Flexible metadata container for entities.
  *
  * @category Core
  */
-export type Meta = Record<string, string | number | boolean | null>;
+export type Meta = Record<string, string | number | boolean | null>
 
 /**
  * Base entity interface for all domain entities.
@@ -77,41 +77,41 @@ export interface Entity {
   /**
    * Unique identifier (ULID format)
    */
-  id: ID;
+  id: ID
 
   /**
    * Organization ID for multi-tenancy
    *
    * Always present to ensure data isolation between organizations
    */
-  organizationId: ID;
+  organizationId: ID
 
   /**
    * Creation timestamp (Unix epoch ms)
    */
-  createdAt: Timestamp;
+  createdAt: Timestamp
 
   /**
    * Last update timestamp (Unix epoch ms)
    */
-  updatedAt: Timestamp;
+  updatedAt: Timestamp
 
   /**
    * Soft delete timestamp (undefined if not deleted)
    */
-  deletedAt?: Timestamp;
+  deletedAt?: Timestamp
 
   /**
    * Version number for optimistic concurrency control
    *
    * Incremented on each update
    */
-  version: number;
+  version: number
 
   /**
    * Flexible metadata storage
    */
-  meta: Meta;
+  meta: Meta
 }
 
 // ---------------------------------------------------------------------------
@@ -132,7 +132,7 @@ export interface Entity {
  * @category Core
  */
 export function generateId(): ID {
-  return ulid();
+  return ulid()
 }
 
 /**
@@ -150,7 +150,7 @@ export function generateId(): ID {
  * @category Core
  */
 export function generatePrefixedId(prefix: string): ID {
-  return `${prefix}_${ulid()}`;
+  return `${prefix}_${ulid()}`
 }
 
 /**
@@ -169,9 +169,9 @@ export function generatePrefixedId(prefix: string): ID {
  * @category Core
  */
 export function isValidId(id: string): boolean {
-  if (!id || id.length !== 26) return false;
+  if (!id || id.length !== 26) return false
   // ULID regex: Crockford's base32
-  return /^[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{26}$/i.test(id);
+  return /^[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{26}$/i.test(id)
 }
 
 /**
@@ -193,20 +193,20 @@ export function isValidId(id: string): boolean {
  */
 export function extractTimestamp(id: ID): Timestamp {
   if (!isValidId(id)) {
-    throw new Error("Invalid ULID format");
+    throw new Error('Invalid ULID format')
   }
   // First 10 characters of ULID encode the timestamp in base32
-  const timePart = id.substring(0, 10);
+  const timePart = id.substring(0, 10)
   // Decode base32 Crockford
-  let timestamp = 0;
-  const base32Chars = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+  let timestamp = 0
+  const base32Chars = '0123456789ABCDEFGHJKMNPQRSTVWXYZ'
   for (let i = 0; i < timePart.length; i++) {
-    const char: string = timePart.charAt(i).toUpperCase();
-    const value = base32Chars.indexOf(char);
-    if (value === -1) return 0;
-    timestamp = timestamp * 32 + value;
+    const char: string = timePart.charAt(i).toUpperCase()
+    const value = base32Chars.indexOf(char)
+    if (value === -1) return 0
+    timestamp = timestamp * 32 + value
   }
-  return timestamp;
+  return timestamp
 }
 
 /**
@@ -235,7 +235,7 @@ export function createEntity<T extends Entity>(
   organizationId: ID,
   partial?: Partial<T>,
 ): T {
-  const now = Date.now() as Timestamp;
+  const now = Date.now() as Timestamp
   return {
     id,
     organizationId,
@@ -244,7 +244,7 @@ export function createEntity<T extends Entity>(
     version: 1,
     meta: {},
     ...partial,
-  } as T;
+  } as T
 }
 
 /**
@@ -256,7 +256,7 @@ export function createEntity<T extends Entity>(
  * @category Core
  */
 export function isDeleted(entity: Entity): boolean {
-  return entity.deletedAt !== undefined;
+  return entity.deletedAt !== undefined
 }
 
 /**
@@ -275,7 +275,7 @@ export function softDelete(entity: Entity): Entity {
     deletedAt: Date.now() as Timestamp,
     updatedAt: Date.now() as Timestamp,
     version: entity.version + 1,
-  };
+  }
 }
 
 /**
@@ -299,16 +299,13 @@ export function softDelete(entity: Entity): Entity {
  *
  * @category Core
  */
-export function updateEntity<T extends Entity>(
-  entity: T,
-  updates: Partial<T>,
-): T {
+export function updateEntity<T extends Entity>(entity: T, updates: Partial<T>): T {
   return {
     ...entity,
     ...updates,
     updatedAt: Date.now() as Timestamp,
     version: entity.version + 1,
-  };
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -316,8 +313,8 @@ export function updateEntity<T extends Entity>(
 // ---------------------------------------------------------------------------
 
 // IDGenerator interface + default implementation
-export type { IDGenerator } from "./id";
-export { createIdGenerator, defaultIdGenerator } from "./id";
+export type { IDGenerator } from './id'
+export { createIdGenerator, defaultIdGenerator } from './id'
 
 // Schema system types and Validators
 export type {
@@ -332,9 +329,9 @@ export type {
   GeoPoint,
   GeoPolygon,
   GeoLinestring,
-} from "./schema";
-export { Validators } from "./schema";
+} from './schema'
+export { Validators } from './schema'
 
 // EntitySchemaRegistry
-export type { EntitySchemaRegistry } from "./registry";
-export { createEntitySchemaRegistry } from "./registry";
+export type { EntitySchemaRegistry } from './registry'
+export { createEntitySchemaRegistry } from './registry'

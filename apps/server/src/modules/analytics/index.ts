@@ -1,11 +1,11 @@
 // Analytics Module
 
-import type { AppModule, BootRegistry } from "@core";
+import type { AppModule, BootRegistry } from '@core'
 
 export const AnalyticsModule: AppModule = {
   manifest: {
-    id: "analytics",
-    version: "0.1.0",
+    id: 'analytics',
+    version: '0.1.0',
     dependsOn: [],
     entities: [],
     idPrefixes: {},
@@ -26,4 +26,4 @@ export const AnalyticsModule: AppModule = {
   async shutdown(): Promise<void> {
     // Cleanup
   },
-};
+}

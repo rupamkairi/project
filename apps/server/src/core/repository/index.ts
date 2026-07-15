@@ -16,10 +16,10 @@ import type {
   EntitySchema,
   ValidationContext,
   ValidationResult,
-} from "../entity";
-import type { EventOutbox } from "../event";
-import { NotFoundError, ValidationError } from "../errors";
-import type { PaginatedResult, SortSpec } from "../primitives";
+} from '../entity'
+import type { EventOutbox } from '../event'
+import { NotFoundError, ValidationError } from '../errors'
+import type { PaginatedResult, SortSpec } from '../primitives'
 
 // ---------------------------------------------------------------------------
 // Transaction
@@ -33,8 +33,8 @@ import type { PaginatedResult, SortSpec } from "../primitives";
  * @category Core
  */
 export interface Transaction {
-  commit(): Promise<void>;
-  rollback(): Promise<void>;
+  commit(): Promise<void>
+  rollback(): Promise<void>
 }
 
 // ---------------------------------------------------------------------------
@@ -49,9 +49,9 @@ export interface Transaction {
  * @category Core
  */
 export interface DbQuery {
-  sql?: string;
-  params?: unknown[];
-  [k: string]: unknown;
+  sql?: string
+  params?: unknown[]
+  [k: string]: unknown
 }
 
 // ---------------------------------------------------------------------------
@@ -70,34 +70,34 @@ export interface DatabaseAdapter {
   /**
    * Executes a select query and returns typed rows.
    */
-  select<R>(q: DbQuery): Promise<R[]>;
+  select<R>(q: DbQuery): Promise<R[]>
 
   /**
    * Inserts a row into a table and returns the created row.
    */
-  insert<R>(table: string, row: Record<string, unknown>): Promise<R>;
+  insert<R>(table: string, row: Record<string, unknown>): Promise<R>
 
   /**
    * Updates an existing row identified by id and returns the updated row.
    */
-  update<R>(table: string, id: ID, patch: Record<string, unknown>): Promise<R>;
+  update<R>(table: string, id: ID, patch: Record<string, unknown>): Promise<R>
 
   /**
    * Deletes a row permanently (hard delete).
    */
-  deleteRow(table: string, id: ID): Promise<void>;
+  deleteRow(table: string, id: ID): Promise<void>
 
   /**
    * Executes a function inside a database transaction.
    */
-  transaction<R>(fn: (tx: Transaction) => Promise<R>): Promise<R>;
+  transaction<R>(fn: (tx: Transaction) => Promise<R>): Promise<R>
 
   /**
    * Executes a raw SQL query and returns plain objects.
    *
    * Escape hatch for complex queries (aggregate reports, spatial joins).
    */
-  raw<R>(query: string, params?: unknown[]): Promise<R[]>;
+  raw<R>(query: string, params?: unknown[]): Promise<R[]>
 }
 
 // ---------------------------------------------------------------------------
@@ -110,16 +110,16 @@ export interface DatabaseAdapter {
  * @category Core
  */
 export type FilterOperator =
-  | "eq" // Equal
-  | "neq" // Not equal
-  | "gt" // Greater than
-  | "gte" // Greater than or equal
-  | "lt" // Less than
-  | "lte" // Less than or equal
-  | "in" // In array
-  | "nin" // Not in array
-  | "contains" // String contains
-  | "exists"; // Field exists
+  | 'eq' // Equal
+  | 'neq' // Not equal
+  | 'gt' // Greater than
+  | 'gte' // Greater than or equal
+  | 'lt' // Less than
+  | 'lte' // Less than or equal
+  | 'in' // In array
+  | 'nin' // Not in array
+  | 'contains' // String contains
+  | 'exists' // Field exists
 
 /**
  * Filter definition for queries.
@@ -136,11 +136,11 @@ export type FilterOperator =
  */
 export interface Filter<T = unknown> {
   /** Field name to filter on. */
-  field: string;
+  field: string
   /** Comparison operator. */
-  op: FilterOperator;
+  op: FilterOperator
   /** Value to compare against. */
-  value: T;
+  value: T
 }
 
 // ---------------------------------------------------------------------------
@@ -156,19 +156,19 @@ export interface Filter<T = unknown> {
  */
 export interface QueryOptions {
   /** Page number (1-indexed, default: 1). */
-  page?: number;
+  page?: number
   /** Items per page (default: 50, max: 500). */
-  limit?: number;
+  limit?: number
   /** Sort specifications. */
-  sort?: SortSpec[];
+  sort?: SortSpec[]
   /** Ref fields to eagerly load. */
-  include?: string[];
+  include?: string[]
   /** Include soft-deleted records (default: false). */
-  withDeleted?: boolean;
+  withDeleted?: boolean
 }
 
 // Re-export PaginatedResult so callers import from one place.
-export type { PaginatedResult } from "../primitives";
+export type { PaginatedResult } from '../primitives'
 
 // ---------------------------------------------------------------------------
 // Repository interface
@@ -185,28 +185,28 @@ export type { PaginatedResult } from "../primitives";
  */
 export interface Repository<T extends Entity> {
   // Single entity reads
-  findById(id: ID, opts?: Pick<QueryOptions, "withDeleted">): Promise<T | null>;
-  findByIdOrFail(id: ID, opts?: Pick<QueryOptions, "withDeleted">): Promise<T>;
+  findById(id: ID, opts?: Pick<QueryOptions, 'withDeleted'>): Promise<T | null>
+  findByIdOrFail(id: ID, opts?: Pick<QueryOptions, 'withDeleted'>): Promise<T>
 
   // Collection reads — Filter<unknown> because value type is a field value, not the entity
-  findMany(filter: Filter, opts?: QueryOptions): Promise<PaginatedResult<T>>;
-  findOne(filter: Filter, opts?: QueryOptions): Promise<T | null>;
-  findAll(filter: Filter, opts?: QueryOptions): Promise<T[]>;
-  count(filter: Filter): Promise<number>;
-  exists(filter: Filter): Promise<boolean>;
+  findMany(filter: Filter, opts?: QueryOptions): Promise<PaginatedResult<T>>
+  findOne(filter: Filter, opts?: QueryOptions): Promise<T | null>
+  findAll(filter: Filter, opts?: QueryOptions): Promise<T[]>
+  count(filter: Filter): Promise<number>
+  exists(filter: Filter): Promise<boolean>
 
   // Writes
-  save(entity: T): Promise<T>;
-  saveBatch(entities: T[]): Promise<T[]>;
-  delete(id: ID): Promise<void>;
-  hardDelete(id: ID): Promise<void>;
-  restore(id: ID): Promise<T>;
+  save(entity: T): Promise<T>
+  saveBatch(entities: T[]): Promise<T[]>
+  delete(id: ID): Promise<void>
+  hardDelete(id: ID): Promise<void>
+  restore(id: ID): Promise<T>
 
   // Transactions
-  transaction<R>(fn: (tx: Transaction) => Promise<R>): Promise<R>;
+  transaction<R>(fn: (tx: Transaction) => Promise<R>): Promise<R>
 
   // Raw escape hatch
-  raw<R = unknown>(query: string, params?: unknown[]): Promise<R[]>;
+  raw<R = unknown>(query: string, params?: unknown[]): Promise<R[]>
 }
 
 // ---------------------------------------------------------------------------
@@ -228,9 +228,7 @@ export interface Repository<T extends Entity> {
  *
  * @category Core
  */
-export abstract class BaseRepository<T extends Entity>
-  implements Repository<T>
-{
+export abstract class BaseRepository<T extends Entity> implements Repository<T> {
   constructor(
     protected readonly schema: EntitySchema,
     protected readonly db: DatabaseAdapter,
@@ -244,7 +242,7 @@ export abstract class BaseRepository<T extends Entity>
    * Concrete implementations provide this to translate Filter<T> into a
    * database-specific query object.
    */
-  abstract buildQuery(filter: Filter): DbQuery;
+  abstract buildQuery(filter: Filter): DbQuery
 
   // -------------------------------------------------------------------------
   // Validation
@@ -256,21 +254,18 @@ export abstract class BaseRepository<T extends Entity>
    * Loops field validators, collects all failures, throws ValidationError if any.
    */
   protected validateEntity(entity: T): void {
-    const failures: Array<{ field: string; message: string }> = [];
+    const failures: Array<{ field: string; message: string }> = []
 
     for (const fieldSchema of this.schema.fields) {
-      const value = (entity as Record<string, unknown>)[fieldSchema.key];
+      const value = (entity as Record<string, unknown>)[fieldSchema.key]
 
       // Required field check
-      if (
-        fieldSchema.required &&
-        (value === undefined || value === null || value === "")
-      ) {
+      if (fieldSchema.required && (value === undefined || value === null || value === '')) {
         failures.push({
           field: fieldSchema.key,
           message: `${fieldSchema.key} is required`,
-        });
-        continue;
+        })
+        continue
       }
 
       // Run field validators if present
@@ -282,19 +277,19 @@ export abstract class BaseRepository<T extends Entity>
           isUpdate: entity.version > 1,
           actorId: this.orgId, // best available without full context
           orgId: this.orgId,
-        };
+        }
 
         for (const validator of fieldSchema.validators) {
-          const result = validator(value, ctx);
+          const result = validator(value, ctx)
           if (result !== null) {
-            failures.push(...result.failures);
+            failures.push(...result.failures)
           }
         }
       }
     }
 
     if (failures.length > 0) {
-      throw new ValidationError("Entity validation failed", failures);
+      throw new ValidationError('Entity validation failed', failures)
     }
   }
 
@@ -305,95 +300,83 @@ export abstract class BaseRepository<T extends Entity>
   /**
    * Returns true when the row should be hidden (soft-deleted and withDeleted not set).
    */
-  private isSoftDeletedHidden(
-    entity: T,
-    withDeleted: boolean | undefined,
-  ): boolean {
-    return entity.deletedAt !== undefined && !withDeleted;
+  private isSoftDeletedHidden(entity: T, withDeleted: boolean | undefined): boolean {
+    return entity.deletedAt !== undefined && !withDeleted
   }
 
   /**
    * Builds the ID-based filter and delegates to db.select.
    */
   private async selectById(id: ID): Promise<T[]> {
-    const q = this.buildQuery({ field: "id", op: "eq", value: id } as unknown as Filter<T>);
-    return this.db.select<T>(q);
+    const q = this.buildQuery({ field: 'id', op: 'eq', value: id } as unknown as Filter<T>)
+    return this.db.select<T>(q)
   }
 
   /**
    * Builds the general filter and delegates to db.select.
    */
   private async selectByFilter(filter: Filter): Promise<T[]> {
-    const q = this.buildQuery(filter);
-    return this.db.select<T>(q);
+    const q = this.buildQuery(filter)
+    return this.db.select<T>(q)
   }
 
   // -------------------------------------------------------------------------
   // Reads
   // -------------------------------------------------------------------------
 
-  async findById(
-    id: ID,
-    opts?: Pick<QueryOptions, "withDeleted">,
-  ): Promise<T | null> {
-    const rows = await this.selectById(id);
+  async findById(id: ID, opts?: Pick<QueryOptions, 'withDeleted'>): Promise<T | null> {
+    const rows = await this.selectById(id)
 
     // Filter: must belong to this org
-    const row = rows.find((r) => r.organizationId === this.orgId) ?? null;
-    if (!row) return null;
+    const row = rows.find((r) => r.organizationId === this.orgId) ?? null
+    if (!row) return null
 
     // Filter soft-deleted unless withDeleted=true
-    if (this.isSoftDeletedHidden(row, opts?.withDeleted)) return null;
+    if (this.isSoftDeletedHidden(row, opts?.withDeleted)) return null
 
-    return row;
+    return row
   }
 
-  async findByIdOrFail(
-    id: ID,
-    opts?: Pick<QueryOptions, "withDeleted">,
-  ): Promise<T> {
-    const entity = await this.findById(id, opts);
+  async findByIdOrFail(id: ID, opts?: Pick<QueryOptions, 'withDeleted'>): Promise<T> {
+    const entity = await this.findById(id, opts)
     if (!entity) {
-      throw new NotFoundError(`Entity not found: ${id}`, { id });
+      throw new NotFoundError(`Entity not found: ${id}`, { id })
     }
-    return entity;
+    return entity
   }
 
-  async findMany(
-    filter: Filter,
-    opts?: QueryOptions,
-  ): Promise<PaginatedResult<T>> {
-    const allRows = await this.selectByFilter(filter);
+  async findMany(filter: Filter, opts?: QueryOptions): Promise<PaginatedResult<T>> {
+    const allRows = await this.selectByFilter(filter)
 
     // Scope to org and optionally include deleted
     const scoped = allRows.filter((r) => {
-      if (r.organizationId !== this.orgId) return false;
-      if (this.isSoftDeletedHidden(r, opts?.withDeleted)) return false;
-      return true;
-    });
+      if (r.organizationId !== this.orgId) return false
+      if (this.isSoftDeletedHidden(r, opts?.withDeleted)) return false
+      return true
+    })
 
-    const page = opts?.page ?? 1;
-    const limit = Math.min(opts?.limit ?? 50, 500);
-    const total = scoped.length;
+    const page = opts?.page ?? 1
+    const limit = Math.min(opts?.limit ?? 50, 500)
+    const total = scoped.length
 
     // Sort
-    const sortSpecs = opts?.sort;
-    let sorted = [...scoped];
+    const sortSpecs = opts?.sort
+    let sorted = [...scoped]
     if (sortSpecs && sortSpecs.length > 0) {
       sorted = sorted.sort((a, b) => {
         for (const spec of sortSpecs) {
-          const aVal = (a as Record<string, unknown>)[spec.field];
-          const bVal = (b as Record<string, unknown>)[spec.field];
-          if (aVal === bVal) continue;
-          const cmp = aVal! < bVal! ? -1 : 1;
-          return spec.order === "asc" ? cmp : -cmp;
+          const aVal = (a as Record<string, unknown>)[spec.field]
+          const bVal = (b as Record<string, unknown>)[spec.field]
+          if (aVal === bVal) continue
+          const cmp = aVal! < bVal! ? -1 : 1
+          return spec.order === 'asc' ? cmp : -cmp
         }
-        return 0;
-      });
+        return 0
+      })
     }
 
-    const start = (page - 1) * limit;
-    const data = sorted.slice(start, start + limit);
+    const start = (page - 1) * limit
+    const data = sorted.slice(start, start + limit)
 
     return {
       data,
@@ -401,32 +384,32 @@ export abstract class BaseRepository<T extends Entity>
       page,
       limit,
       hasNext: page * limit < total,
-    };
+    }
   }
 
   async findOne(filter: Filter, opts?: QueryOptions): Promise<T | null> {
-    const result = await this.findMany(filter, { ...opts, limit: 1 });
-    return result.data[0] ?? null;
+    const result = await this.findMany(filter, { ...opts, limit: 1 })
+    return result.data[0] ?? null
   }
 
   async findAll(filter: Filter, opts?: QueryOptions): Promise<T[]> {
-    const allRows = await this.selectByFilter(filter);
+    const allRows = await this.selectByFilter(filter)
 
     return allRows.filter((r) => {
-      if (r.organizationId !== this.orgId) return false;
-      if (this.isSoftDeletedHidden(r, opts?.withDeleted)) return false;
-      return true;
-    });
+      if (r.organizationId !== this.orgId) return false
+      if (this.isSoftDeletedHidden(r, opts?.withDeleted)) return false
+      return true
+    })
   }
 
   async count(filter: Filter): Promise<number> {
-    const rows = await this.findAll(filter);
-    return rows.length;
+    const rows = await this.findAll(filter)
+    return rows.length
   }
 
   async exists(filter: Filter): Promise<boolean> {
-    const n = await this.count(filter);
-    return n > 0;
+    const n = await this.count(filter)
+    return n > 0
   }
 
   // -------------------------------------------------------------------------
@@ -435,13 +418,13 @@ export abstract class BaseRepository<T extends Entity>
 
   async save(entity: T): Promise<T> {
     // Always inject the repo's orgId — callers never supply it
-    const now = Date.now() as Timestamp;
+    const now = Date.now() as Timestamp
 
     // Check if this is an insert or update
-    const existingRows = await this.selectById(entity.id);
-    const existing = existingRows.find((r) => r.organizationId === this.orgId);
+    const existingRows = await this.selectById(entity.id)
+    const existing = existingRows.find((r) => r.organizationId === this.orgId)
 
-    let saved: T;
+    let saved: T
 
     if (!existing) {
       // Insert — set lifecycle fields, force version = 1
@@ -451,32 +434,35 @@ export abstract class BaseRepository<T extends Entity>
         createdAt: now,
         updatedAt: now,
         version: 1,
-      };
+      }
 
       // Validate before insert
-      this.validateEntity(toInsert);
+      this.validateEntity(toInsert)
 
-      saved = await this.db.insert<T>(this.schema.name, toInsert as unknown as Record<string, unknown>);
+      saved = await this.db.insert<T>(
+        this.schema.name,
+        toInsert as unknown as Record<string, unknown>,
+      )
     } else {
       // Update — bump version, update timestamp
       const patch: Partial<T> = {
         ...entity,
         organizationId: this.orgId,
         updatedAt: now,
-        version: (existing.version + 1) as T["version"],
+        version: (existing.version + 1) as T['version'],
         // Preserve original createdAt
         createdAt: existing.createdAt,
-      };
+      }
 
       // Validate before update (merge patch onto existing for validation)
-      const merged = { ...existing, ...patch } as T;
-      this.validateEntity(merged);
+      const merged = { ...existing, ...patch } as T
+      this.validateEntity(merged)
 
       saved = await this.db.update<T>(
         this.schema.name,
         entity.id,
         patch as unknown as Record<string, unknown>,
-      );
+      )
     }
 
     // Publish to outbox (within an implicit transaction context)
@@ -495,53 +481,53 @@ export abstract class BaseRepository<T extends Entity>
           source: this.schema.namespace,
         },
         tx,
-      );
-    });
+      )
+    })
 
-    return saved;
+    return saved
   }
 
   async saveBatch(entities: T[]): Promise<T[]> {
-    const results: T[] = [];
+    const results: T[] = []
     for (const entity of entities) {
-      results.push(await this.save(entity));
+      results.push(await this.save(entity))
     }
-    return results;
+    return results
   }
 
   async delete(id: ID): Promise<void> {
-    const now = Date.now() as Timestamp;
-    const existing = await this.findById(id);
-    if (!existing) return; // already gone or not in this org — no-op
+    const now = Date.now() as Timestamp
+    const existing = await this.findById(id)
+    if (!existing) return // already gone or not in this org — no-op
 
     await this.db.update<T>(this.schema.name, id, {
       deletedAt: now,
       updatedAt: now,
       version: existing.version + 1,
-    } as Record<string, unknown>);
+    } as Record<string, unknown>)
   }
 
   async hardDelete(id: ID): Promise<void> {
-    await this.db.deleteRow(this.schema.name, id);
+    await this.db.deleteRow(this.schema.name, id)
   }
 
   async restore(id: ID): Promise<T> {
-    const now = Date.now() as Timestamp;
+    const now = Date.now() as Timestamp
     // We need to find even soft-deleted entities
-    const rows = await this.selectById(id);
-    const existing = rows.find((r) => r.organizationId === this.orgId);
+    const rows = await this.selectById(id)
+    const existing = rows.find((r) => r.organizationId === this.orgId)
 
     if (!existing) {
-      throw new NotFoundError(`Entity not found for restore: ${id}`, { id });
+      throw new NotFoundError(`Entity not found for restore: ${id}`, { id })
     }
 
     const restored = await this.db.update<T>(this.schema.name, id, {
       deletedAt: undefined,
       updatedAt: now,
       version: existing.version + 1,
-    } as Record<string, unknown>);
+    } as Record<string, unknown>)
 
-    return restored;
+    return restored
   }
 
   // -------------------------------------------------------------------------
@@ -549,10 +535,10 @@ export abstract class BaseRepository<T extends Entity>
   // -------------------------------------------------------------------------
 
   async transaction<R>(fn: (tx: Transaction) => Promise<R>): Promise<R> {
-    return this.db.transaction(fn);
+    return this.db.transaction(fn)
   }
 
   async raw<R = unknown>(query: string, params?: unknown[]): Promise<R[]> {
-    return this.db.raw<R>(query, params);
+    return this.db.raw<R>(query, params)
   }
 }

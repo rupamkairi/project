@@ -1,13 +1,16 @@
-import { Route as indexRoute } from "@/routes/index";
-import { crmRoutes } from "@projectx/crm-web";
-import { ecommerceAdminRoutes } from "@projectx/ecommerce-admin";
-import { ecommerceStorefrontRoutes } from "@projectx/ecommerce-storefront";
-import { erpRoutes } from "@projectx/erp-web";
-import { lmsRoutes } from "@projectx/lms-web";
-import { platformRoutes } from "@projectx/platform-web";
-import { restaurantRoutes } from "@projectx/restaurant-web";
-import { sharedRootRoute } from "@projectx/shared-router";
-import { createRouter } from "@tanstack/react-router";
+import { Route as indexRoute } from '@/routes/index'
+import { crmRoutes } from '@projectx/crm-web'
+import { ecommerceAdminRoutes } from '@projectx/ecommerce-admin'
+import { ecommerceStorefrontRoutes } from '@projectx/ecommerce-storefront'
+import { erpRoutes } from '@projectx/erp-web'
+import { lmsRoutes } from '@projectx/lms-web'
+import { platformRoutes } from '@projectx/platform-web'
+import { restaurantRoutes } from '@projectx/restaurant-web'
+import { workplaceRoutes } from '@projectx/workplace-web'
+import { projectManagementRoutes } from '@projectx/project-management-web'
+import { hospitalityRoutes } from '@projectx/hospitality-web'
+import { sharedRootRoute } from '@projectx/shared-router'
+import { createRouter } from '@tanstack/react-router'
 
 const routeTree = sharedRootRoute.addChildren([
   indexRoute,
@@ -18,17 +21,23 @@ const routeTree = sharedRootRoute.addChildren([
   ...erpRoutes,
   ...lmsRoutes,
   ...restaurantRoutes,
-]);
+  ...workplaceRoutes,
+  ...projectManagementRoutes,
+  ...hospitalityRoutes,
+])
 
 export const router = createRouter({
   routeTree,
   context: {},
   defaultErrorComponent: ({ error }) => {
-    if (error?.message === "UNAUTHENTICATED") {
-      window.location.href = "/login";
-      return null;
-    }
-    throw error;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center max-w-md px-4">
+          <h1 className="text-2xl font-bold">Something went wrong</h1>
+          <p className="text-muted-foreground mt-2 text-sm">{error?.message}</p>
+        </div>
+      </div>
+    )
   },
   defaultNotFoundComponent: () => {
     return (
@@ -40,12 +49,12 @@ export const router = createRouter({
           </p>
         </div>
       </div>
-    );
+    )
   },
-});
+})
 
-declare module "@tanstack/react-router" {
+declare module '@tanstack/react-router' {
   interface Register {
-    router: typeof router;
+    router: typeof router
   }
 }

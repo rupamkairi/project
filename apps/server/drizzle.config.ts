@@ -1,17 +1,20 @@
-import { config } from "dotenv";
-import { defineConfig } from "drizzle-kit";
-import { resolve } from "path";
+import { config } from 'dotenv'
+import { defineConfig } from 'drizzle-kit'
+import { resolve } from 'path'
 
-config({ path: resolve(__dirname, "./.env") });
+config({ path: resolve(__dirname, './.env') })
 
 export default defineConfig({
-  dialect: "postgresql",
+  dialect: 'postgresql',
   schema: [
-    "./src/infra/db/schema/index.ts",
-    "../../composes/restaurant/server/src/db/schema/restaurant.ts",
+    './src/infra/db/schema/index.ts',
+    '../../composes/restaurant/server/src/db/schema/restaurant.ts',
+    '../../composes/workplace/server/src/db/schema/workplace.ts',
+    '../../composes/project-management/server/src/db/schema/project-management.ts',
+    '../../composes/hospitality/server/src/db/schema/hospitality.ts',
   ],
-  out: "./src/infra/db/migrations",
+  out: './src/infra/db/migrations',
   dbCredentials: { url: process.env.DATABASE_URL! },
   verbose: true,
   strict: true,
-});
+})

@@ -8,7 +8,7 @@
  * @packageDocumentation
  */
 
-import type { CoreError } from "../errors";
+import type { CoreError } from '../errors'
 
 /**
  * Result type for functional error handling.
@@ -37,7 +37,7 @@ import type { CoreError } from "../errors";
  */
 export type Result<T, E extends CoreError = CoreError> =
   | { ok: true; value: T }
-  | { ok: false; error: E };
+  | { ok: false; error: E }
 
 /**
  * Creates a successful Result.
@@ -49,7 +49,7 @@ export type Result<T, E extends CoreError = CoreError> =
  * @category Core
  */
 export function Ok<T>(value: T): Result<T> {
-  return { ok: true, value };
+  return { ok: true, value }
 }
 
 /**
@@ -62,5 +62,5 @@ export function Ok<T>(value: T): Result<T> {
  * @category Core
  */
 export function Err<E extends CoreError>(error: E): Result<never, E> {
-  return { ok: false, error };
+  return { ok: false, error }
 }

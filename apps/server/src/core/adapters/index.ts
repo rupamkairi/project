@@ -17,9 +17,9 @@
  * @packageDocumentation
  */
 
-import { IntegrationError } from "../errors";
-import type { Money } from "../primitives";
-import type { DomainEvent } from "../event";
+import { IntegrationError } from '../errors'
+import type { Money } from '../primitives'
+import type { DomainEvent } from '../event'
 
 // ---------------------------------------------------------------------------
 // AdapterType — verbatim from core.md §13
@@ -31,24 +31,24 @@ import type { DomainEvent } from "../event";
  * @category Core
  */
 export type AdapterType =
-  | "auth"
-  | "storage"
-  | "notification.email"
-  | "notification.sms"
-  | "notification.push"
-  | "notification.whatsapp"
-  | "notification.webhook"
-  | "payment"
-  | "geo"
-  | "search"
-  | "fx-rates"
-  | "ocr"
-  | "translate"
-  | "tax"
-  | "fulfillment"
-  | "email-sync"
-  | "calendar-sync"
-  | "telephony";
+  | 'auth'
+  | 'storage'
+  | 'notification.email'
+  | 'notification.sms'
+  | 'notification.push'
+  | 'notification.whatsapp'
+  | 'notification.webhook'
+  | 'payment'
+  | 'geo'
+  | 'search'
+  | 'fx-rates'
+  | 'ocr'
+  | 'translate'
+  | 'tax'
+  | 'fulfillment'
+  | 'email-sync'
+  | 'calendar-sync'
+  | 'telephony'
 
 // ---------------------------------------------------------------------------
 // AdapterRegistry interface — verbatim from core.md §13
@@ -61,11 +61,11 @@ export type AdapterType =
  */
 export interface AdapterRegistry {
   /** Returns the registered adapter for the given type. Throws if absent. */
-  get<T>(type: AdapterType): T;
+  get<T>(type: AdapterType): T
   /** Registers (or overwrites) the active implementation for a type. */
-  register<T>(type: AdapterType, adapter: T): void;
+  register<T>(type: AdapterType, adapter: T): void
   /** Returns true if an implementation is registered for the given type. */
-  has(type: AdapterType): boolean;
+  has(type: AdapterType): boolean
 }
 
 // ---------------------------------------------------------------------------
@@ -84,7 +84,7 @@ export interface AdapterRegistry {
  * @category Core
  */
 export function createAdapterRegistry(): AdapterRegistry {
-  const store = new Map<AdapterType, unknown>();
+  const store = new Map<AdapterType, unknown>()
 
   return {
     get<T>(type: AdapterType): T {
@@ -92,19 +92,19 @@ export function createAdapterRegistry(): AdapterRegistry {
         throw new IntegrationError(
           `No adapter registered for type "${type}". Register an implementation before calling get().`,
           { adapterType: type },
-        );
+        )
       }
-      return store.get(type) as T;
+      return store.get(type) as T
     },
 
     register<T>(type: AdapterType, adapter: T): void {
-      store.set(type, adapter);
+      store.set(type, adapter)
     },
 
     has(type: AdapterType): boolean {
-      return store.has(type);
+      return store.has(type)
     },
-  };
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -119,9 +119,9 @@ export function createAdapterRegistry(): AdapterRegistry {
  * @category Core
  */
 export interface FileMeta {
-  mimeType?: string;
-  size?: number;
-  [k: string]: unknown;
+  mimeType?: string
+  size?: number
+  [k: string]: unknown
 }
 
 /**
@@ -131,15 +131,15 @@ export interface FileMeta {
  */
 export interface StoredFile {
   /** Storage key (path) */
-  key: string;
+  key: string
   /** CDN or direct URL */
-  url: string;
+  url: string
   /** File size in bytes */
-  size: number;
+  size: number
   /** MIME type */
-  mimeType: string;
+  mimeType: string
   /** ETag for cache validation */
-  etag: string;
+  etag: string
 }
 
 /**
@@ -148,11 +148,11 @@ export interface StoredFile {
  * @category Core
  */
 export interface StorageAdapter {
-  upload(key: string, file: Buffer, meta: FileMeta): Promise<StoredFile>;
-  download(key: string): Promise<Buffer>;
-  getSignedUrl(key: string, expiresIn: number): Promise<string>;
-  delete(key: string): Promise<void>;
-  move(fromKey: string, toKey: string): Promise<void>;
+  upload(key: string, file: Buffer, meta: FileMeta): Promise<StoredFile>
+  download(key: string): Promise<Buffer>
+  getSignedUrl(key: string, expiresIn: number): Promise<string>
+  delete(key: string): Promise<void>
+  move(fromKey: string, toKey: string): Promise<void>
 }
 
 // ---------------------------------------------------------------------------
@@ -165,9 +165,9 @@ export interface StorageAdapter {
  * @category Core
  */
 export interface NotificationPayload {
-  subject?: string;
-  body: string;
-  data?: Record<string, unknown>;
+  subject?: string
+  body: string
+  data?: Record<string, unknown>
 }
 
 /**
@@ -176,9 +176,9 @@ export interface NotificationPayload {
  * @category Core
  */
 export interface NotificationResult {
-  success: boolean;
-  messageId?: string;
-  error?: string;
+  success: boolean
+  messageId?: string
+  error?: string
 }
 
 /**
@@ -188,9 +188,9 @@ export interface NotificationResult {
  * @category Core
  */
 export interface NotificationAdapter {
-  channel: "email" | "sms" | "push" | "whatsapp" | "webhook" | "in-app";
-  send(to: string, message: NotificationPayload): Promise<NotificationResult>;
-  health(): Promise<boolean>;
+  channel: 'email' | 'sms' | 'push' | 'whatsapp' | 'webhook' | 'in-app'
+  send(to: string, message: NotificationPayload): Promise<NotificationResult>
+  health(): Promise<boolean>
 }
 
 // ---------------------------------------------------------------------------
@@ -203,12 +203,12 @@ export interface NotificationAdapter {
  * @category Core
  */
 export interface AuthSession {
-  sessionId: string;
-  actorId: string;
-  orgId: string;
-  roles: string[];
-  expiresAt: Date;
-  revokedAt?: Date | null;
+  sessionId: string
+  actorId: string
+  orgId: string
+  roles: string[]
+  expiresAt: Date
+  revokedAt?: Date | null
 }
 
 /**
@@ -218,9 +218,9 @@ export interface AuthSession {
  * @category Core
  */
 export interface AuthAdapter {
-  verifyToken(token: string): Promise<{ actorId: string; orgId: string; sessionId: string } | null>;
-  resolveSession(sessionId: string): Promise<AuthSession | null>;
-  issueToken(payload: { actorId: string; orgId: string; sessionId: string }): Promise<string>;
+  verifyToken(token: string): Promise<{ actorId: string; orgId: string; sessionId: string } | null>
+  resolveSession(sessionId: string): Promise<AuthSession | null>
+  issueToken(payload: { actorId: string; orgId: string; sessionId: string }): Promise<string>
 }
 
 // ---------------------------------------------------------------------------
@@ -233,10 +233,10 @@ export interface AuthAdapter {
  * @category Core
  */
 export interface PaymentOrder {
-  amount: Money;
-  currency: string;
-  description?: string;
-  metadata?: Record<string, unknown>;
+  amount: Money
+  currency: string
+  description?: string
+  metadata?: Record<string, unknown>
 }
 
 /**
@@ -245,10 +245,10 @@ export interface PaymentOrder {
  * @category Core
  */
 export interface PaymentSession {
-  sessionId: string;
-  url: string;
-  expiresAt: number;
-  metadata?: Record<string, unknown>;
+  sessionId: string
+  url: string
+  expiresAt: number
+  metadata?: Record<string, unknown>
 }
 
 /**
@@ -257,9 +257,9 @@ export interface PaymentSession {
  * @category Core
  */
 export interface PaymentResult {
-  success: boolean;
-  transactionId?: string;
-  error?: string;
+  success: boolean
+  transactionId?: string
+  error?: string
 }
 
 /**
@@ -268,9 +268,9 @@ export interface PaymentResult {
  * @category Core
  */
 export interface RefundResult {
-  success: boolean;
-  refundId?: string;
-  error?: string;
+  success: boolean
+  refundId?: string
+  error?: string
 }
 
 /**
@@ -284,11 +284,11 @@ export interface RefundResult {
  * @category Core
  */
 export interface PaymentTransaction {
-  id: string;
-  amount: Money;
-  status: string;
-  createdAt: number;
-  metadata?: Record<string, unknown>;
+  id: string
+  amount: Money
+  status: string
+  createdAt: number
+  metadata?: Record<string, unknown>
 }
 
 /**
@@ -297,9 +297,9 @@ export interface PaymentTransaction {
  * @category Core
  */
 export interface WebhookEvent {
-  type: string;
-  data: Record<string, unknown>;
-  metadata?: Record<string, unknown>;
+  type: string
+  data: Record<string, unknown>
+  metadata?: Record<string, unknown>
 }
 
 /**
@@ -308,17 +308,17 @@ export interface WebhookEvent {
  * @category Core
  */
 export interface PaymentAdapter {
-  createPaymentSession(order: PaymentOrder): Promise<PaymentSession>;
-  capturePayment(sessionId: string): Promise<PaymentResult>;
-  refund(transactionId: string, amount: Money): Promise<RefundResult>;
+  createPaymentSession(order: PaymentOrder): Promise<PaymentSession>
+  capturePayment(sessionId: string): Promise<PaymentResult>
+  refund(transactionId: string, amount: Money): Promise<RefundResult>
   /**
    * Returns the payment-level transaction record.
    *
    * Returns {@link PaymentTransaction} (not the DB transaction type introduced
    * in C10) to avoid a naming collision.
    */
-  getTransaction(id: string): Promise<PaymentTransaction>;
-  handleWebhook(payload: unknown, signature: string): Promise<WebhookEvent>;
+  getTransaction(id: string): Promise<PaymentTransaction>
+  handleWebhook(payload: unknown, signature: string): Promise<WebhookEvent>
 }
 
 // ---------------------------------------------------------------------------
@@ -331,8 +331,8 @@ export interface PaymentAdapter {
  * @category Core
  */
 export interface Coordinates {
-  lat: number;
-  lng: number;
+  lat: number
+  lng: number
 }
 
 /**
@@ -341,12 +341,12 @@ export interface Coordinates {
  * @category Core
  */
 export interface Address {
-  street?: string;
-  city?: string;
-  state?: string;
-  postalCode?: string;
-  country?: string;
-  [k: string]: unknown;
+  street?: string
+  city?: string
+  state?: string
+  postalCode?: string
+  country?: string
+  [k: string]: unknown
 }
 
 /**
@@ -354,7 +354,7 @@ export interface Address {
  *
  * @category Core
  */
-export type TravelMode = "driving" | "walking" | "cycling" | "transit";
+export type TravelMode = 'driving' | 'walking' | 'cycling' | 'transit'
 
 /**
  * A computed route between an origin and one or more destinations.
@@ -362,11 +362,11 @@ export type TravelMode = "driving" | "walking" | "cycling" | "transit";
  * @category Core
  */
 export interface Route {
-  distanceMeters: number;
-  durationSeconds: number;
+  distanceMeters: number
+  durationSeconds: number
   /** Encoded polyline or GeoJSON string */
-  polyline?: string;
-  legs?: Array<{ distanceMeters: number; durationSeconds: number }>;
+  polyline?: string
+  legs?: Array<{ distanceMeters: number; durationSeconds: number }>
 }
 
 /**
@@ -377,10 +377,10 @@ export interface Route {
 export interface Matrix {
   rows: Array<{
     elements?: Array<{
-      distanceMeters: number;
-      durationSeconds: number;
-    }>;
-  }>;
+      distanceMeters: number
+      durationSeconds: number
+    }>
+  }>
 }
 
 /**
@@ -389,17 +389,10 @@ export interface Matrix {
  * @category Core
  */
 export interface GeoAdapter {
-  geocode(address: string): Promise<Coordinates>;
-  reverseGeocode(coords: Coordinates): Promise<Address>;
-  getRoute(
-    origin: Coordinates,
-    destinations: Coordinates[],
-    mode: TravelMode,
-  ): Promise<Route>;
-  getDistanceMatrix(
-    origins: Coordinates[],
-    destinations: Coordinates[],
-  ): Promise<Matrix>;
+  geocode(address: string): Promise<Coordinates>
+  reverseGeocode(coords: Coordinates): Promise<Address>
+  getRoute(origin: Coordinates, destinations: Coordinates[], mode: TravelMode): Promise<Route>
+  getDistanceMatrix(origins: Coordinates[], destinations: Coordinates[]): Promise<Matrix>
 }
 
 // ---------------------------------------------------------------------------
@@ -412,11 +405,11 @@ export interface GeoAdapter {
  * @category Core
  */
 export interface SearchQuery {
-  query: string;
-  filters?: Record<string, unknown>;
-  page?: number;
-  limit?: number;
-  sort?: Array<{ field: string; order: "asc" | "desc" }>;
+  query: string
+  filters?: Record<string, unknown>
+  page?: number
+  limit?: number
+  sort?: Array<{ field: string; order: 'asc' | 'desc' }>
 }
 
 /**
@@ -425,9 +418,9 @@ export interface SearchQuery {
  * @category Core
  */
 export interface SearchResult {
-  hits: Array<Record<string, unknown>>;
-  total: number;
-  page?: number;
+  hits: Array<Record<string, unknown>>
+  total: number
+  page?: number
 }
 
 /**
@@ -437,11 +430,11 @@ export interface SearchResult {
  * @category Core
  */
 export interface SearchAdapter {
-  index(collection: string, documents: Record<string, unknown>[]): Promise<void>;
-  search(collection: string, query: SearchQuery): Promise<SearchResult>;
-  delete(collection: string, ids: string[]): Promise<void>;
+  index(collection: string, documents: Record<string, unknown>[]): Promise<void>
+  search(collection: string, query: SearchQuery): Promise<SearchResult>
+  delete(collection: string, ids: string[]): Promise<void>
   /** Event-driven index update */
-  sync(collection: string, event: DomainEvent): Promise<void>;
+  sync(collection: string, event: DomainEvent): Promise<void>
 }
 
 // ---------------------------------------------------------------------------
@@ -449,15 +442,15 @@ export interface SearchAdapter {
 // ---------------------------------------------------------------------------
 
 export interface TaxLineItem {
-  variantId: string;
-  qty: number;
-  unitPrice: Money;
+  variantId: string
+  qty: number
+  unitPrice: Money
 }
 
 export interface TaxLine {
-  variantId: string;
-  taxAmount: Money;
-  taxRate: number;
+  variantId: string
+  taxAmount: Money
+  taxRate: number
 }
 
 /**
@@ -470,8 +463,8 @@ export interface TaxAdapter {
     items: TaxLineItem[],
     shippingAddress: Address,
     taxProfileId?: string,
-  ): Promise<TaxLine[]>;
-  getRate(jurisdiction: string, productType?: string): Promise<number>;
+  ): Promise<TaxLine[]>
+  getRate(jurisdiction: string, productType?: string): Promise<number>
 }
 
 // ---------------------------------------------------------------------------
@@ -479,21 +472,21 @@ export interface TaxAdapter {
 // ---------------------------------------------------------------------------
 
 export interface FulfillmentPackage {
-  orderId: string;
-  items: Array<{ variantId: string; qty: number }>;
+  orderId: string
+  items: Array<{ variantId: string; qty: number }>
 }
 
 export interface FulfillmentResult {
-  fulfillmentId: string;
-  trackingNumber?: string;
-  label?: string;
-  estimatedDelivery?: number;
+  fulfillmentId: string
+  trackingNumber?: string
+  label?: string
+  estimatedDelivery?: number
 }
 
 export interface TrackingEvent {
-  at: number;
-  location: string;
-  status: string;
+  at: number
+  location: string
+  status: string
 }
 
 /**
@@ -502,9 +495,9 @@ export interface TrackingEvent {
  * @category Core
  */
 export interface FulfillmentAdapter {
-  createFulfillment(pkg: FulfillmentPackage, address: Address): Promise<FulfillmentResult>;
-  cancelFulfillment(fulfillmentId: string): Promise<void>;
-  getTracking(fulfillmentId: string): Promise<{ status: string; events: TrackingEvent[] }>;
+  createFulfillment(pkg: FulfillmentPackage, address: Address): Promise<FulfillmentResult>
+  cancelFulfillment(fulfillmentId: string): Promise<void>
+  getTracking(fulfillmentId: string): Promise<{ status: string; events: TrackingEvent[] }>
 }
 
 // ---------------------------------------------------------------------------
@@ -512,13 +505,13 @@ export interface FulfillmentAdapter {
 // ---------------------------------------------------------------------------
 
 export interface EmailMessage {
-  id: string;
-  threadId: string;
-  subject: string;
-  from: string;
-  to: string[];
-  bodyText?: string;
-  receivedAt: number;
+  id: string
+  threadId: string
+  subject: string
+  from: string
+  to: string[]
+  bodyText?: string
+  receivedAt: number
 }
 
 /**
@@ -528,9 +521,9 @@ export interface EmailMessage {
  * @category Core
  */
 export interface EmailSyncAdapter {
-  connect(credentials: Record<string, unknown>): Promise<void>;
-  syncMessages(since?: number): AsyncIterable<EmailMessage>;
-  disconnect(): Promise<void>;
+  connect(credentials: Record<string, unknown>): Promise<void>
+  syncMessages(since?: number): AsyncIterable<EmailMessage>
+  disconnect(): Promise<void>
 }
 
 // ---------------------------------------------------------------------------
@@ -538,12 +531,12 @@ export interface EmailSyncAdapter {
 // ---------------------------------------------------------------------------
 
 export interface CalendarEvent {
-  id: string;
-  title: string;
-  startAt: number;
-  endAt: number;
-  attendees: string[];
-  location?: string;
+  id: string
+  title: string
+  startAt: number
+  endAt: number
+  attendees: string[]
+  location?: string
 }
 
 /**
@@ -553,10 +546,10 @@ export interface CalendarEvent {
  * @category Core
  */
 export interface CalendarSyncAdapter {
-  connect(credentials: Record<string, unknown>): Promise<void>;
-  syncEvents(since?: number): AsyncIterable<CalendarEvent>;
-  createEvent(event: Omit<CalendarEvent, "id">): Promise<CalendarEvent>;
-  disconnect(): Promise<void>;
+  connect(credentials: Record<string, unknown>): Promise<void>
+  syncEvents(since?: number): AsyncIterable<CalendarEvent>
+  createEvent(event: Omit<CalendarEvent, 'id'>): Promise<CalendarEvent>
+  disconnect(): Promise<void>
 }
 
 // ---------------------------------------------------------------------------
@@ -564,14 +557,14 @@ export interface CalendarSyncAdapter {
 // ---------------------------------------------------------------------------
 
 export interface CallRecord {
-  id: string;
-  from: string;
-  to: string;
-  direction: "inbound" | "outbound";
-  status: string;
-  durationSeconds: number;
-  recordingUrl?: string;
-  startedAt: number;
+  id: string
+  from: string
+  to: string
+  direction: 'inbound' | 'outbound'
+  status: string
+  durationSeconds: number
+  recordingUrl?: string
+  startedAt: number
 }
 
 /**
@@ -581,7 +574,7 @@ export interface CallRecord {
  * @category Core
  */
 export interface TelephonyAdapter {
-  initiateCall(to: string, from: string, callbackUrl: string): Promise<{ callId: string }>;
-  getCallRecord(callId: string): Promise<CallRecord>;
-  handleWebhook(payload: unknown, signature: string): Promise<CallRecord>;
+  initiateCall(to: string, from: string, callbackUrl: string): Promise<{ callId: string }>
+  getCallRecord(callId: string): Promise<CallRecord>
+  handleWebhook(payload: unknown, signature: string): Promise<CallRecord>
 }

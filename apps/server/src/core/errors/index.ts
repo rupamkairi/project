@@ -8,7 +8,7 @@
  * @packageDocumentation
  */
 
-import type { Meta } from "../entity";
+import type { Meta } from '../entity'
 
 /**
  * Base class for all custom errors in the system.
@@ -33,17 +33,17 @@ export class CoreError extends Error {
   /**
    * Machine-readable error code for programmatic handling
    */
-  public readonly code: string;
+  public readonly code: string
 
   /**
    * Additional metadata about the error context
    */
-  public readonly meta?: Meta;
+  public readonly meta?: Meta
 
   /**
    * The original error that caused this error (if any)
    */
-  override readonly cause?: unknown;
+  override readonly cause?: unknown
 
   /**
    * Creates a new CoreError instance.
@@ -53,21 +53,16 @@ export class CoreError extends Error {
    * @param meta - Optional metadata for debugging
    * @param cause - Optional original error that caused this error
    */
-  constructor(
-    code: string,
-    message: string,
-    meta?: Meta,
-    cause?: unknown,
-  ) {
-    super(message);
-    this.name = this.constructor.name;
-    this.code = code;
-    this.meta = meta;
-    this.cause = cause;
+  constructor(code: string, message: string, meta?: Meta, cause?: unknown) {
+    super(message)
+    this.name = this.constructor.name
+    this.code = code
+    if (meta !== undefined) this.meta = meta
+    if (cause !== undefined) this.cause = cause
 
     // Maintains proper stack trace in V8 environments
     if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, this.constructor);
+      Error.captureStackTrace(this, this.constructor)
     }
   }
 
@@ -82,7 +77,7 @@ export class CoreError extends Error {
       code: this.code,
       message: this.message,
       ...(this.meta && { meta: this.meta }),
-    };
+    }
   }
 }
 
@@ -109,13 +104,9 @@ export class NotFoundError extends CoreError {
    * @param meta - Optional metadata (e.g., resource ID)
    * @param cause - Optional original error
    */
-  constructor(
-    message: string,
-    meta?: Meta,
-    cause?: unknown,
-  ) {
-    super("NOT_FOUND", message, meta, cause);
-    this.name = "NotFoundError";
+  constructor(message: string, meta?: Meta, cause?: unknown) {
+    super('NOT_FOUND', message, meta, cause)
+    this.name = 'NotFoundError'
   }
 }
 
@@ -139,7 +130,7 @@ export class ValidationError extends CoreError {
   /**
    * Array of validation failures with field names and messages
    */
-  public readonly failures: Array<{ field: string; message: string }>;
+  public readonly failures: Array<{ field: string; message: string }>
 
   /**
    * Creates a new ValidationError.
@@ -153,9 +144,9 @@ export class ValidationError extends CoreError {
     failures: Array<{ field: string; message: string }> = [],
     meta?: Meta,
   ) {
-    super("VALIDATION_ERROR", message, meta, undefined);
-    this.name = "ValidationError";
-    this.failures = failures;
+    super('VALIDATION_ERROR', message, meta, undefined)
+    this.name = 'ValidationError'
+    this.failures = failures
   }
 
   /**
@@ -169,7 +160,7 @@ export class ValidationError extends CoreError {
       code: this.code,
       message: this.message,
       failures: this.failures,
-    };
+    }
   }
 }
 
@@ -194,12 +185,9 @@ export class AuthenticationError extends CoreError {
    * @param message - Human-readable error message (default: "Authentication required")
    * @param meta - Optional metadata
    */
-  constructor(
-    message: string = "Authentication required",
-    meta?: Meta,
-  ) {
-    super("AUTHENTICATION_ERROR", message, meta);
-    this.name = "AuthenticationError";
+  constructor(message: string = 'Authentication required', meta?: Meta) {
+    super('AUTHENTICATION_ERROR', message, meta)
+    this.name = 'AuthenticationError'
   }
 }
 
@@ -224,12 +212,9 @@ export class AuthorizationError extends CoreError {
    * @param message - Human-readable error message (default: "Access denied")
    * @param meta - Optional metadata
    */
-  constructor(
-    message: string = "Access denied",
-    meta?: Meta,
-  ) {
-    super("AUTHORIZATION_ERROR", message, meta);
-    this.name = "AuthorizationError";
+  constructor(message: string = 'Access denied', meta?: Meta) {
+    super('AUTHORIZATION_ERROR', message, meta)
+    this.name = 'AuthorizationError'
   }
 }
 
@@ -256,13 +241,9 @@ export class ConflictError extends CoreError {
    * @param meta - Optional metadata
    * @param cause - Optional original error
    */
-  constructor(
-    message: string,
-    meta?: Meta,
-    cause?: unknown,
-  ) {
-    super("CONFLICT", message, meta, cause);
-    this.name = "ConflictError";
+  constructor(message: string, meta?: Meta, cause?: unknown) {
+    super('CONFLICT', message, meta, cause)
+    this.name = 'ConflictError'
   }
 }
 
@@ -288,8 +269,8 @@ export class BusinessError extends CoreError {
    * @param meta - Optional metadata
    */
   constructor(message: string, meta?: Meta) {
-    super("BUSINESS_ERROR", message, meta);
-    this.name = "BusinessError";
+    super('BUSINESS_ERROR', message, meta)
+    this.name = 'BusinessError'
   }
 }
 
@@ -317,21 +298,17 @@ export class IntegrationError extends CoreError {
    * @param meta - Optional metadata
    * @param cause - Optional original error from the integration
    */
-  constructor(
-    message: string,
-    meta?: Meta,
-    cause?: unknown,
-  ) {
-    super("INTEGRATION_ERROR", message, meta, cause);
-    this.name = "IntegrationError";
+  constructor(message: string, meta?: Meta, cause?: unknown) {
+    super('INTEGRATION_ERROR', message, meta, cause)
+    this.name = 'IntegrationError'
   }
 }
 
 // Result, Ok, and Err live in primitives — re-exported here so any consumer
 // importing from errors still works without changes.
-export type { Result } from "../primitives/result";
-export { Ok, Err } from "../primitives/result";
-import type { Result } from "../primitives/result";
+export type { Result } from '../primitives/result'
+export { Ok, Err } from '../primitives/result'
+import type { Result } from '../primitives/result'
 
 /**
  * Type guard to check if a Result is successful.
@@ -346,7 +323,7 @@ import type { Result } from "../primitives/result";
 export function isOk<T, E extends CoreError>(
   result: Result<T, E>,
 ): result is { ok: true; value: T } {
-  return result.ok === true;
+  return result.ok === true
 }
 
 /**
@@ -362,7 +339,7 @@ export function isOk<T, E extends CoreError>(
 export function isErr<T, E extends CoreError>(
   result: Result<T, E>,
 ): result is { ok: false; error: E } {
-  return result.ok === false;
+  return result.ok === false
 }
 
 /**
@@ -375,20 +352,20 @@ export function isErr<T, E extends CoreError>(
  */
 export function getHttpStatus(error: CoreError): number {
   switch (error.name) {
-    case "NotFoundError":
-      return 404;
-    case "ValidationError":
-    case "BusinessError":
-      return 422;
-    case "AuthenticationError":
-      return 401;
-    case "AuthorizationError":
-      return 403;
-    case "ConflictError":
-      return 409;
-    case "IntegrationError":
-      return 502;
+    case 'NotFoundError':
+      return 404
+    case 'ValidationError':
+    case 'BusinessError':
+      return 422
+    case 'AuthenticationError':
+      return 401
+    case 'AuthorizationError':
+      return 403
+    case 'ConflictError':
+      return 409
+    case 'IntegrationError':
+      return 502
     default:
-      return 500;
+      return 500
   }
 }

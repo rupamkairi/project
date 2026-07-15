@@ -1,7 +1,7 @@
-import { createRoute } from "@tanstack/react-router"
-import { Route as dashboardLayoutRoute } from "./dashboard.layout"
-import { useState, useEffect } from "react"
-import { platformApi } from "../lib/api/platform"
+import { createRoute } from '@tanstack/react-router'
+import { Route as dashboardLayoutRoute } from './dashboard.layout'
+import { useState, useEffect } from 'react'
+import { platformApi } from '../lib/api/platform'
 import {
   PageHeader,
   Button,
@@ -23,20 +23,20 @@ import {
   StatusBadge,
   ConfirmDialog,
   Skeleton,
-} from "@projectx/ui"
-import { Plus, Search, Pencil, UserX, UserCheck, Trash2 } from "lucide-react"
+} from '@projectx/ui'
+import { Plus, Search, Pencil, UserX, UserCheck, Trash2 } from 'lucide-react'
 
 export const Route = createRoute({
   getParentRoute: () => dashboardLayoutRoute,
-  path: "/users",
+  path: '/users',
   component: UsersPage,
 })
 
 const STATUS_FILTERS = [
-  { label: "All", value: "" },
-  { label: "Active", value: "active" },
-  { label: "Pending", value: "pending" },
-  { label: "Suspended", value: "suspended" },
+  { label: 'All', value: '' },
+  { label: 'Active', value: 'active' },
+  { label: 'Pending', value: 'pending' },
+  { label: 'Suspended', value: 'suspended' },
 ]
 
 function UsersPage() {
@@ -48,8 +48,8 @@ function UsersPage() {
     totalPages: 1,
   })
   const [isLoading, setIsLoading] = useState(true)
-  const [search, setSearch] = useState("")
-  const [statusFilter, setStatusFilter] = useState("")
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
 
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
@@ -57,15 +57,15 @@ function UsersPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const [formData, setFormData] = useState({
-    email: "",
-    firstName: "",
-    lastName: "",
-    password: "",
+    email: '',
+    firstName: '',
+    lastName: '',
+    password: '',
   })
 
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean
-    type: "suspend" | "delete"
+    type: 'suspend' | 'delete'
     userId: string
   } | null>(null)
 
@@ -75,7 +75,7 @@ function UsersPage() {
       page,
       limit: 20,
       search,
-      status: statusFilter || undefined,
+      ...(statusFilter ? { status: statusFilter } : {}),
     })
     if (data) {
       setUsers(data.data)
@@ -109,7 +109,7 @@ function UsersPage() {
     })
     if (!error && data) {
       setShowCreateModal(false)
-      setFormData({ email: "", firstName: "", lastName: "", password: "" })
+      setFormData({ email: '', firstName: '', lastName: '', password: '' })
       loadUsers(pagination.page)
     }
     setIsSubmitting(false)
@@ -126,7 +126,7 @@ function UsersPage() {
     if (!error && data) {
       setShowEditModal(false)
       setSelectedUser(null)
-      setFormData({ email: "", firstName: "", lastName: "", password: "" })
+      setFormData({ email: '', firstName: '', lastName: '', password: '' })
       loadUsers(pagination.page)
     }
     setIsSubmitting(false)
@@ -136,9 +136,9 @@ function UsersPage() {
     setSelectedUser(user)
     setFormData({
       email: user.email,
-      firstName: user.firstName || "",
-      lastName: user.lastName || "",
-      password: "",
+      firstName: user.firstName || '',
+      lastName: user.lastName || '',
+      password: '',
     })
     setShowEditModal(true)
   }
@@ -151,7 +151,7 @@ function UsersPage() {
   const handleConfirmAction = async () => {
     if (!confirmDialog) return
     setIsSubmitting(true)
-    if (confirmDialog.type === "suspend") {
+    if (confirmDialog.type === 'suspend') {
       await platformApi.suspendUser(confirmDialog.userId)
     } else {
       await platformApi.deleteUser(confirmDialog.userId)
@@ -162,7 +162,7 @@ function UsersPage() {
   }
 
   const initials = (user: any) =>
-    [user.firstName?.[0], user.lastName?.[0]].filter(Boolean).join("").toUpperCase() || "?"
+    [user.firstName?.[0], user.lastName?.[0]].filter(Boolean).join('').toUpperCase() || '?'
 
   return (
     <div className="p-6 space-y-4">
@@ -173,7 +173,7 @@ function UsersPage() {
           <Button
             size="sm"
             onClick={() => {
-              setFormData({ email: "", firstName: "", lastName: "", password: "" })
+              setFormData({ email: '', firstName: '', lastName: '', password: '' })
               setShowCreateModal(true)
             }}
           >
@@ -200,7 +200,7 @@ function UsersPage() {
           {STATUS_FILTERS.map((f) => (
             <Button
               key={f.value}
-              variant={statusFilter === f.value ? "default" : "outline"}
+              variant={statusFilter === f.value ? 'default' : 'outline'}
               size="sm"
               onClick={() => handleStatusFilter(f.value)}
             >
@@ -235,10 +235,18 @@ function UsersPage() {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell><Skeleton className="h-5 w-16" /></TableCell>
-                  <TableCell><Skeleton className="h-3.5 w-16" /></TableCell>
-                  <TableCell><Skeleton className="h-3.5 w-20" /></TableCell>
-                  <TableCell><Skeleton className="h-3.5 w-20" /></TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-16" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-3.5 w-16" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-3.5 w-20" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-3.5 w-20" />
+                  </TableCell>
                   <TableCell />
                 </TableRow>
               ))
@@ -269,9 +277,7 @@ function UsersPage() {
                   </TableCell>
                   <TableCell className="text-muted-foreground">{user.type}</TableCell>
                   <TableCell className="text-muted-foreground">
-                    {user.lastLoginAt
-                      ? new Date(user.lastLoginAt).toLocaleDateString()
-                      : "Never"}
+                    {user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleDateString() : 'Never'}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {new Date(user.createdAt).toLocaleDateString()}
@@ -286,19 +292,19 @@ function UsersPage() {
                       >
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
-                      {user.status === "active" && (
+                      {user.status === 'active' && (
                         <Button
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7 text-destructive hover:text-destructive"
                           onClick={() =>
-                            setConfirmDialog({ open: true, type: "suspend", userId: user.id })
+                            setConfirmDialog({ open: true, type: 'suspend', userId: user.id })
                           }
                         >
                           <UserX className="h-3.5 w-3.5" />
                         </Button>
                       )}
-                      {user.status === "suspended" && (
+                      {user.status === 'suspended' && (
                         <Button
                           variant="ghost"
                           size="icon"
@@ -308,13 +314,13 @@ function UsersPage() {
                           <UserCheck className="h-3.5 w-3.5" />
                         </Button>
                       )}
-                      {user.status !== "deleted" && (
+                      {user.status !== 'deleted' && (
                         <Button
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7 text-destructive hover:text-destructive"
                           onClick={() =>
-                            setConfirmDialog({ open: true, type: "delete", userId: user.id })
+                            setConfirmDialog({ open: true, type: 'delete', userId: user.id })
                           }
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -409,7 +415,7 @@ function UsersPage() {
                 Cancel
               </Button>
               <Button type="submit" size="sm" disabled={isSubmitting}>
-                {isSubmitting ? "Creating..." : "Create User"}
+                {isSubmitting ? 'Creating...' : 'Create User'}
               </Button>
             </DialogFooter>
           </form>
@@ -454,7 +460,7 @@ function UsersPage() {
                 Cancel
               </Button>
               <Button type="submit" size="sm" disabled={isSubmitting}>
-                {isSubmitting ? "Saving..." : "Save Changes"}
+                {isSubmitting ? 'Saving...' : 'Save Changes'}
               </Button>
             </DialogFooter>
           </form>
@@ -467,13 +473,13 @@ function UsersPage() {
         onOpenChange={(open) => {
           if (!open) setConfirmDialog(null)
         }}
-        title={confirmDialog?.type === "suspend" ? "Suspend User" : "Delete User"}
+        title={confirmDialog?.type === 'suspend' ? 'Suspend User' : 'Delete User'}
         description={
-          confirmDialog?.type === "suspend"
-            ? "This user will be suspended and logged out immediately."
-            : "This action cannot be undone."
+          confirmDialog?.type === 'suspend'
+            ? 'This user will be suspended and logged out immediately.'
+            : 'This action cannot be undone.'
         }
-        confirmLabel={confirmDialog?.type === "suspend" ? "Suspend" : "Delete"}
+        confirmLabel={confirmDialog?.type === 'suspend' ? 'Suspend' : 'Delete'}
         onConfirm={handleConfirmAction}
         loading={isSubmitting}
       />

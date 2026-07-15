@@ -1,12 +1,12 @@
 // Inventory Module
 
-import type { AppModule, BootRegistry } from "@core";
+import type { AppModule, BootRegistry } from '@core'
 
 export const InventoryModule: AppModule = {
   manifest: {
-    id: "inventory",
-    version: "0.1.0",
-    dependsOn: ["catalog"],
+    id: 'inventory',
+    version: '0.1.0',
+    dependsOn: ['catalog'],
     entities: [],
     idPrefixes: {},
     events: [],
@@ -26,4 +26,4 @@ export const InventoryModule: AppModule = {
   async shutdown(): Promise<void> {
     // Cleanup
   },
-};
+}

@@ -1,11 +1,13 @@
-import { createRoute } from "@tanstack/react-router";
-import { sharedRootRoute } from "@projectx/shared-router";
-import { KdsBoardPage } from "./pages/board";
+import { createRoute } from '@tanstack/react-router'
+import { sharedRootRoute } from '@projectx/shared-router'
+import { requireAuth } from '@projectx/plugin-auth-web'
+import { KdsBoardPage } from './pages/board'
 
 const kdsBoardRoute = createRoute({
   getParentRoute: () => sharedRootRoute,
-  path: "/restaurants/kds",
+  path: '/restaurants/kds',
+  beforeLoad: () => requireAuth(),
   component: KdsBoardPage,
-});
+})
 
-export const kdsRoutes = [kdsBoardRoute];
+export const kdsRoutes = [kdsBoardRoute]

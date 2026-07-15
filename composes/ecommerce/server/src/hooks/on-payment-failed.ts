@@ -1,26 +1,26 @@
-import type { Mediator } from "@core";
+import type { Mediator } from '@core'
 
 export async function onPaymentFailed(
   orderId: string,
   gatewayRef: string,
-  mediator: Mediator
+  mediator: Mediator,
 ): Promise<void> {
   await mediator.dispatch({
-    type: "ecommerce.cancelOrder",
+    type: 'ecommerce.cancelOrder',
     orderId,
-    reason: "payment_failed",
-    orgId: "",
-    actorId: "system",
+    reason: 'payment_failed',
+    orgId: '',
+    actorId: 'system',
     correlationId: crypto.randomUUID(),
-  } as any);
+  } as any)
 
   await mediator.dispatch({
-    type: "notification.send",
-    templateId: "payment-failed",
+    type: 'notification.send',
+    templateId: 'payment-failed',
     recipientId: orderId,
-    orgId: "",
-    actorId: "system",
+    orgId: '',
+    actorId: 'system',
     correlationId: crypto.randomUUID(),
     payload: {},
-  } as any);
+  } as any)
 }

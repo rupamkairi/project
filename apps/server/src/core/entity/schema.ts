@@ -12,14 +12,14 @@
  * @packageDocumentation
  */
 
-import { z } from "zod";
-import { ValidationError } from "../errors/index";
-import type { ID } from "./types";
+import { z } from 'zod'
+import { ValidationError } from '../errors/index'
+import type { ID } from './types'
 
 // ---------------------------------------------------------------------------
 // Re-export ValidationError so callers import it from one place
 // ---------------------------------------------------------------------------
-export { ValidationError };
+export { ValidationError }
 
 // ---------------------------------------------------------------------------
 // FieldType
@@ -30,36 +30,36 @@ export { ValidationError };
  * Extend only through a schema evolution — never break this union.
  */
 export type FieldType =
-  | "string"
-  | "number"
-  | "boolean"
-  | "date"       // stored as Timestamp (Unix epoch ms)
-  | "enum"       // enumValues must be provided
-  | "ref"        // single foreign key; refEntity required
-  | "ref[]"      // array of foreign keys; refEntity required
-  | "json"       // arbitrary nested object
-  | "money"      // { amount: number; currency: string }
-  | "geo.point"      // { lat: number; lng: number }
-  | "geo.polygon"    // GeoJSON polygon
-  | "geo.linestring"; // GeoJSON linestring
+  | 'string'
+  | 'number'
+  | 'boolean'
+  | 'date' // stored as Timestamp (Unix epoch ms)
+  | 'enum' // enumValues must be provided
+  | 'ref' // single foreign key; refEntity required
+  | 'ref[]' // array of foreign keys; refEntity required
+  | 'json' // arbitrary nested object
+  | 'money' // { amount: number; currency: string }
+  | 'geo.point' // { lat: number; lng: number }
+  | 'geo.polygon' // GeoJSON polygon
+  | 'geo.linestring' // GeoJSON linestring
 
 // ---------------------------------------------------------------------------
 // Geo primitives (opaque minimal types — real shape TBD by geo adapter)
 // ---------------------------------------------------------------------------
 
 export interface GeoPoint {
-  lat: number;
-  lng: number;
+  lat: number
+  lng: number
 }
 
 export interface GeoPolygon {
-  type: "Polygon";
-  coordinates: number[][][];
+  type: 'Polygon'
+  coordinates: number[][][]
 }
 
 export interface GeoLinestring {
-  type: "LineString";
-  coordinates: number[][];
+  type: 'LineString'
+  coordinates: number[][]
 }
 
 // ---------------------------------------------------------------------------
@@ -71,27 +71,24 @@ export interface GeoLinestring {
  */
 export interface ValidationContext {
   /** The full entity object being validated. */
-  entity: Record<string, unknown>;
+  entity: Record<string, unknown>
   /** The EntitySchema for the entity being validated. */
-  schema: EntitySchema;
+  schema: EntitySchema
   /** True when this is a create operation. */
-  isCreate: boolean;
+  isCreate: boolean
   /** True when this is an update operation. */
-  isUpdate: boolean;
+  isUpdate: boolean
   /** ID of the actor performing the operation. */
-  actorId: ID;
+  actorId: ID
   /** Organization ID for tenant scoping. */
-  orgId: ID;
+  orgId: ID
 }
 
 /**
  * The function signature that custom validators must match.
  * Returns null on success, a ValidationError on failure.
  */
-export type ValidatorFn = (
-  value: unknown,
-  context: ValidationContext,
-) => ValidationError | null;
+export type ValidatorFn = (value: unknown, context: ValidationContext) => ValidationError | null
 
 /**
  * A Validator is a pure function: `(value, context) => ValidationError | null`.
@@ -100,18 +97,15 @@ export type ValidatorFn = (
  *
  * IMPORTANT: validators must NEVER return a boolean.
  */
-export type Validator = (
-  value: unknown,
-  context: ValidationContext,
-) => ValidationError | null;
+export type Validator = (value: unknown, context: ValidationContext) => ValidationError | null
 
 // ---------------------------------------------------------------------------
 // ValidationResult
 // ---------------------------------------------------------------------------
 
 export interface ValidationResult {
-  valid: boolean;
-  errors: ValidationError[];
+  valid: boolean
+  errors: ValidationError[]
 }
 
 // ---------------------------------------------------------------------------
@@ -119,10 +113,10 @@ export interface ValidationResult {
 // ---------------------------------------------------------------------------
 
 export interface EntityHooks {
-  beforeSave?: (entity: Record<string, unknown>, ctx: ValidationContext) => void | Promise<void>;
-  afterSave?: (entity: Record<string, unknown>, ctx: ValidationContext) => void | Promise<void>;
-  beforeDelete?: (entity: Record<string, unknown>, ctx: ValidationContext) => void | Promise<void>;
-  afterDelete?: (entity: Record<string, unknown>, ctx: ValidationContext) => void | Promise<void>;
+  beforeSave?: (entity: Record<string, unknown>, ctx: ValidationContext) => void | Promise<void>
+  afterSave?: (entity: Record<string, unknown>, ctx: ValidationContext) => void | Promise<void>
+  beforeDelete?: (entity: Record<string, unknown>, ctx: ValidationContext) => void | Promise<void>
+  afterDelete?: (entity: Record<string, unknown>, ctx: ValidationContext) => void | Promise<void>
 }
 
 // ---------------------------------------------------------------------------
@@ -131,33 +125,33 @@ export interface EntityHooks {
 
 export interface FieldSchema {
   /** Field key — used as the property name on entities. */
-  key: string;
+  key: string
   /** Field type — one of the FieldType union members. */
-  type: FieldType;
+  type: FieldType
   /** Human-readable label for auto-UI generation. */
-  label?: string;
+  label?: string
   /** Whether this field must be present and non-null. */
-  required?: boolean;
+  required?: boolean
   /** Whether this field must be unique within the organization scope. */
-  unique?: boolean;
+  unique?: boolean
   /** Static default value or a factory function that produces one. */
-  default?: unknown | (() => unknown);
+  default?: unknown | (() => unknown)
   /** Array of validator functions applied in order during validate(). */
-  validators?: Validator[];
+  validators?: Validator[]
   /** Valid enum members — required when type = 'enum'. */
-  enumValues?: string[];
+  enumValues?: string[]
   /** Entity schema name this field references — required when type = 'ref' | 'ref[]'. */
-  refEntity?: string;
+  refEntity?: string
   /** Field to join on (default: 'id') — used when type = 'ref' | 'ref[]'. */
-  refField?: string;
+  refField?: string
   /** Create a DB index on this field. */
-  indexed?: boolean;
+  indexed?: boolean
   /** Include in SearchAdapter sync. */
-  searchable?: boolean;
+  searchable?: boolean
   /** Redacted from logs and API responses. */
-  sensitive?: boolean;
+  sensitive?: boolean
   /** Virtual / computed field — not persisted; derived at read time. */
-  computed?: (entity: Record<string, unknown>) => unknown;
+  computed?: (entity: Record<string, unknown>) => unknown
 }
 
 // ---------------------------------------------------------------------------
@@ -166,29 +160,29 @@ export interface FieldSchema {
 
 export interface EntitySchema {
   /** PascalCase entity name: 'Product', 'OrderItem', 'StockUnit'. */
-  name: string;
+  name: string
   /** Owning module namespace: 'catalog', 'inventory'. */
-  namespace: string;
+  namespace: string
   /** ID prefix: 'prod_', 'si_', 'ord_'. */
-  idPrefix?: string;
+  idPrefix?: string
   /** Field definitions — an ARRAY, not a Record. */
-  fields: FieldSchema[];
+  fields: FieldSchema[]
   /** Composite index definitions. */
-  indexes?: Array<string[]>;
+  indexes?: Array<string[]>
   /** Composite unique constraint definitions. */
-  uniqueConstraints?: Array<string[]>;
+  uniqueConstraints?: Array<string[]>
   /** Enable soft-delete via deletedAt timestamp (default: true). */
-  softDelete?: boolean;
+  softDelete?: boolean
   /** Auto-manage createdAt / updatedAt (default: true). */
-  timestamps?: boolean;
+  timestamps?: boolean
   /** Enable optimistic locking via version counter (default: true). */
-  versioned?: boolean;
+  versioned?: boolean
   /** Auto-sync to SearchAdapter on change. */
-  searchSync?: boolean;
+  searchSync?: boolean
   /** Real-time channel to broadcast mutations on. */
-  rtChannel?: string;
+  rtChannel?: string
   /** Lifecycle hooks: beforeSave, afterSave, beforeDelete, afterDelete. */
-  hooks?: EntityHooks;
+  hooks?: EntityHooks
 }
 
 // ---------------------------------------------------------------------------
@@ -197,12 +191,12 @@ export interface EntitySchema {
 
 /** Build a one-failure ValidationError for a field. */
 function fieldError(field: string, message: string): ValidationError {
-  return new ValidationError("Validation failed", [{ field, message }]);
+  return new ValidationError('Validation failed', [{ field, message }])
 }
 
 /** Build a ValidationError with a generic (non-field) failure. */
 function genericError(message: string): ValidationError {
-  return new ValidationError("Validation failed", [{ field: "_", message }]);
+  return new ValidationError('Validation failed', [{ field: '_', message }])
 }
 
 // ---------------------------------------------------------------------------
@@ -220,68 +214,68 @@ export const Validators = {
 
   minLength(n: number): Validator {
     return (value, _ctx) => {
-      if (typeof value !== "string") {
-        return genericError(`Expected a string but got ${typeof value}`);
+      if (typeof value !== 'string') {
+        return genericError(`Expected a string but got ${typeof value}`)
       }
       if (value.length < n) {
-        return genericError(`Minimum length is ${n}, got ${value.length}`);
+        return genericError(`Minimum length is ${n}, got ${value.length}`)
       }
-      return null;
-    };
+      return null
+    }
   },
 
   maxLength(n: number): Validator {
     return (value, _ctx) => {
-      if (typeof value !== "string") {
-        return genericError(`Expected a string but got ${typeof value}`);
+      if (typeof value !== 'string') {
+        return genericError(`Expected a string but got ${typeof value}`)
       }
       if (value.length > n) {
-        return genericError(`Maximum length is ${n}, got ${value.length}`);
+        return genericError(`Maximum length is ${n}, got ${value.length}`)
       }
-      return null;
-    };
+      return null
+    }
   },
 
   pattern(re: RegExp): Validator {
     return (value, _ctx) => {
-      if (typeof value !== "string") {
-        return genericError(`Expected a string`);
+      if (typeof value !== 'string') {
+        return genericError(`Expected a string`)
       }
       if (!re.test(value)) {
-        return genericError(`Value does not match pattern ${re.toString()}`);
+        return genericError(`Value does not match pattern ${re.toString()}`)
       }
-      return null;
-    };
+      return null
+    }
   },
 
   /** Validate email format using Zod internally. */
   email(): Validator {
-    const schema = z.email();
+    const schema = z.email()
     return (value, _ctx) => {
-      if (typeof value !== "string") {
-        return genericError("Expected a string for email");
+      if (typeof value !== 'string') {
+        return genericError('Expected a string for email')
       }
-      const result = schema.safeParse(value);
+      const result = schema.safeParse(value)
       if (!result.success) {
-        return genericError("Must be a valid email address");
+        return genericError('Must be a valid email address')
       }
-      return null;
-    };
+      return null
+    }
   },
 
   /** Validate URL format using Zod internally. */
   url(): Validator {
-    const schema = z.url();
+    const schema = z.url()
     return (value, _ctx) => {
-      if (typeof value !== "string") {
-        return genericError("Expected a string for URL");
+      if (typeof value !== 'string') {
+        return genericError('Expected a string for URL')
       }
-      const result = schema.safeParse(value);
+      const result = schema.safeParse(value)
       if (!result.success) {
-        return genericError("Must be a valid URL");
+        return genericError('Must be a valid URL')
       }
-      return null;
-    };
+      return null
+    }
   },
 
   /**
@@ -290,66 +284,66 @@ export const Validators = {
    */
   phone(): Validator {
     // E.164: + followed by 1–15 digits
-    const E164 = /^\+[1-9]\d{1,14}$/;
+    const E164 = /^\+[1-9]\d{1,14}$/
     return (value, _ctx) => {
-      if (typeof value !== "string") {
-        return genericError("Expected a string for phone number");
+      if (typeof value !== 'string') {
+        return genericError('Expected a string for phone number')
       }
       if (!E164.test(value)) {
-        return genericError("Phone must be in E.164 format (e.g. +14155552671)");
+        return genericError('Phone must be in E.164 format (e.g. +14155552671)')
       }
-      return null;
-    };
+      return null
+    }
   },
 
   // --- Number validators ---
 
   min(n: number): Validator {
     return (value, _ctx) => {
-      if (typeof value !== "number") {
-        return genericError(`Expected a number`);
+      if (typeof value !== 'number') {
+        return genericError(`Expected a number`)
       }
       if (value < n) {
-        return genericError(`Value must be >= ${n}, got ${value}`);
+        return genericError(`Value must be >= ${n}, got ${value}`)
       }
-      return null;
-    };
+      return null
+    }
   },
 
   max(n: number): Validator {
     return (value, _ctx) => {
-      if (typeof value !== "number") {
-        return genericError(`Expected a number`);
+      if (typeof value !== 'number') {
+        return genericError(`Expected a number`)
       }
       if (value > n) {
-        return genericError(`Value must be <= ${n}, got ${value}`);
+        return genericError(`Value must be <= ${n}, got ${value}`)
       }
-      return null;
-    };
+      return null
+    }
   },
 
   positive(): Validator {
     return (value, _ctx) => {
-      if (typeof value !== "number") {
-        return genericError("Expected a number");
+      if (typeof value !== 'number') {
+        return genericError('Expected a number')
       }
       if (value <= 0) {
-        return genericError("Value must be positive (> 0)");
+        return genericError('Value must be positive (> 0)')
       }
-      return null;
-    };
+      return null
+    }
   },
 
   nonZero(): Validator {
     return (value, _ctx) => {
-      if (typeof value !== "number") {
-        return genericError("Expected a number");
+      if (typeof value !== 'number') {
+        return genericError('Expected a number')
       }
       if (value === 0) {
-        return genericError("Value must not be zero");
+        return genericError('Value must not be zero')
       }
-      return null;
-    };
+      return null
+    }
   },
 
   // --- Date validators ---
@@ -357,27 +351,27 @@ export const Validators = {
   /** Value (Unix epoch ms) must be in the future. */
   future(): Validator {
     return (value, _ctx) => {
-      if (typeof value !== "number") {
-        return genericError("Expected a timestamp (number)");
+      if (typeof value !== 'number') {
+        return genericError('Expected a timestamp (number)')
       }
       if (value <= Date.now()) {
-        return genericError("Date must be in the future");
+        return genericError('Date must be in the future')
       }
-      return null;
-    };
+      return null
+    }
   },
 
   /** Value (Unix epoch ms) must be in the past. */
   past(): Validator {
     return (value, _ctx) => {
-      if (typeof value !== "number") {
-        return genericError("Expected a timestamp (number)");
+      if (typeof value !== 'number') {
+        return genericError('Expected a timestamp (number)')
       }
       if (value >= Date.now()) {
-        return genericError("Date must be in the past");
+        return genericError('Date must be in the past')
       }
-      return null;
-    };
+      return null
+    }
   },
 
   // --- Relational validators (DB-dependent — best-effort stubs) ---
@@ -391,8 +385,8 @@ export const Validators = {
   refExists(): Validator {
     return (_value, _ctx) => {
       // TODO: inject a resolver via ctx when DatabaseAdapter is available.
-      return null;
-    };
+      return null
+    }
   },
 
   /**
@@ -404,8 +398,8 @@ export const Validators = {
   unique(): Validator {
     return (_value, _ctx) => {
       // TODO: inject a resolver via ctx when DatabaseAdapter is available.
-      return null;
-    };
+      return null
+    }
   },
 
   // --- Custom validator ---
@@ -415,6 +409,6 @@ export const Validators = {
    * The supplied function must match `(value, ctx) => ValidationError | null`.
    */
   custom(fn: ValidatorFn): Validator {
-    return (value, ctx) => fn(value, ctx);
+    return (value, ctx) => fn(value, ctx)
   },
-} as const;
+} as const

@@ -1,7 +1,7 @@
-import { createRoute, useNavigate } from "@tanstack/react-router"
-import { useState, useEffect } from "react"
-import { Route as crmLayoutRoute } from "../layout"
-import { crmApi } from "../../lib/api"
+import { createRoute, useNavigate } from '@tanstack/react-router'
+import { useState, useEffect } from 'react'
+import { Route as crmLayoutRoute } from '../layout'
+import { crmApi } from '../../lib/api'
 import {
   Button,
   Card,
@@ -12,12 +12,12 @@ import {
   AvatarFallback,
   Badge,
   Skeleton,
-} from "@projectx/ui"
-import { ArrowLeft, Users } from "lucide-react"
+} from '@projectx/ui'
+import { ArrowLeft, Users } from 'lucide-react'
 
 export const Route = createRoute({
   getParentRoute: () => crmLayoutRoute,
-  path: "/segments/$segmentId",
+  path: '/segments/$segmentId',
   component: SegmentDetailPage,
 })
 
@@ -45,7 +45,7 @@ function SegmentDetailPage() {
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={() => navigate({ to: "/crm/segments" })}>
+        <Button variant="ghost" size="sm" onClick={() => navigate({ to: '/crm/segments' })}>
           <ArrowLeft className="h-4 w-4 mr-1" /> Segments
         </Button>
       </div>
@@ -65,44 +65,73 @@ function SegmentDetailPage() {
             </div>
             <div>
               <h1 className="text-xl font-semibold">{segment.name}</h1>
-              {segment.description && <p className="text-sm text-muted-foreground">{segment.description}</p>}
+              {segment.description && (
+                <p className="text-sm text-muted-foreground">{segment.description}</p>
+              )}
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Total Contacts</CardTitle></CardHeader>
-              <CardContent><p className="text-2xl font-bold">{contacts.length}</p></CardContent>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs text-muted-foreground">Total Contacts</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold">{contacts.length}</p>
+              </CardContent>
             </Card>
             {segment.lastComputedAt && (
               <Card>
-                <CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Last Computed</CardTitle></CardHeader>
-                <CardContent><p className="text-sm font-medium">{new Date(segment.lastComputedAt).toLocaleString()}</p></CardContent>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xs text-muted-foreground">Last Computed</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm font-medium">
+                    {new Date(segment.lastComputedAt).toLocaleString()}
+                  </p>
+                </CardContent>
               </Card>
             )}
           </div>
 
           <Card>
-            <CardHeader><CardTitle className="text-sm">Contacts in Segment</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle className="text-sm">Contacts in Segment</CardTitle>
+            </CardHeader>
             <CardContent className="space-y-2">
-              {contacts.length === 0
-                ? <p className="text-sm text-muted-foreground text-center py-6">No contacts match this segment</p>
-                : contacts.map((c) => {
-                    const initials = [c.firstName?.[0], c.lastName?.[0]].filter(Boolean).join("").toUpperCase() || "?"
-                    return (
-                      <div key={c.id} className="flex items-center gap-3 py-2 border-b last:border-0 cursor-pointer hover:opacity-80"
-                        onClick={() => navigate({ to: "/crm/contacts/$contactId", params: { contactId: c.id } })}>
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback className="text-xs">{initials}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium">{c.firstName} {c.lastName}</p>
-                          {c.email && <p className="text-xs text-muted-foreground">{c.email}</p>}
-                        </div>
-                        <Badge variant="outline" className="text-xs">{c.status ?? "active"}</Badge>
+              {contacts.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-6">
+                  No contacts match this segment
+                </p>
+              ) : (
+                contacts.map((c) => {
+                  const initials =
+                    [c.firstName?.[0], c.lastName?.[0]].filter(Boolean).join('').toUpperCase() ||
+                    '?'
+                  return (
+                    <div
+                      key={c.id}
+                      className="flex items-center gap-3 py-2 border-b last:border-0 cursor-pointer hover:opacity-80"
+                      onClick={() =>
+                        navigate({ to: '/crm/contacts/$contactId', params: { contactId: c.id } })
+                      }
+                    >
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">
+                          {c.firstName} {c.lastName}
+                        </p>
+                        {c.email && <p className="text-xs text-muted-foreground">{c.email}</p>}
                       </div>
-                    )
-                  })}
+                      <Badge variant="outline" className="text-xs">
+                        {c.status ?? 'active'}
+                      </Badge>
+                    </div>
+                  )
+                })
+              )}
             </CardContent>
           </Card>
         </>

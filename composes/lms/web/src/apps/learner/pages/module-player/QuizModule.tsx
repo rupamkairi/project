@@ -1,8 +1,8 @@
-import { useState } from "react"
-import { useMutation, useQuery } from "@tanstack/react-query"
-import { lmsApi } from "../../../../api/lms-client"
-import { Button } from "@projectx/ui"
-import { Loader2 } from "lucide-react"
+import { useState } from 'react'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import { lmsApi } from '../../../../api/lms-client'
+import { Button } from '@projectx/ui'
+import { Loader2 } from 'lucide-react'
 
 interface QuizResult {
   score: number
@@ -23,13 +23,13 @@ export function QuizModule({ moduleId, enrollmentId, attemptsUsed, maxAttempts }
   const [result, setResult] = useState<QuizResult | null>(null)
 
   const { data: module } = useQuery({
-    queryKey: ["module-questions", moduleId],
+    queryKey: ['module-questions', moduleId],
     queryFn: () => lmsApi.get<any>(`/courses/modules/${moduleId}/questions`),
   })
 
   const submit = useMutation({
     mutationFn: () =>
-      lmsApi.post("/progress/quiz/submit", {
+      lmsApi.post('/progress/quiz/submit', {
         moduleId,
         enrollmentId,
         answers: Object.entries(answers).map(([questionId, answer]) => ({
@@ -49,16 +49,14 @@ export function QuizModule({ moduleId, enrollmentId, attemptsUsed, maxAttempts }
           <p className="text-3xl font-bold mb-2">
             {result.score}/{result.total}
           </p>
-          <p className="text-lg font-medium">
-            {result.passed ? "🎉 Passed!" : "❌ Not quite"}
-          </p>
+          <p className="text-lg font-medium">{result.passed ? '🎉 Passed!' : '❌ Not quite'}</p>
           <p className="text-sm text-muted-foreground mt-1">
             {Math.round((result.score / result.total) * 100)}%
           </p>
         </div>
         {attemptsLeft > 0 && !result.passed && (
           <Button variant="outline" onClick={() => setResult(null)}>
-            Retry ({attemptsLeft} attempt{attemptsLeft > 1 ? "s" : ""} left)
+            Retry ({attemptsLeft} attempt{attemptsLeft > 1 ? 's' : ''} left)
           </Button>
         )}
         {attemptsLeft === 0 && !result.passed && (
@@ -88,10 +86,8 @@ export function QuizModule({ moduleId, enrollmentId, attemptsUsed, maxAttempts }
               <label
                 key={j}
                 className={cn(
-                  "flex items-center gap-2 p-2 rounded border text-sm cursor-pointer",
-                  answers[q.id] === opt.value
-                    ? "border-primary bg-primary/5"
-                    : "hover:bg-muted",
+                  'flex items-center gap-2 p-2 rounded border text-sm cursor-pointer',
+                  answers[q.id] === opt.value ? 'border-primary bg-primary/5' : 'hover:bg-muted',
                 )}
               >
                 <input
@@ -111,10 +107,7 @@ export function QuizModule({ moduleId, enrollmentId, attemptsUsed, maxAttempts }
 
       <Button
         onClick={() => submit.mutateAsync()}
-        disabled={
-          submit.isPending ||
-          Object.keys(answers).length < (module.questions?.length ?? 0)
-        }
+        disabled={submit.isPending || Object.keys(answers).length < (module.questions?.length ?? 0)}
       >
         {submit.isPending ? (
           <>
@@ -122,17 +115,17 @@ export function QuizModule({ moduleId, enrollmentId, attemptsUsed, maxAttempts }
             Submitting...
           </>
         ) : (
-          "Submit Quiz"
+          'Submit Quiz'
         )}
       </Button>
 
       {submit.isError && (
         <p className="text-sm text-red-500">
-          {(submit.error as any)?.message ?? "Submission failed"}
+          {(submit.error as any)?.message ?? 'Submission failed'}
         </p>
       )}
     </div>
   )
 }
 
-import { cn } from "@projectx/ui"
+import { cn } from '@projectx/ui'

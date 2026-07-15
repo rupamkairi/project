@@ -10,30 +10,36 @@
       "@modules/*": ["./src/modules/*"],
       "@infra/*": ["./src/infra/*"],
       "@db/*": ["./src/infra/db/*"],
-      "@projectx/platform-server": [
-        "../../composes/platform/server/src/index.ts"
-      ],
+      "drizzle-orm": ["./node_modules/drizzle-orm"],
+      "drizzle-orm/*": ["./node_modules/drizzle-orm/*"],
+      "@projectx/plugin-auth-server": ["../../plugins/auth/server/src/index.ts"],
+      "@projectx/plugin-auth-server/*": ["../../plugins/auth/server/src/*"],
+      "@projectx/plugin-notification-server": ["../../plugins/notification/server/src/index.ts"],
+      "@projectx/plugin-notification-server/*": ["../../plugins/notification/server/src/*"],
+      "@projectx/plugin-payment-server": ["../../plugins/payment/server/src/index.ts"],
+      "@projectx/plugin-payment-server/*": ["../../plugins/payment/server/src/*"],
+      "@projectx/plugin-storage-server": ["../../plugins/storage/server/src/index.ts"],
+      "@projectx/plugin-storage-server/*": ["../../plugins/storage/server/src/*"],
+      "@projectx/platform-server": ["../../composes/platform/server/src/index.ts"],
       "@projectx/platform-server/*": ["../../composes/platform/server/src/*"],
-      "@projectx/crm-server": [
-        "../../composes/crm/server/src/index.ts"
-      ],
+      "@projectx/crm-server": ["../../composes/crm/server/src/index.ts"],
       "@projectx/crm-server/*": ["../../composes/crm/server/src/*"],
-      "@projectx/ecommerce-server": [
-        "../../composes/ecommerce/server/src/index.ts"
-      ],
+      "@projectx/ecommerce-server": ["../../composes/ecommerce/server/src/index.ts"],
       "@projectx/ecommerce-server/*": ["../../composes/ecommerce/server/src/*"],
-      "@projectx/erp-server": [
-        "../../composes/erp/server/src/index.ts"
-      ],
+      "@projectx/erp-server": ["../../composes/erp/server/src/index.ts"],
       "@projectx/erp-server/*": ["../../composes/erp/server/src/*"],
-      "@projectx/lms-server": [
-        "../../composes/lms/server/src/index.ts"
-      ],
+      "@projectx/lms-server": ["../../composes/lms/server/src/index.ts"],
       "@projectx/lms-server/*": ["../../composes/lms/server/src/*"],
-      "@projectx/restaurant-server": [
-        "../../composes/restaurant/server/src/index.ts"
+      "@projectx/restaurant-server": ["../../composes/restaurant/server/src/index.ts"],
+      "@projectx/restaurant-server/*": ["../../composes/restaurant/server/src/*"],
+      "@projectx/hospitality-server": ["../../composes/hospitality/server/src/index.ts"],
+      "@projectx/hospitality-server/*": ["../../composes/hospitality/server/src/*"],
+      "@projectx/workplace-server": ["../../composes/workplace/server/src/index.ts"],
+      "@projectx/workplace-server/*": ["../../composes/workplace/server/src/*"],
+      "@projectx/project-management-server": [
+        "../../composes/project-management/server/src/index.ts"
       ],
-      "@projectx/restaurant-server/*": ["../../composes/restaurant/server/src/*"]
+      "@projectx/project-management-server/*": ["../../composes/project-management/server/src/*"]
     }
   },
   "include": ["src/**/*"],

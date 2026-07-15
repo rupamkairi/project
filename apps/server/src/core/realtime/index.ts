@@ -7,8 +7,8 @@
  * @packageDocumentation
  */
 
-import type { ID } from "../entity";
-import type { DomainEvent } from "../event";
+import type { ID } from '../entity'
+import type { DomainEvent } from '../event'
 
 /**
  * Client connection information.
@@ -19,22 +19,22 @@ export interface RealTimeClient {
   /**
    * Unique client connection ID
    */
-  id: ID;
+  id: ID
 
   /**
    * Actor ID associated with this connection
    */
-  actorId: ID;
+  actorId: ID
 
   /**
    * Organization ID for multi-tenancy
    */
-  orgId: ID;
+  orgId: ID
 
   /**
    * Set of channels this client is subscribed to
    */
-  channels: Set<string>;
+  channels: Set<string>
 }
 
 /**
@@ -64,7 +64,7 @@ export interface RealTimeGateway {
    * @param clientId - Client connection ID
    * @returns Client info or undefined
    */
-  getClient(clientId: ID): RealTimeClient | undefined;
+  getClient(clientId: ID): RealTimeClient | undefined
 
   /**
    * Gets all clients for an organization.
@@ -72,7 +72,7 @@ export interface RealTimeGateway {
    * @param orgId - Organization ID
    * @returns Array of clients
    */
-  getClientsByOrg(orgId: ID): RealTimeClient[];
+  getClientsByOrg(orgId: ID): RealTimeClient[]
 
   // -------------------------------------------------------------------------
   // Client lifecycle (called by WebSocket transport)
@@ -85,14 +85,14 @@ export interface RealTimeGateway {
    * @param actorId - Actor associated with the connection
    * @param orgId - Organization the actor belongs to
    */
-  connect(clientId: ID, actorId: ID, orgId: ID): void;
+  connect(clientId: ID, actorId: ID, orgId: ID): void
 
   /**
    * Removes a disconnected client and cleans up subscriptions.
    *
    * @param clientId - Client connection ID
    */
-  disconnect(clientId: ID): void;
+  disconnect(clientId: ID): void
 
   /**
    * Subscribes a client to a single channel.
@@ -100,7 +100,7 @@ export interface RealTimeGateway {
    * @param clientId - Client connection ID
    * @param channel - Channel name to subscribe to
    */
-  subscribe(clientId: ID, channel: string): void;
+  subscribe(clientId: ID, channel: string): void
 
   /**
    * Unsubscribes a client from a single channel.
@@ -108,7 +108,7 @@ export interface RealTimeGateway {
    * @param clientId - Client connection ID
    * @param channel - Channel name to unsubscribe from
    */
-  unsubscribe(clientId: ID, channel: string): void;
+  unsubscribe(clientId: ID, channel: string): void
 
   /**
    * Checks if a client is subscribed to a channel.
@@ -117,7 +117,7 @@ export interface RealTimeGateway {
    * @param channel - Channel name
    * @returns True if subscribed
    */
-  isSubscribed(clientId: ID, channel: string): boolean;
+  isSubscribed(clientId: ID, channel: string): boolean
 
   /**
    * Publishes a message to all clients subscribed to a channel.
@@ -125,7 +125,7 @@ export interface RealTimeGateway {
    * @param channel - Channel name
    * @param payload - Message payload
    */
-  publish(channel: string, payload: unknown): Promise<void>;
+  publish(channel: string, payload: unknown): Promise<void>
 
   /**
    * Broadcasts to all clients in an organization.
@@ -133,7 +133,7 @@ export interface RealTimeGateway {
    * @param orgId - Organization ID
    * @param payload - Message payload
    */
-  broadcast(orgId: ID, payload: unknown): void;
+  broadcast(orgId: ID, payload: unknown): void
 
   /**
    * Sends a message to a specific client.
@@ -141,7 +141,7 @@ export interface RealTimeGateway {
    * @param clientId - Client connection ID
    * @param payload - Message payload
    */
-  sendToClient(clientId: ID, payload: unknown): void;
+  sendToClient(clientId: ID, payload: unknown): void
 
   /**
    * Sends a message to all clients of an actor.
@@ -149,7 +149,7 @@ export interface RealTimeGateway {
    * @param actorId - Actor ID
    * @param payload - Message payload
    */
-  sendToActor(actorId: ID, payload: unknown): void;
+  sendToActor(actorId: ID, payload: unknown): void
 
   // -------------------------------------------------------------------------
   // Presence
@@ -161,7 +161,7 @@ export interface RealTimeGateway {
    * @param channel - Channel name
    * @returns Array of client IDs
    */
-  getPresence(channel: string): ID[];
+  getPresence(channel: string): ID[]
 
   /**
    * Returns all channels a client is subscribed to.
@@ -169,7 +169,7 @@ export interface RealTimeGateway {
    * @param clientId - Client connection ID
    * @returns Array of channel names
    */
-  getChannels(clientId: ID): string[];
+  getChannels(clientId: ID): string[]
 }
 
 /**
@@ -202,7 +202,7 @@ export interface RealTimeBridge {
     eventPattern: string,
     toChannel: (event: DomainEvent) => string,
     filter?: (event: DomainEvent) => boolean,
-  ): void;
+  ): void
 
   /**
    * Handles incoming realtime messages from clients.
@@ -210,7 +210,7 @@ export interface RealTimeBridge {
    * @param clientId - Client connection ID
    * @param message - Incoming message
    */
-  handleMessage(clientId: ID, message: RealtimeMessage): Promise<void>;
+  handleMessage(clientId: ID, message: RealtimeMessage): Promise<void>
 }
 
 /**
@@ -218,11 +218,7 @@ export interface RealTimeBridge {
  *
  * @category Core
  */
-export type RealtimeMessageType =
-  | "subscribe"
-  | "unsubscribed"
-  | "broadcast"
-  | "ping";
+export type RealtimeMessageType = 'subscribe' | 'unsubscribed' | 'broadcast' | 'ping'
 
 /**
  * Message format from client to server.
@@ -247,17 +243,17 @@ export interface RealtimeMessage {
   /**
    * Message type
    */
-  type: RealtimeMessageType;
+  type: RealtimeMessageType
 
   /**
    * Channels to subscribe/unsubscribe
    */
-  channels?: string[];
+  channels?: string[]
 
   /**
    * Message payload (for broadcast)
    */
-  payload?: unknown;
+  payload?: unknown
 }
 
 /**
@@ -265,12 +261,7 @@ export interface RealtimeMessage {
  *
  * @category Core
  */
-export type RealtimeServerMessageType =
-  | "subscribed"
-  | "unsubscribed"
-  | "message"
-  | "error"
-  | "pong";
+export type RealtimeServerMessageType = 'subscribed' | 'unsubscribed' | 'message' | 'error' | 'pong'
 
 /**
  * Message format from server to client.
@@ -303,22 +294,22 @@ export interface RealtimeServerMessage {
   /**
    * Message type
    */
-  type: RealtimeServerMessageType;
+  type: RealtimeServerMessageType
 
   /**
    * Channel name (for subscribed/unsubscribed/message)
    */
-  channel?: string;
+  channel?: string
 
   /**
    * Message data (for message type)
    */
-  data?: unknown;
+  data?: unknown
 
   /**
    * Error message (for error type)
    */
-  error?: string;
+  error?: string
 }
 
 // ---------------------------------------------------------------------------
@@ -329,9 +320,9 @@ export interface RealtimeServerMessage {
  * In-memory store for a single gateway instance.
  */
 interface ClientRecord {
-  actorId: ID;
-  orgId: ID;
-  channels: Set<string>;
+  actorId: ID
+  orgId: ID
+  channels: Set<string>
 }
 
 /**
@@ -343,108 +334,113 @@ interface ClientRecord {
  * @category Core
  */
 export function createInMemoryGateway(): RealTimeGateway {
-  const clientMap = new Map<ID, ClientRecord>();
-  const channelMap = new Map<string, Set<ID>>();
+  const clientMap = new Map<ID, ClientRecord>()
+  const channelMap = new Map<string, Set<ID>>()
 
   function addToChannel(channel: string, clientId: ID): void {
     if (!channelMap.has(channel)) {
-      channelMap.set(channel, new Set());
+      channelMap.set(channel, new Set())
     }
-    channelMap.get(channel)!.add(clientId);
+    channelMap.get(channel)!.add(clientId)
   }
 
   function removeFromChannel(channel: string, clientId: ID): void {
-    const set = channelMap.get(channel);
-    if (!set) return;
-    set.delete(clientId);
-    if (set.size === 0) channelMap.delete(channel);
+    const set = channelMap.get(channel)
+    if (!set) return
+    set.delete(clientId)
+    if (set.size === 0) channelMap.delete(channel)
   }
 
   return {
     getClient(clientId: ID): RealTimeClient | undefined {
-      const record = clientMap.get(clientId);
-      if (!record) return undefined;
+      const record = clientMap.get(clientId)
+      if (!record) return undefined
       return {
         id: clientId,
         actorId: record.actorId,
         orgId: record.orgId,
         channels: record.channels,
-      };
+      }
     },
 
     getClientsByOrg(orgId: ID): RealTimeClient[] {
-      const result: RealTimeClient[] = [];
+      const result: RealTimeClient[] = []
       for (const [id, record] of clientMap) {
         if (record.orgId === orgId) {
-          result.push({ id, actorId: record.actorId, orgId: record.orgId, channels: record.channels });
+          result.push({
+            id,
+            actorId: record.actorId,
+            orgId: record.orgId,
+            channels: record.channels,
+          })
         }
       }
-      return result;
+      return result
     },
 
     connect(clientId: ID, actorId: ID, orgId: ID): void {
-      clientMap.set(clientId, { actorId, orgId, channels: new Set() });
+      clientMap.set(clientId, { actorId, orgId, channels: new Set() })
     },
 
     disconnect(clientId: ID): void {
-      const record = clientMap.get(clientId);
-      if (!record) return;
+      const record = clientMap.get(clientId)
+      if (!record) return
       for (const channel of record.channels) {
-        removeFromChannel(channel, clientId);
+        removeFromChannel(channel, clientId)
       }
-      clientMap.delete(clientId);
+      clientMap.delete(clientId)
     },
 
     subscribe(clientId: ID, channel: string): void {
-      const record = clientMap.get(clientId);
-      if (!record) return;
-      record.channels.add(channel);
-      addToChannel(channel, clientId);
+      const record = clientMap.get(clientId)
+      if (!record) return
+      record.channels.add(channel)
+      addToChannel(channel, clientId)
     },
 
     unsubscribe(clientId: ID, channel: string): void {
-      const record = clientMap.get(clientId);
-      if (!record) return;
-      record.channels.delete(channel);
-      removeFromChannel(channel, clientId);
+      const record = clientMap.get(clientId)
+      if (!record) return
+      record.channels.delete(channel)
+      removeFromChannel(channel, clientId)
     },
 
     isSubscribed(clientId: ID, channel: string): boolean {
-      return clientMap.get(clientId)?.channels.has(channel) ?? false;
+      return clientMap.get(clientId)?.channels.has(channel) ?? false
     },
 
     async publish(channel: string, payload: unknown): Promise<void> {
       // In-memory: no actual transport — payload is captured for testing
       // Real adapters (WebSocket, Redis pub/sub) replace this method.
-      void channel;
-      void payload;
+      void channel
+      void payload
     },
 
     broadcast(orgId: ID, payload: unknown): void {
-      void orgId;
-      void payload;
+      void orgId
+      void payload
     },
 
     sendToClient(clientId: ID, payload: unknown): void {
-      void clientId;
-      void payload;
+      void clientId
+      void payload
     },
 
     sendToActor(actorId: ID, payload: unknown): void {
-      void actorId;
-      void payload;
+      void actorId
+      void payload
     },
 
     getPresence(channel: string): ID[] {
-      const set = channelMap.get(channel);
-      return set ? Array.from(set) : [];
+      const set = channelMap.get(channel)
+      return set ? Array.from(set) : []
     },
 
     getChannels(clientId: ID): string[] {
-      const record = clientMap.get(clientId);
-      return record ? Array.from(record.channels) : [];
+      const record = clientMap.get(clientId)
+      return record ? Array.from(record.channels) : []
     },
-  };
+  }
 }
 
 /**
@@ -457,38 +453,40 @@ export function createInMemoryGateway(): RealTimeGateway {
  */
 export function createInMemoryBridge(): RealTimeBridge & {
   /** Resolve the channel(s) for a given event, applying filter and pattern. */
-  resolve(event: DomainEvent): string[];
+  resolve(event: DomainEvent): string[]
   /** All registered mappings (for inspection in tests). */
   readonly mappings: ReadonlyArray<{
-    pattern: string;
-    toChannel: (event: DomainEvent) => string;
-    filter?: (event: DomainEvent) => boolean;
-  }>;
+    pattern: string
+    toChannel: (event: DomainEvent) => string
+    filter?: (event: DomainEvent) => boolean
+  }>
 } {
   type Mapping = {
-    pattern: string;
-    toChannel: (event: DomainEvent) => string;
-    filter?: (event: DomainEvent) => boolean;
-  };
+    pattern: string
+    toChannel: (event: DomainEvent) => string
+    filter?: (event: DomainEvent) => boolean
+  }
 
-  const mappings: Mapping[] = [];
+  const mappings: Mapping[] = []
 
   /** Glob-style match: supports "*" (single segment) and "**" (any). */
   function matches(pattern: string, type: string): boolean {
     const re = new RegExp(
-      "^" +
+      '^' +
         pattern
-          .split(".")
-          .map((seg) => (seg === "*" ? "[^.]+" : seg === "**" ? ".+" : seg.replace(/[+?^${}()|[\]\\]/g, "\\$&")))
-          .join("\\.") +
-        "$",
-    );
-    return re.test(type);
+          .split('.')
+          .map((seg) =>
+            seg === '*' ? '[^.]+' : seg === '**' ? '.+' : seg.replace(/[+?^${}()|[\]\\]/g, '\\$&'),
+          )
+          .join('\\.') +
+        '$',
+    )
+    return re.test(type)
   }
 
   return {
     get mappings() {
-      return mappings as ReadonlyArray<Mapping>;
+      return mappings as ReadonlyArray<Mapping>
     },
 
     forward(
@@ -496,21 +494,25 @@ export function createInMemoryBridge(): RealTimeBridge & {
       toChannel: (event: DomainEvent) => string,
       filter?: (event: DomainEvent) => boolean,
     ): void {
-      mappings.push({ pattern: eventPattern, toChannel, filter });
+      mappings.push({
+        pattern: eventPattern,
+        toChannel,
+        ...(filter !== undefined && { filter }),
+      })
     },
 
     resolve(event: DomainEvent): string[] {
-      const channels: string[] = [];
+      const channels: string[] = []
       for (const mapping of mappings) {
-        if (!matches(mapping.pattern, event.type)) continue;
-        if (mapping.filter && !mapping.filter(event)) continue;
-        channels.push(mapping.toChannel(event));
+        if (!matches(mapping.pattern, event.type)) continue
+        if (mapping.filter && !mapping.filter(event)) continue
+        channels.push(mapping.toChannel(event))
       }
-      return channels;
+      return channels
     },
 
     async handleMessage(_clientId: ID, _message: RealtimeMessage): Promise<void> {
       // No-op in-memory implementation
     },
-  };
+  }
 }

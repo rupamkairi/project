@@ -1,16 +1,16 @@
-import { useQuery, useMutation } from "@tanstack/react-query"
-import { lmsApi } from "../../../../api/lms-client"
-import { Button, StatusBadge } from "@projectx/ui"
-import { AmountDisplay } from "../../../../components/shared/PriceDisplay"
-import { useNavigate } from "@tanstack/react-router"
-import { CheckCircle, XCircle } from "lucide-react"
+import { useQuery, useMutation } from '@tanstack/react-query'
+import { lmsApi } from '../../../../api/lms-client'
+import { Button, StatusBadge } from '@projectx/ui'
+import { AmountDisplay } from '../../../../components/shared/PriceDisplay'
+import { useNavigate } from '@tanstack/react-router'
+import { CheckCircle, XCircle } from 'lucide-react'
 
 export function AdminCoursesPage() {
   const navigate = useNavigate()
 
   const { data, refetch } = useQuery({
-    queryKey: ["admin-courses"],
-    queryFn: () => lmsApi.get<any>("/admin/courses"),
+    queryKey: ['admin-courses'],
+    queryFn: () => lmsApi.get<any>('/admin/courses'),
   })
 
   const approve = useMutation({
@@ -29,9 +29,7 @@ export function AdminCoursesPage() {
     <div className="space-y-4">
       <div>
         <h1 className="text-xl font-semibold">Courses</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Manage all courses across the platform
-        </p>
+        <p className="text-sm text-muted-foreground mt-1">Manage all courses across the platform</p>
       </div>
 
       <div className="rounded-md border overflow-hidden">
@@ -50,9 +48,7 @@ export function AdminCoursesPage() {
             {courses.map((c: any) => (
               <tr key={c.id} className="border-t hover:bg-muted/30">
                 <td className="p-3 font-medium">{c.title}</td>
-                <td className="p-3 text-muted-foreground">
-                  {c.instructorName ?? "—"}
-                </td>
+                <td className="p-3 text-muted-foreground">{c.instructorName ?? '—'}</td>
                 <td className="p-3">
                   <StatusBadge status={c.status} />
                 </td>
@@ -62,7 +58,7 @@ export function AdminCoursesPage() {
                 </td>
                 <td className="p-3">
                   <div className="flex gap-1">
-                    {c.status === "review" && (
+                    {c.status === 'review' && (
                       <>
                         <Button
                           variant="ghost"

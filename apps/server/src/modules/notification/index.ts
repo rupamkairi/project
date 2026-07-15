@@ -1,12 +1,12 @@
 // Notification Module
 
-import type { AppModule, BootRegistry } from "@core";
+import type { AppModule, BootRegistry } from '@core'
 
 export const NotificationModule: AppModule = {
   manifest: {
-    id: "notification",
-    version: "0.1.0",
-    dependsOn: ["identity"],
+    id: 'notification',
+    version: '0.1.0',
+    dependsOn: ['identity'],
     entities: [],
     idPrefixes: {},
     events: [],
@@ -26,4 +26,4 @@ export const NotificationModule: AppModule = {
   async shutdown(): Promise<void> {
     // Cleanup
   },
-};
+}

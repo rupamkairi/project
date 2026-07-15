@@ -1,14 +1,14 @@
-import { useParams, createRoute } from "@tanstack/react-router"
-import { sharedRootRoute } from "@projectx/shared-router"
-import { useQuery } from "@tanstack/react-query"
-import { Button, Spinner } from "@projectx/ui"
-import { CheckCircle, XCircle, Linkedin } from "lucide-react"
-import { formatDate } from "../components/shared/PriceDisplay"
+import { useParams, createRoute } from '@tanstack/react-router'
+import { sharedRootRoute } from '@projectx/shared-router'
+import { useQuery } from '@tanstack/react-query'
+import { Button, Spinner } from '@projectx/ui'
+import { CheckCircle, XCircle, Linkedin } from 'lucide-react'
+import { formatDate } from '../components/shared/PriceDisplay'
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:10050"
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:10050'
 
 function LinkedInShareButton({ verifyUrl, courseName }: { verifyUrl: string; courseName: string }) {
-  const linkedInUrl = `https://www.linkedin.com/profile/add?startTask=CERTIFICATION_NAME&name=${encodeURIComponent(courseName)}&certUrl=${encodeURIComponent(verifyUrl)}&certId=${encodeURIComponent(verifyUrl.split("/").pop() ?? "")}`
+  const linkedInUrl = `https://www.linkedin.com/profile/add?startTask=CERTIFICATION_NAME&name=${encodeURIComponent(courseName)}&certUrl=${encodeURIComponent(verifyUrl)}&certId=${encodeURIComponent(verifyUrl.split('/').pop() ?? '')}`
 
   return (
     <Button asChild variant="outline" size="sm">
@@ -21,10 +21,10 @@ function LinkedInShareButton({ verifyUrl, courseName }: { verifyUrl: string; cou
 }
 
 function VerifyCertificateContent() {
-  const { code } = useParams({ from: "/lms/verify/$code" })
+  const { code } = useParams({ from: '/lms/verify/$code' })
 
   const { data, isLoading } = useQuery({
-    queryKey: ["verify-cert", code],
+    queryKey: ['verify-cert', code],
     queryFn: () => fetch(`${API_BASE}/lms/verify/${code}`).then((r) => r.json()),
   })
 
@@ -48,18 +48,14 @@ function VerifyCertificateContent() {
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
                 <CheckCircle className="text-green-600 w-8 h-8" />
               </div>
-              <h1 className="text-xl font-semibold text-green-700">
-                Certificate Valid
-              </h1>
+              <h1 className="text-xl font-semibold text-green-700">Certificate Valid</h1>
             </div>
 
             <div className="space-y-3 border-t pt-4">
               <InfoRow label="Learner" value={cert.learnerName} />
               <InfoRow label="Course" value={cert.courseTitle} />
               <InfoRow label="Issued" value={formatDate(cert.issuedAt)} />
-              {cert.expiresAt && (
-                <InfoRow label="Expires" value={formatDate(cert.expiresAt)} />
-              )}
+              {cert.expiresAt && <InfoRow label="Expires" value={formatDate(cert.expiresAt)} />}
               <InfoRow
                 label="Verification Code"
                 value={
@@ -71,10 +67,7 @@ function VerifyCertificateContent() {
             </div>
 
             <div className="flex justify-center pt-2">
-              <LinkedInShareButton
-                verifyUrl={verifyUrl}
-                courseName={cert.courseTitle}
-              />
+              <LinkedInShareButton verifyUrl={verifyUrl} courseName={cert.courseTitle} />
             </div>
           </>
         ) : (
@@ -83,11 +76,9 @@ function VerifyCertificateContent() {
               <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
                 <XCircle className="text-red-600 w-8 h-8" />
               </div>
-              <h1 className="text-xl font-semibold text-red-700">
-                Certificate Invalid
-              </h1>
+              <h1 className="text-xl font-semibold text-red-700">Certificate Invalid</h1>
               <p className="text-sm text-muted-foreground text-center">
-                {data?.error ?? "This certificate could not be verified."}
+                {data?.error ?? 'This certificate could not be verified.'}
               </p>
             </div>
           </>
@@ -108,6 +99,6 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
 
 export const verifyCertificateRoute = createRoute({
   getParentRoute: () => sharedRootRoute,
-  path: "/lms/verify/$code",
+  path: '/lms/verify/$code',
   component: VerifyCertificateContent,
 })

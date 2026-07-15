@@ -1,18 +1,18 @@
-import { useQuery } from "@tanstack/react-query"
-import { lmsApi } from "../../../../api/lms-client"
-import { StatCard } from "../../../../components/shared/StatCard"
-import { ProgressBar } from "../../../../components/shared/ProgressBar"
-import { CourseCard } from "../../../../components/shared/CourseCard"
-import { formatDate } from "../../../../components/shared/PriceDisplay"
-import { useNavigate } from "@tanstack/react-router"
-import { Button } from "@projectx/ui"
+import { useQuery } from '@tanstack/react-query'
+import { lmsApi } from '../../../../api/lms-client'
+import { StatCard } from '../../../../components/shared/StatCard'
+import { ProgressBar } from '../../../../components/shared/ProgressBar'
+import { CourseCard } from '../../../../components/shared/CourseCard'
+import { formatDate } from '../../../../components/shared/PriceDisplay'
+import { useNavigate } from '@tanstack/react-router'
+import { Button } from '@projectx/ui'
 
 export function LearnerDashboard() {
   const navigate = useNavigate()
 
   const { data } = useQuery({
-    queryKey: ["learner-dashboard"],
-    queryFn: () => lmsApi.get<any>("/enrollments"),
+    queryKey: ['learner-dashboard'],
+    queryFn: () => lmsApi.get<any>('/enrollments'),
   })
 
   const enrollments = data?.enrollments ?? []
@@ -21,17 +21,13 @@ export function LearnerDashboard() {
     const p = e.progress ?? 0
     return p > 0 && p < 1
   })
-  const completed = enrollments.filter(
-    (e: any) => (e.progress ?? 0) >= 1 && e.status !== "dropped",
-  )
+  const completed = enrollments.filter((e: any) => (e.progress ?? 0) >= 1 && e.status !== 'dropped')
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-semibold">My Learning</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Continue where you left off
-        </p>
+        <p className="text-sm text-muted-foreground mt-1">Continue where you left off</p>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
@@ -54,12 +50,8 @@ export function LearnerDashboard() {
                   })
                 }
               >
-                <p className="text-sm font-medium truncate">
-                  {e.courseTitle ?? "Course"}
-                </p>
-                <ProgressBar
-                  value={((e.progress ?? 0) * 100).toFixed(0) as any}
-                />
+                <p className="text-sm font-medium truncate">{e.courseTitle ?? 'Course'}</p>
+                <ProgressBar value={((e.progress ?? 0) * 100).toFixed(0) as any} />
                 <p className="text-xs text-muted-foreground">
                   {Math.round((e.progress ?? 0) * 100)}% complete
                 </p>
@@ -86,9 +78,7 @@ export function LearnerDashboard() {
                 {completed.map((e: any) => (
                   <tr key={e.id} className="border-t hover:bg-muted/30">
                     <td className="p-3 font-medium">{e.courseTitle}</td>
-                    <td className="p-3 text-muted-foreground">
-                      {formatDate(e.completedAt)}
-                    </td>
+                    <td className="p-3 text-muted-foreground">{formatDate(e.completedAt)}</td>
                     <td className="p-3">
                       {e.certificateUrl ? (
                         <a
@@ -125,12 +115,8 @@ export function LearnerDashboard() {
 
       {enrollments.length === 0 && (
         <div className="text-center py-12">
-          <p className="text-muted-foreground mb-4">
-            You haven't enrolled in any courses yet
-          </p>
-          <Button onClick={() => navigate({ to: "/lms/learn/catalog" })}>
-            Browse Catalog
-          </Button>
+          <p className="text-muted-foreground mb-4">You haven't enrolled in any courses yet</p>
+          <Button onClick={() => navigate({ to: '/lms/learn/catalog' })}>Browse Catalog</Button>
         </div>
       )}
     </div>

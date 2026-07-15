@@ -1,2 +1,2 @@
-export { crmRoutes } from "./routes"
-export { crmManifest } from "./manifest"
+export { crmRoutes } from './routes'
+export { crmManifest } from './manifest'

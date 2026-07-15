@@ -1,27 +1,26 @@
-import { createRoute } from "@tanstack/react-router";
-import { ecommerceStorefrontLayoutRoute } from "./store.layout";
-import { useNavigate } from "@tanstack/react-router";
-import { Button, Card, CardContent, Skeleton, Badge } from "@projectx/ui";
-import { useQuery } from "@tanstack/react-query";
-import { ecommerceStorefrontApi } from "../lib/api";
-import { ProductCard } from "../components/ProductCard";
-import { formatCurrency } from "../lib/format";
-import { ArrowRight, Sparkles, Truck, RotateCcw, Shield } from "lucide-react";
+import { createRoute } from '@tanstack/react-router'
+import { ecommerceStorefrontLayoutRoute } from './store.layout'
+import { useNavigate } from '@tanstack/react-router'
+import { Button, Card, CardContent, Skeleton, Badge } from '@projectx/ui'
+import { useQuery } from '@tanstack/react-query'
+import { ecommerceStorefrontApi } from '../lib/api'
+import { ProductCard } from '../components/ProductCard'
+import { formatCurrency } from '../lib/format'
+import { ArrowRight, Sparkles, Truck, RotateCcw, Shield } from 'lucide-react'
 
 function StorefrontHome() {
-  const navigate = useNavigate();
+  const navigate = useNavigate()
   const { data: catData } = useQuery({
-    queryKey: ["categories"],
+    queryKey: ['categories'],
     queryFn: () => ecommerceStorefrontApi.getCategories(),
-  });
+  })
   const { data: prodData, isLoading } = useQuery({
-    queryKey: ["products", "trending"],
-    queryFn: () =>
-      ecommerceStorefrontApi.getProducts({ limit: 6 }),
-  });
+    queryKey: ['products', 'trending'],
+    queryFn: () => ecommerceStorefrontApi.getProducts({ limit: 6 }),
+  })
 
-  const categories = catData?.data?.data ?? [];
-  const products = prodData?.data?.data ?? [];
+  const categories = catData?.data?.data ?? []
+  const products = prodData?.data?.data ?? []
 
   return (
     <div>
@@ -29,10 +28,7 @@ function StorefrontHome() {
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-40" />
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24 lg:py-32">
           <div className="max-w-2xl space-y-6">
-            <Badge
-              variant="outline"
-              className="w-fit border-zinc-600 text-zinc-300 bg-zinc-800/50"
-            >
+            <Badge variant="outline" className="w-fit border-zinc-600 text-zinc-300 bg-zinc-800/50">
               <Sparkles className="h-3 w-3 mr-1" /> New Collection
             </Badge>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white leading-tight">
@@ -43,21 +39,21 @@ function StorefrontHome() {
               </span>
             </h1>
             <p className="text-lg text-zinc-400 max-w-md leading-relaxed">
-              Curated essentials for the modern lifestyle. Premium quality,
-              thoughtful design, delivered to your door.
+              Curated essentials for the modern lifestyle. Premium quality, thoughtful design,
+              delivered to your door.
             </p>
             <div className="flex items-center gap-3 pt-2">
               <Button
                 size="lg"
                 className="bg-white text-zinc-900 hover:bg-zinc-200"
-                onClick={() => navigate({ to: "/ecommerce/store/products" })}
+                onClick={() => navigate({ to: '/ecommerce/store/products' })}
               >
                 Shop Now <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
               <Button
                 size="lg"
                 variant="outline"
-                onClick={() => navigate({ to: "/ecommerce/store/categories" })}
+                onClick={() => navigate({ to: '/ecommerce/store/categories' })}
               >
                 Browse Categories
               </Button>
@@ -69,14 +65,11 @@ function StorefrontHome() {
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
-            { icon: Truck, label: "Free Shipping", desc: "Orders over $50" },
-            { icon: RotateCcw, label: "Easy Returns", desc: "30-day returns" },
-            { icon: Shield, label: "Secure Checkout", desc: "SSL encrypted" },
+            { icon: Truck, label: 'Free Shipping', desc: 'Orders over $50' },
+            { icon: RotateCcw, label: 'Easy Returns', desc: '30-day returns' },
+            { icon: Shield, label: 'Secure Checkout', desc: 'SSL encrypted' },
           ].map((item) => (
-            <div
-              key={item.label}
-              className="flex items-center gap-3 rounded-lg border bg-card p-4"
-            >
+            <div key={item.label} className="flex items-center gap-3 rounded-lg border bg-card p-4">
               <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                 <item.icon className="h-5 w-5 text-primary" />
               </div>
@@ -93,17 +86,13 @@ function StorefrontHome() {
         <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-2xl font-bold tracking-tight">
-                Shop by Category
-              </h2>
-              <p className="text-sm text-muted-foreground mt-1">
-                Find exactly what you need
-              </p>
+              <h2 className="text-2xl font-bold tracking-tight">Shop by Category</h2>
+              <p className="text-sm text-muted-foreground mt-1">Find exactly what you need</p>
             </div>
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate({ to: "/ecommerce/store/categories" })}
+              onClick={() => navigate({ to: '/ecommerce/store/categories' })}
             >
               View All <ArrowRight className="h-3 w-3 ml-1" />
             </Button>
@@ -115,7 +104,7 @@ function StorefrontHome() {
                 className="group cursor-pointer border-0 bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800 hover:shadow-lg transition-all duration-300"
                 onClick={() =>
                   navigate({
-                    to: "/ecommerce/store/categories/$id",
+                    to: '/ecommerce/store/categories/$id',
                     params: { id: cat.id },
                   })
                 }
@@ -126,9 +115,7 @@ function StorefrontHome() {
                   </div>
                   <p className="font-semibold">{cat.name}</p>
                   {cat.description && (
-                    <p className="text-xs text-muted-foreground line-clamp-1">
-                      {cat.description}
-                    </p>
+                    <p className="text-xs text-muted-foreground line-clamp-1">{cat.description}</p>
                   )}
                 </CardContent>
               </Card>
@@ -141,14 +128,12 @@ function StorefrontHome() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-2xl font-bold tracking-tight">Trending Now</h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              Most popular products this week
-            </p>
+            <p className="text-sm text-muted-foreground mt-1">Most popular products this week</p>
           </div>
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate({ to: "/ecommerce/store/products" })}
+            onClick={() => navigate({ to: '/ecommerce/store/products' })}
           >
             View All <ArrowRight className="h-3 w-3 ml-1" />
           </Button>
@@ -193,20 +178,19 @@ function StorefrontHome() {
             Ready to Upgrade Your Style?
           </h2>
           <p className="text-muted-foreground max-w-sm mx-auto">
-            Join thousands of happy customers. Free shipping on your first
-            order.
+            Join thousands of happy customers. Free shipping on your first order.
           </p>
-          <Button size="lg" onClick={() => navigate({ to: "/ecommerce/store/products" })}>
+          <Button size="lg" onClick={() => navigate({ to: '/ecommerce/store/products' })}>
             Start Shopping <ArrowRight className="h-4 w-4 ml-2" />
           </Button>
         </div>
       </section>
     </div>
-  );
+  )
 }
 
 export const ecommerceStorefrontIndexRoute = createRoute({
   getParentRoute: () => ecommerceStorefrontLayoutRoute,
-  path: "/",
+  path: '/',
   component: StorefrontHome,
-});
+})

@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react"
-import { useMutation } from "@tanstack/react-query"
-import { lmsApi } from "../../../../api/lms-client"
-import { Button, Input, Label, Textarea } from "@projectx/ui"
-import { Loader2 } from "lucide-react"
+import { useState, useEffect } from 'react'
+import { useMutation } from '@tanstack/react-query'
+import { lmsApi } from '../../../../api/lms-client'
+import { Button, Input, Label, Textarea } from '@projectx/ui'
+import { Loader2 } from 'lucide-react'
 
 interface Props {
   course: any
@@ -11,17 +11,17 @@ interface Props {
 }
 
 export function CourseDetailsForm({ course, courseId, onUpdate }: Props) {
-  const [title, setTitle] = useState("")
-  const [description, setDescription] = useState("")
-  const [level, setLevel] = useState("beginner")
-  const [language, setLanguage] = useState("en")
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [level, setLevel] = useState('beginner')
+  const [language, setLanguage] = useState('en')
 
   useEffect(() => {
     if (course) {
-      setTitle(course.title ?? "")
-      setDescription(course.description ?? "")
-      setLevel(course.level ?? "beginner")
-      setLanguage(course.language ?? "en")
+      setTitle(course.title ?? '')
+      setDescription(course.description ?? '')
+      setLevel(course.level ?? 'beginner')
+      setLanguage(course.language ?? 'en')
     }
   }, [course])
 
@@ -92,7 +92,7 @@ export function CourseDetailsForm({ course, courseId, onUpdate }: Props) {
 
       {update.isSuccess && <p className="text-sm text-green-600">Details saved</p>}
       {update.isError && (
-        <p className="text-sm text-red-500">{(update.error as any)?.message ?? "Save failed"}</p>
+        <p className="text-sm text-red-500">{(update.error as any)?.message ?? 'Save failed'}</p>
       )}
 
       <Button type="submit" disabled={update.isPending}>
@@ -102,7 +102,7 @@ export function CourseDetailsForm({ course, courseId, onUpdate }: Props) {
             Saving...
           </>
         ) : (
-          "Save Details"
+          'Save Details'
         )}
       </Button>
     </form>

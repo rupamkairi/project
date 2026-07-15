@@ -8,9 +8,13 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist node_modules"
+    "clean": "rm -rf dist node_modules",
+    "lint": "eslint .",
+    "format:check": "prettier --check .",
+    "format:write": "prettier --write ."
   },
   "dependencies": {
+    "@projectx/plugin-auth-web": "workspace:*",
     "@projectx/shared-router": "workspace:*",
     "@projectx/platform-web": "workspace:*",
     "@projectx/ui": "workspace:*",

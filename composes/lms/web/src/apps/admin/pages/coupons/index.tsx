@@ -1,6 +1,6 @@
-import { useState } from "react"
-import { useQuery, useMutation } from "@tanstack/react-query"
-import { lmsApi } from "../../../../api/lms-client"
+import { useState } from 'react'
+import { useQuery, useMutation } from '@tanstack/react-query'
+import { lmsApi } from '../../../../api/lms-client'
 import {
   Button,
   DataTable,
@@ -12,25 +12,25 @@ import {
   DialogFooter,
   Input,
   Label,
-} from "@projectx/ui"
-import { AmountDisplay, formatDate } from "../../../../components/shared/PriceDisplay"
-import { Plus, Loader2 } from "lucide-react"
+} from '@projectx/ui'
+import { AmountDisplay, formatDate } from '../../../../components/shared/PriceDisplay'
+import { Plus, Loader2 } from 'lucide-react'
 
 export function AdminCouponsPage() {
   const [showCreate, setShowCreate] = useState(false)
-  const [code, setCode] = useState("")
-  const [type, setType] = useState("percentage")
-  const [value, setValue] = useState("10")
-  const [maxUses, setMaxUses] = useState("")
+  const [code, setCode] = useState('')
+  const [type, setType] = useState('percentage')
+  const [value, setValue] = useState('10')
+  const [maxUses, setMaxUses] = useState('')
 
   const { data, refetch } = useQuery({
-    queryKey: ["coupons"],
-    queryFn: () => lmsApi.get<any>("/admin/coupons"),
+    queryKey: ['coupons'],
+    queryFn: () => lmsApi.get<any>('/admin/coupons'),
   })
 
   const create = useMutation({
     mutationFn: () =>
-      lmsApi.post("/admin/coupons", {
+      lmsApi.post('/admin/coupons', {
         code: code.toUpperCase(),
         type,
         value: parseFloat(value),
@@ -38,10 +38,10 @@ export function AdminCouponsPage() {
       }),
     onSuccess: () => {
       setShowCreate(false)
-      setCode("")
-      setType("percentage")
-      setValue("10")
-      setMaxUses("")
+      setCode('')
+      setType('percentage')
+      setValue('10')
+      setMaxUses('')
       refetch()
     },
   })
@@ -54,40 +54,42 @@ export function AdminCouponsPage() {
 
   const columns = [
     {
-      accessorKey: "code",
-      header: "Code",
-      cell: ({ row }: any) => <code className="text-xs bg-muted px-1 py-0.5 rounded">{row.original.code}</code>,
+      accessorKey: 'code',
+      header: 'Code',
+      cell: ({ row }: any) => (
+        <code className="text-xs bg-muted px-1 py-0.5 rounded">{row.original.code}</code>
+      ),
     },
-    { accessorKey: "type", header: "Type" },
+    { accessorKey: 'type', header: 'Type' },
     {
-      accessorKey: "value",
-      header: "Value",
+      accessorKey: 'value',
+      header: 'Value',
       cell: ({ row }: any) =>
-        row.original.type === "percentage"
-          ? `${row.original.value}%`
-          : <AmountDisplay amount={row.original.value} />,
+        row.original.type === 'percentage' ? (
+          `${row.original.value}%`
+        ) : (
+          <AmountDisplay amount={row.original.value} />
+        ),
     },
     {
-      accessorKey: "usedCount",
-      header: "Used",
+      accessorKey: 'usedCount',
+      header: 'Used',
       cell: ({ row }: any) =>
-        `${row.original.usedCount ?? 0}${row.original.maxUses ? ` / ${row.original.maxUses}` : ""}`,
+        `${row.original.usedCount ?? 0}${row.original.maxUses ? ` / ${row.original.maxUses}` : ''}`,
     },
     {
-      accessorKey: "expiresAt",
-      header: "Expires",
+      accessorKey: 'expiresAt',
+      header: 'Expires',
       cell: ({ row }: any) =>
-        row.original.expiresAt ? formatDate(row.original.expiresAt) : "Never",
+        row.original.expiresAt ? formatDate(row.original.expiresAt) : 'Never',
     },
     {
-      accessorKey: "isActive",
-      header: "Active",
+      accessorKey: 'isActive',
+      header: 'Active',
       cell: ({ row }: any) => (
         <Switch
           checked={row.original.isActive ?? false}
-          onCheckedChange={(v) =>
-            toggleActive.mutate({ id: row.original.id, isActive: v })
-          }
+          onCheckedChange={(v) => toggleActive.mutate({ id: row.original.id, isActive: v })}
         />
       ),
     },
@@ -98,9 +100,7 @@ export function AdminCouponsPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-xl font-semibold">Coupons</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Manage discount coupons
-          </p>
+          <p className="text-sm text-muted-foreground mt-1">Manage discount coupons</p>
         </div>
         <Button size="sm" onClick={() => setShowCreate(true)}>
           <Plus className="h-4 w-4 mr-1.5" />
@@ -142,7 +142,7 @@ export function AdminCouponsPage() {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="coupon-value">
-                {type === "percentage" ? "Percentage Off" : "Amount Off"}
+                {type === 'percentage' ? 'Percentage Off' : 'Amount Off'}
               </Label>
               <Input
                 id="coupon-value"
@@ -177,7 +177,7 @@ export function AdminCouponsPage() {
                   Creating...
                 </>
               ) : (
-                "Create"
+                'Create'
               )}
             </Button>
           </DialogFooter>

@@ -1,6 +1,6 @@
-import { Card, CardContent } from "@projectx/ui"
-import { useNavigate } from "@tanstack/react-router"
-import { PriceDisplay } from "./PriceDisplay"
+import { Card, CardContent } from '@projectx/ui'
+import { useNavigate } from '@tanstack/react-router'
+import { PriceDisplay } from './PriceDisplay'
 
 interface CourseCardCourse {
   id: string
@@ -47,12 +47,13 @@ export function CourseCard({ course }: CourseCardProps) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1 text-xs">
             <span className="text-amber-500">★</span>
-            <span>{course.rating?.toFixed(1) ?? "—"}</span>
-            <span className="text-muted-foreground">
-              ({course.reviewCount ?? 0})
-            </span>
+            <span>{course.rating?.toFixed(1) ?? '—'}</span>
+            <span className="text-muted-foreground">({course.reviewCount ?? 0})</span>
           </div>
-          <PriceDisplay amount={course.price} currency={course.currency} />
+          <PriceDisplay
+            {...(course.price === undefined ? {} : { amount: course.price })}
+            {...(course.currency === undefined ? {} : { currency: course.currency })}
+          />
         </div>
       </CardContent>
     </Card>

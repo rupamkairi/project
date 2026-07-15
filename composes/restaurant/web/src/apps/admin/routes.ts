@@ -1,40 +1,46 @@
-import { createRoute } from "@tanstack/react-router";
-import { sharedRootRoute } from "@projectx/shared-router";
-import { AdminDashboardPage } from "./pages/dashboard";
-import { AdminMenuPage } from "./pages/menu";
-import { AdminInventoryPage } from "./pages/inventory";
-import { AdminAggregatorsPage } from "./pages/aggregators";
-import { AdminAnalyticsPage } from "./pages/analytics";
+import { createRoute } from '@tanstack/react-router'
+import { sharedRootRoute } from '@projectx/shared-router'
+import { requireAuth } from '@projectx/plugin-auth-web'
+import { AdminDashboardPage } from './pages/dashboard'
+import { AdminMenuPage } from './pages/menu'
+import { AdminInventoryPage } from './pages/inventory'
+import { AdminAggregatorsPage } from './pages/aggregators'
+import { AdminAnalyticsPage } from './pages/analytics'
 
 const adminDashboardRoute = createRoute({
   getParentRoute: () => sharedRootRoute,
-  path: "/restaurants/admin/dashboard",
+  path: '/restaurants/admin/dashboard',
+  beforeLoad: () => requireAuth(),
   component: AdminDashboardPage,
-});
+})
 
 const adminMenuRoute = createRoute({
   getParentRoute: () => sharedRootRoute,
-  path: "/restaurants/admin/menu",
+  path: '/restaurants/admin/menu',
+  beforeLoad: () => requireAuth(),
   component: AdminMenuPage,
-});
+})
 
 const adminInventoryRoute = createRoute({
   getParentRoute: () => sharedRootRoute,
-  path: "/restaurants/admin/inventory",
+  path: '/restaurants/admin/inventory',
+  beforeLoad: () => requireAuth(),
   component: AdminInventoryPage,
-});
+})
 
 const adminAggregatorsRoute = createRoute({
   getParentRoute: () => sharedRootRoute,
-  path: "/restaurants/admin/aggregators",
+  path: '/restaurants/admin/aggregators',
+  beforeLoad: () => requireAuth(),
   component: AdminAggregatorsPage,
-});
+})
 
 const adminAnalyticsRoute = createRoute({
   getParentRoute: () => sharedRootRoute,
-  path: "/restaurants/admin/analytics",
+  path: '/restaurants/admin/analytics',
+  beforeLoad: () => requireAuth(),
   component: AdminAnalyticsPage,
-});
+})
 
 export const adminRoutes = [
   adminDashboardRoute,
@@ -42,4 +48,4 @@ export const adminRoutes = [
   adminInventoryRoute,
   adminAggregatorsRoute,
   adminAnalyticsRoute,
-];
+]

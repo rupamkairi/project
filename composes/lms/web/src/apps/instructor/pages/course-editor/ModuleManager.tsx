@@ -1,9 +1,9 @@
-import { useState } from "react"
-import { useQuery, useMutation } from "@tanstack/react-query"
-import { lmsApi } from "../../../../api/lms-client"
-import { Button, Input, Label, Switch, cn } from "@projectx/ui"
-import { Plus, GripVertical, Pencil, Trash2, Loader2 } from "lucide-react"
-import { ModuleIcon } from "../../../../components/shared/ModuleIcon"
+import { useState } from 'react'
+import { useQuery, useMutation } from '@tanstack/react-query'
+import { lmsApi } from '../../../../api/lms-client'
+import { Button, Input, Label, Switch, cn } from '@projectx/ui'
+import { Plus, GripVertical, Pencil, Trash2, Loader2 } from 'lucide-react'
+import { ModuleIcon } from '../../../../components/shared/ModuleIcon'
 
 interface Props {
   courseId: string
@@ -12,12 +12,12 @@ interface Props {
 export function ModuleManager({ courseId }: Props) {
   const [creating, setCreating] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [newTitle, setNewTitle] = useState("")
-  const [newType, setNewType] = useState("video")
-  const [newEstimatedMinutes, setNewEstimatedMinutes] = useState("10")
+  const [newTitle, setNewTitle] = useState('')
+  const [newType, setNewType] = useState('video')
+  const [newEstimatedMinutes, setNewEstimatedMinutes] = useState('10')
 
   const { data, refetch } = useQuery({
-    queryKey: ["instructor-course", courseId],
+    queryKey: ['instructor-course', courseId],
     queryFn: () => lmsApi.get<any>(`/instructor/courses/${courseId}`),
     select: (d: any) => d?.modules ?? [],
   })
@@ -33,8 +33,8 @@ export function ModuleManager({ courseId }: Props) {
       }),
     onSuccess: () => {
       setCreating(false)
-      setNewTitle("")
-      setNewType("video")
+      setNewTitle('')
+      setNewType('video')
       refetch()
     },
   })
@@ -76,17 +76,12 @@ export function ModuleManager({ courseId }: Props) {
       )}
 
       {modules.map((m: any, i: number) => (
-        <div
-          key={m.id}
-          className="flex items-center gap-3 p-3 rounded border bg-background"
-        >
+        <div key={m.id} className="flex items-center gap-3 p-3 rounded border bg-background">
           <GripVertical className="h-4 w-4 text-muted-foreground shrink-0 cursor-grab" />
           <span className="text-xs text-muted-foreground w-5 shrink-0">{i + 1}</span>
           <ModuleIcon type={m.type} />
           <span className="flex-1 text-sm truncate">{m.title}</span>
-          <span className="text-xs text-muted-foreground">
-            {m.estimatedMinutes}min
-          </span>
+          <span className="text-xs text-muted-foreground">{m.estimatedMinutes}min</span>
           <Switch
             checked={m.isPublished ?? false}
             onCheckedChange={(v) => togglePublish.mutate({ moduleId: m.id, isPublished: v })}
@@ -154,11 +149,7 @@ export function ModuleManager({ courseId }: Props) {
               onClick={() => createModule.mutate()}
               disabled={createModule.isPending || !newTitle.trim()}
             >
-              {createModule.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                "Add Module"
-              )}
+              {createModule.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Add Module'}
             </Button>
             <Button size="sm" variant="outline" onClick={() => setCreating(false)}>
               Cancel
@@ -166,12 +157,7 @@ export function ModuleManager({ courseId }: Props) {
           </div>
         </div>
       ) : (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setCreating(true)}
-          className="mt-2"
-        >
+        <Button variant="outline" size="sm" onClick={() => setCreating(true)} className="mt-2">
           <Plus className="h-4 w-4 mr-1.5" />
           Add Module
         </Button>

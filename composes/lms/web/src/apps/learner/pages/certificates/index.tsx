@@ -1,13 +1,13 @@
-import { useQuery } from "@tanstack/react-query"
-import { lmsApi } from "../../../../api/lms-client"
-import { formatDate } from "../../../../components/shared/PriceDisplay"
-import { AArrowDown, ExternalLink, Linkedin } from "lucide-react"
-import { Button } from "@projectx/ui"
+import { useQuery } from '@tanstack/react-query'
+import { lmsApi } from '../../../../api/lms-client'
+import { formatDate } from '../../../../components/shared/PriceDisplay'
+import { AArrowDown, ExternalLink, Linkedin } from 'lucide-react'
+import { Button } from '@projectx/ui'
 
 export function CertificatesPage() {
   const { data } = useQuery({
-    queryKey: ["my-certificates"],
-    queryFn: () => lmsApi.get<any>("/enrollments?completed=true"),
+    queryKey: ['my-certificates'],
+    queryFn: () => lmsApi.get<any>('/enrollments?completed=true'),
   })
 
   const enrollments = data?.enrollments?.filter((e: any) => e.certificateUrl) ?? []
@@ -16,9 +16,7 @@ export function CertificatesPage() {
     <div className="space-y-4">
       <div>
         <h1 className="text-xl font-semibold">My Certificates</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          View and share your certificates
-        </p>
+        <p className="text-sm text-muted-foreground mt-1">View and share your certificates</p>
       </div>
 
       {enrollments.length === 0 ? (
@@ -40,15 +38,13 @@ export function CertificatesPage() {
               {enrollments.map((e: any) => {
                 const verifyUrl = e.certificateUrl
                 const linkedInUrl = verifyUrl
-                  ? `https://www.linkedin.com/profile/add?startTask=CERTIFICATION_NAME&name=${encodeURIComponent(e.courseTitle)}&certUrl=${encodeURIComponent(verifyUrl)}&certId=${encodeURIComponent(verifyUrl.split("/").pop() ?? "")}`
+                  ? `https://www.linkedin.com/profile/add?startTask=CERTIFICATION_NAME&name=${encodeURIComponent(e.courseTitle)}&certUrl=${encodeURIComponent(verifyUrl)}&certId=${encodeURIComponent(verifyUrl.split('/').pop() ?? '')}`
                   : null
 
                 return (
                   <tr key={e.id} className="border-t hover:bg-muted/30">
                     <td className="p-3 font-medium">{e.courseTitle}</td>
-                    <td className="p-3 text-muted-foreground">
-                      {formatDate(e.completedAt)}
-                    </td>
+                    <td className="p-3 text-muted-foreground">{formatDate(e.completedAt)}</td>
                     <td className="p-3">
                       {e.certificateUrl ? (
                         <a
@@ -66,11 +62,7 @@ export function CertificatesPage() {
                     <td className="p-3">
                       {linkedInUrl && (
                         <Button variant="outline" size="sm" asChild>
-                          <a
-                            href={linkedInUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
+                          <a href={linkedInUrl} target="_blank" rel="noopener noreferrer">
                             <Linkedin className="h-3.5 w-3.5 mr-1" />
                             LinkedIn
                           </a>

@@ -1,10 +1,19 @@
-import { base } from "./base.js";
+import globals from 'globals'
+import { createBaseConfig } from './base.js'
 
-export const server = [
-  ...base,
-  {
-    rules: {
-      "no-console": "off", // servers log by design
+export function createServerConfig(tsconfigRootDir) {
+  return [
+    ...createBaseConfig({
+      tsconfigRootDir,
+      environmentGlobals: {
+        ...globals.node,
+        ...globals.bun,
+      },
+    }),
+    {
+      rules: {
+        'no-console': 'off', // servers log by design
+      },
     },
-  },
-];
+  ]
+}

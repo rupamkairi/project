@@ -1,22 +1,22 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
-import { lmsApi } from "../../../../api/lms-client";
-import { Button, Input, Label, Card, CardContent, CardHeader, CardTitle } from "@projectx/ui";
+import { useQuery, useMutation } from '@tanstack/react-query'
+import { useState, useEffect } from 'react'
+import { lmsApi } from '../../../../api/lms-client'
+import { Button, Input, Label, Card, CardContent, CardHeader, CardTitle } from '@projectx/ui'
 
 export function LmsConfigPage() {
   const { data: config } = useQuery({
-    queryKey: ["lms-config"],
-    queryFn: () => lmsApi.get<any>("/admin/config"),
-  });
+    queryKey: ['lms-config'],
+    queryFn: () => lmsApi.get<any>('/admin/config'),
+  })
 
   const [form, setForm] = useState({
     defaultCompletionThreshold: 80,
     refundWindowDays: 7,
     inactivityNudgeDays: 7,
     maxQuizAttempts: 3,
-    certificateExpiresAfterDays: "",
+    certificateExpiresAfterDays: '',
     allowGuestAccess: false,
-  });
+  })
 
   useEffect(() => {
     if (config) {
@@ -25,20 +25,20 @@ export function LmsConfigPage() {
         refundWindowDays: config.refundWindowDays ?? 7,
         inactivityNudgeDays: config.inactivityNudgeDays ?? 7,
         maxQuizAttempts: config.maxQuizAttempts ?? 3,
-        certificateExpiresAfterDays: config.certificateExpiresAfterDays ?? "",
+        certificateExpiresAfterDays: config.certificateExpiresAfterDays ?? '',
         allowGuestAccess: config.allowGuestAccess ?? false,
-      });
+      })
     }
-  }, [config]);
+  }, [config])
 
   const update = useMutation({
-    mutationFn: (data: typeof form) => lmsApi.patch("/admin/config", data),
-  });
+    mutationFn: (data: typeof form) => lmsApi.patch('/admin/config', data),
+  })
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    update.mutate(form);
-  };
+    e.preventDefault()
+    update.mutate(form)
+  }
 
   return (
     <div className="max-w-2xl p-6">
@@ -100,9 +100,7 @@ export function LmsConfigPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="cert-expiry">
-                Certificate Expiry (days, blank = never)
-              </Label>
+              <Label htmlFor="cert-expiry">Certificate Expiry (days, blank = never)</Label>
               <Input
                 id="cert-expiry"
                 type="number"
@@ -116,21 +114,19 @@ export function LmsConfigPage() {
               />
             </div>
 
-            {update.isSuccess && (
-              <p className="text-sm text-green-600">Configuration saved</p>
-            )}
+            {update.isSuccess && <p className="text-sm text-green-600">Configuration saved</p>}
             {update.isError && (
               <p className="text-sm text-red-500">
-                Failed to save: {(update.error as any)?.message ?? "Unknown error"}
+                Failed to save: {(update.error as any)?.message ?? 'Unknown error'}
               </p>
             )}
 
             <Button type="submit" disabled={update.isPending}>
-              {update.isPending ? "Saving..." : "Save Config"}
+              {update.isPending ? 'Saving...' : 'Save Config'}
             </Button>
           </form>
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }

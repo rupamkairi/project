@@ -1,28 +1,22 @@
-import { StrictMode } from "react";
-import { createRoot } from "react-dom/client";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { RouterProvider } from "@tanstack/react-router";
-import { router } from "@/router";
-import { useAuthStore } from "@projectx/platform-web";
-import "./globals.css";
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { RouterProvider } from '@tanstack/react-router'
+import { AuthProvider } from '@projectx/plugin-auth-web'
+import { router } from '@/router'
+import './globals.css'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
-});
+})
 
-// Initialize auth on app startup
-function initializeAuth() {
-  const { checkAuth } = useAuthStore.getState();
-  checkAuth();
-}
-
-// Call auth initialization
-initializeAuth();
-
-createRoot(document.getElementById("root")!).render(
+// Authentication is initialized once, inside the provider, above the router.
+createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>
     </QueryClientProvider>
   </StrictMode>,
-);
+)

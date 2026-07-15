@@ -1,16 +1,16 @@
-import { Elysia } from "elysia"
-import type { Mediator } from "@core"
-import type { EventBus, Scheduler } from "@core"
-import { createCourseRoutes } from "./routes/courses"
-import { createEnrollmentRoutes } from "./routes/enrollments"
-import { createLearningRoutes } from "./routes/learning"
-import { createAssignmentRoutes } from "./routes/assignments"
-import { createCohortRoutes } from "./routes/cohorts"
-import { createCertificateRoutes } from "./routes/certificates"
-import { createAnalyticsRoutes } from "./routes/analytics"
-import { createDiscussionRoutes } from "./routes/discussions"
-import { createWebhookRoutes } from "./routes/webhook"
-import { registerLmsHooks, registerLmsJobs, LMS_FSMs } from "./backend"
+import { Elysia } from 'elysia'
+import type { Mediator } from '@core'
+import type { EventBus, Scheduler } from '@core'
+import { createCourseRoutes } from './routes/courses'
+import { createEnrollmentRoutes } from './routes/enrollments'
+import { createLearningRoutes } from './routes/learning'
+import { createAssignmentRoutes } from './routes/assignments'
+import { createCohortRoutes } from './routes/cohorts'
+import { createCertificateRoutes } from './routes/certificates'
+import { createAnalyticsRoutes } from './routes/analytics'
+import { createDiscussionRoutes } from './routes/discussions'
+import { createWebhookRoutes } from './routes/webhook'
+import { registerLmsHooks, registerLmsJobs, LMS_FSMs } from './backend'
 
 export function createLmsCompose(mediator: Mediator, bus?: EventBus, scheduler?: Scheduler) {
   // Register FSMs with the mediator's FSM engine (if available via mediator.context)
@@ -35,7 +35,7 @@ export function createLmsCompose(mediator: Mediator, bus?: EventBus, scheduler?:
     registerLmsJobs(scheduler, mediator)
   }
 
-  return new Elysia({ prefix: "/lms" })
+  return new Elysia({ prefix: '/lms' })
     .use(createCourseRoutes(mediator))
     .use(createEnrollmentRoutes(mediator))
     .use(createLearningRoutes(mediator))
@@ -89,10 +89,17 @@ export {
   type LmsQuizSubmission,
   type LmsPaymentEvent,
   type LmsOrgConfig,
-} from "./db/schema/lms"
+} from './db/schema/lms'
 
 // Re-export seed
-export { seedLms } from "./db/seed/lms"
+export { seedLms } from './db/seed/lms'
 
 // Re-export backend
-export { registerLmsHooks, registerLmsJobs, LMS_FSMs, seedLmsPipelines, debouncedHeartbeatWrite, getOrgConfig } from "./backend"
+export {
+  registerLmsHooks,
+  registerLmsJobs,
+  LMS_FSMs,
+  seedLmsPipelines,
+  debouncedHeartbeatWrite,
+  getOrgConfig,
+} from './backend'

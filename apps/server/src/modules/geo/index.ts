@@ -1,11 +1,11 @@
 // Geo Module
 
-import type { AppModule, BootRegistry } from "@core";
+import type { AppModule, BootRegistry } from '@core'
 
 export const GeoModule: AppModule = {
   manifest: {
-    id: "geo",
-    version: "0.1.0",
+    id: 'geo',
+    version: '0.1.0',
     dependsOn: [],
     entities: [],
     idPrefixes: {},
@@ -26,4 +26,4 @@ export const GeoModule: AppModule = {
   async shutdown(): Promise<void> {
     // Cleanup
   },
-};
+}

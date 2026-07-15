@@ -1,11 +1,11 @@
 // Catalog Module
 
-import type { AppModule, BootRegistry } from "@core";
+import type { AppModule, BootRegistry } from '@core'
 
 export const CatalogModule: AppModule = {
   manifest: {
-    id: "catalog",
-    version: "0.1.0",
+    id: 'catalog',
+    version: '0.1.0',
     dependsOn: [],
     entities: [],
     idPrefixes: {},
@@ -26,4 +26,4 @@ export const CatalogModule: AppModule = {
   async shutdown(): Promise<void> {
     // Cleanup
   },
-};
+}

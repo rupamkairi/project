@@ -1,14 +1,42 @@
-import { useAuthStore } from "../lib/store";
+import { useAuthStore } from '../lib/store'
+import type { AuthUser } from '../lib/store'
 
 export function useAuth() {
-  const { user, token, isLoading, setAuth, clearAuth } = useAuthStore();
+  const {
+    user,
+    actor,
+    token,
+    status,
+    isAuthenticated,
+    isLoading,
+    error,
+    login,
+    logout,
+    restore,
+    refresh,
+    clearError,
+    setSession,
+  } = useAuthStore()
 
   return {
-    actor: user,
+    user: user ?? actor,
+    actor: user ?? actor,
     token,
-    isAuthenticated: !!user && !!token,
+    status,
+    isAuthenticated,
     isLoading,
-    setAuth,
-    logout: clearAuth,
-  };
+    error,
+    login,
+    logout,
+    restore,
+    refresh,
+    checkAuth: restore,
+    clearError,
+    setSession,
+    setAuth: setSession,
+  }
 }
+
+export type UseAuthReturn = ReturnType<typeof useAuth> & { user: AuthUser | null }
+
+export { useAuthStore } from '../lib/store'

@@ -1,10 +1,10 @@
-import { db } from "./client";
-import { pipelines, pipelineStages } from "./schema/pipeline";
-import { seedPlatform } from "@projectx/platform-server";
-import { ulid } from "ulid";
+import { db } from './client'
+import { pipelines, pipelineStages } from './schema/pipeline'
+import { seedPlatform } from '@projectx/platform-server'
+import { ulid } from 'ulid'
 
 function generateId(): string {
-  return ulid();
+  return ulid()
 }
 
 /**
@@ -23,7 +23,7 @@ export async function seedPipeline(
   stages: { name: string; meta?: Record<string, unknown> }[],
   opts: { name?: string; isDefault?: boolean } = {},
 ): Promise<{ pipelineId: string; stageIds: Record<string, string> }> {
-  const pipelineId = generateId();
+  const pipelineId = generateId()
   await db
     .insert(pipelines)
     .values({
@@ -33,11 +33,11 @@ export async function seedPipeline(
       name: opts.name ?? entityType,
       isDefault: opts.isDefault ?? true,
     })
-    .onConflictDoNothing();
+    .onConflictDoNothing()
 
-  const stageIds: Record<string, string> = {};
+  const stageIds: Record<string, string> = {}
   for (const [position, stage] of stages.entries()) {
-    const stageId = generateId();
+    const stageId = generateId()
     await db
       .insert(pipelineStages)
       .values({
@@ -48,20 +48,20 @@ export async function seedPipeline(
         position,
         meta: stage.meta ?? {},
       })
-      .onConflictDoNothing();
-    stageIds[stage.name] = stageId;
+      .onConflictDoNothing()
+    stageIds[stage.name] = stageId
   }
 
-  return { pipelineId, stageIds };
+  return { pipelineId, stageIds }
 }
 
 async function seed() {
-  console.log("Starting seed...");
-  console.log("Step 1: Seeding platform demo data...");
-  await seedPlatform();
-  console.log("✓ Demo seed complete");
+  console.log('Starting seed...')
+  console.log('Step 1: Seeding platform demo data...')
+  await seedPlatform()
+  console.log('✓ Demo seed complete')
 }
 
 if (import.meta.path === Bun.main) {
-  seed().catch(console.error);
+  seed().catch(console.error)
 }

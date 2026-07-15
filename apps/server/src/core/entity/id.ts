@@ -8,11 +8,11 @@
  * @packageDocumentation
  */
 
-import { ulid } from "ulid";
-import type { ID, Timestamp } from "./types";
+import { ulid } from 'ulid'
+import type { ID, Timestamp } from './types'
 
 // Re-export so callers can `import type { ID } from "./id"` without going to types.ts
-export type { ID, Timestamp } from "./types";
+export type { ID, Timestamp } from './types'
 
 // ---------------------------------------------------------------------------
 // IDGenerator interface (per docs/architecture/core.md §1)
@@ -25,16 +25,16 @@ export type { ID, Timestamp } from "./types";
  */
 export interface IDGenerator {
   /** Generate a new bare ULID. */
-  generate(): ID;
+  generate(): ID
 
   /** Generate a namespaced ID: `namespace_<ULID>`. E.g. `ord_01ARZ...` */
-  generateFor(namespace: string): ID;
+  generateFor(namespace: string): ID
 
   /** Returns true if the string is a valid bare 26-character ULID. */
-  isValid(id: string): boolean;
+  isValid(id: string): boolean
 
   /** Decode the Unix epoch ms timestamp embedded in a ULID. */
-  extractTimestamp(id: ID): Timestamp;
+  extractTimestamp(id: ID): Timestamp
 }
 
 // ---------------------------------------------------------------------------
@@ -42,17 +42,17 @@ export interface IDGenerator {
 // ---------------------------------------------------------------------------
 
 /** Crockford base32 alphabet used in ULID. */
-const BASE32 = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+const BASE32 = '0123456789ABCDEFGHJKMNPQRSTVWXYZ'
 
 /** Regex for a bare 26-char Crockford base32 ULID. */
-const ULID_RE = /^[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{26}$/i;
+const ULID_RE = /^[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{26}$/i
 
 /**
  * Check if a string is a valid bare ULID.
  * @internal
  */
 function _isValid(id: string): boolean {
-  return typeof id === "string" && id.length === 26 && ULID_RE.test(id);
+  return typeof id === 'string' && id.length === 26 && ULID_RE.test(id)
 }
 
 /**
@@ -62,17 +62,17 @@ function _isValid(id: string): boolean {
  */
 function _extractTimestamp(id: ID): Timestamp {
   if (!_isValid(id)) {
-    throw new Error(`Invalid ULID: "${id}"`);
+    throw new Error(`Invalid ULID: "${id}"`)
   }
-  const timePart = id.substring(0, 10).toUpperCase();
-  let ts = 0;
+  const timePart = id.substring(0, 10).toUpperCase()
+  let ts = 0
   for (let i = 0; i < timePart.length; i++) {
-    const char = timePart.charAt(i);
-    const value = BASE32.indexOf(char);
-    if (value === -1) throw new Error(`Invalid ULID character: "${char}"`);
-    ts = ts * 32 + value;
+    const char = timePart.charAt(i)
+    const value = BASE32.indexOf(char)
+    if (value === -1) throw new Error(`Invalid ULID character: "${char}"`)
+    ts = ts * 32 + value
   }
-  return ts as Timestamp;
+  return ts as Timestamp
 }
 
 // ---------------------------------------------------------------------------
@@ -85,25 +85,25 @@ function _extractTimestamp(id: ID): Timestamp {
 export function createIdGenerator(): IDGenerator {
   return {
     generate(): ID {
-      return ulid() as ID;
+      return ulid() as ID
     },
 
     generateFor(namespace: string): ID {
-      return `${namespace}_${ulid()}` as ID;
+      return `${namespace}_${ulid()}` as ID
     },
 
     isValid(id: string): boolean {
-      return _isValid(id);
+      return _isValid(id)
     },
 
     extractTimestamp(id: ID): Timestamp {
-      return _extractTimestamp(id);
+      return _extractTimestamp(id)
     },
-  };
+  }
 }
 
 /**
  * Singleton default IDGenerator.
  * Modules can inject their own, but this covers the common case.
  */
-export const defaultIdGenerator: IDGenerator = createIdGenerator();
+export const defaultIdGenerator: IDGenerator = createIdGenerator()

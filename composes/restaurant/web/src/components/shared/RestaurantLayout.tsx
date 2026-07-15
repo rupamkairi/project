@@ -1,33 +1,43 @@
-import React from "react";
-import { Outlet } from "@tanstack/react-router";
-import { NavBar, cn } from "@projectx/ui";
-import { useOutletStore } from "../../stores/outlet-store";
+import React from 'react'
+import { Outlet } from '@tanstack/react-router'
+import { NavBar, cn } from '@projectx/ui'
+import { useOutletStore } from '../../stores/outlet-store'
 
 interface NavItem {
-  label: string;
-  href: string;
-  icon?: React.ReactNode;
+  label: string
+  href: string
+  icon?: React.ReactNode
 }
 
 interface RestaurantLayoutProps {
-  navItems: NavItem[];
-  title: string;
-  appColor?: string;
-  darkMode?: boolean;
+  navItems: NavItem[]
+  title: string
+  appColor?: string
+  darkMode?: boolean
 }
 
 export function RestaurantLayout({ navItems, title, darkMode = false }: RestaurantLayoutProps) {
-  const { outletName } = useOutletStore();
+  const { outletName } = useOutletStore()
 
   return (
-    <div className={cn("flex flex-col min-h-screen", darkMode ? "bg-card text-card-foreground" : "bg-background text-foreground")}>
+    <div
+      className={cn(
+        'flex flex-col min-h-screen',
+        darkMode ? 'bg-card text-card-foreground' : 'bg-background text-foreground',
+      )}
+    >
       <NavBar
         logo={<span className="text-sm font-semibold">{title}</span>}
         items={navItems.map((n) => ({ label: n.label, href: n.href }))}
         actions={
           <div className="flex items-center gap-3">
             {outletName && (
-              <span className={cn("text-xs px-2 py-1 rounded-md", darkMode ? "bg-muted text-muted-foreground" : "bg-muted text-muted-foreground")}>
+              <span
+                className={cn(
+                  'text-xs px-2 py-1 rounded-md',
+                  darkMode ? 'bg-muted text-muted-foreground' : 'bg-muted text-muted-foreground',
+                )}
+              >
                 {outletName}
               </span>
             )}
@@ -38,18 +48,21 @@ export function RestaurantLayout({ navItems, title, darkMode = false }: Restaura
         <Outlet />
       </main>
     </div>
-  );
+  )
 }
 
 export function OutletSelector({ onSelect }: { onSelect: (id: string, name: string) => void }) {
-  const [outlets, setOutlets] = React.useState<{ id: string; name: string }[]>([]);
-  const { rstApi } = React.useMemo(() => ({ rstApi: null as any }), []);
+  const [outlets, setOutlets] = React.useState<{ id: string; name: string }[]>([])
+  const { rstApi } = React.useMemo(() => ({ rstApi: null as any }), [])
 
   React.useEffect(() => {
-    import("../../lib/api/restaurant").then(({ rstApi }) => {
-      rstApi.getOutlets().then((res: any) => setOutlets(res?.data ?? [])).catch(() => {});
-    });
-  }, []);
+    import('../../lib/api/restaurant').then(({ rstApi }) => {
+      rstApi
+        .getOutlets()
+        .then((res: any) => setOutlets(res?.data ?? []))
+        .catch(() => {})
+    })
+  }, [])
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
@@ -71,5 +84,5 @@ export function OutletSelector({ onSelect }: { onSelect: (id: string, name: stri
         </div>
       </div>
     </div>
-  );
+  )
 }

@@ -1,7 +1,7 @@
-import { createRoute } from "@tanstack/react-router"
-import { Outlet, useNavigate } from "@tanstack/react-router"
-import { useAuthStore, AuthGuard } from "@projectx/platform-web"
-import { sharedRootRoute } from "@projectx/shared-router"
+import { createRoute } from '@tanstack/react-router'
+import { Outlet, useNavigate } from '@tanstack/react-router'
+import { useAuthStore, AuthGuard, requireAuth } from '@projectx/plugin-auth-web'
+import { sharedRootRoute } from '@projectx/shared-router'
 import {
   NavBar,
   Avatar,
@@ -11,7 +11,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-} from "@projectx/ui"
+} from '@projectx/ui'
 import {
   LayoutDashboard,
   Users,
@@ -23,30 +23,27 @@ import {
   Filter,
   Ticket,
   LogOut,
-} from "lucide-react"
+} from 'lucide-react'
 
 export const Route = createRoute({
   getParentRoute: () => sharedRootRoute,
-  path: "/crm",
+  path: '/crm',
   beforeLoad: () => {
-    const { isAuthenticated, isLoading } = useAuthStore.getState()
-    if (!isLoading && !isAuthenticated) {
-      throw new Error("UNAUTHENTICATED")
-    }
+    requireAuth()
   },
   component: CrmLayout,
 })
 
 const NAV_ITEMS = [
-  { label: "Dashboard", href: "/crm", icon: LayoutDashboard, exact: true },
-  { label: "Contacts", href: "/crm/contacts", icon: Users },
-  { label: "Accounts", href: "/crm/accounts", icon: Building2 },
-  { label: "Leads", href: "/crm/leads", icon: UserPlus },
-  { label: "Deals", href: "/crm/deals", icon: TrendingUp },
-  { label: "Activities", href: "/crm/activities", icon: Activity },
-  { label: "Campaigns", href: "/crm/campaigns", icon: Megaphone },
-  { label: "Segments", href: "/crm/segments", icon: Filter },
-  { label: "Tickets", href: "/crm/tickets", icon: Ticket },
+  { label: 'Dashboard', href: '/crm', icon: LayoutDashboard, exact: true },
+  { label: 'Contacts', href: '/crm/contacts', icon: Users },
+  { label: 'Accounts', href: '/crm/accounts', icon: Building2 },
+  { label: 'Leads', href: '/crm/leads', icon: UserPlus },
+  { label: 'Deals', href: '/crm/deals', icon: TrendingUp },
+  { label: 'Activities', href: '/crm/activities', icon: Activity },
+  { label: 'Campaigns', href: '/crm/campaigns', icon: Megaphone },
+  { label: 'Segments', href: '/crm/segments', icon: Filter },
+  { label: 'Tickets', href: '/crm/tickets', icon: Ticket },
 ]
 
 function UserMenu() {
@@ -55,17 +52,13 @@ function UserMenu() {
 
   const handleLogout = async () => {
     await logout()
-    navigate({ to: "/login" })
+    navigate({ to: '/login' })
   }
 
   const initials =
-    [actor?.firstName?.[0], actor?.lastName?.[0]]
-      .filter(Boolean)
-      .join("")
-      .toUpperCase() || "?"
+    [actor?.firstName?.[0], actor?.lastName?.[0]].filter(Boolean).join('').toUpperCase() || '?'
 
-  const fullName =
-    [actor?.firstName, actor?.lastName].filter(Boolean).join(" ") || "User"
+  const fullName = [actor?.firstName, actor?.lastName].filter(Boolean).join(' ') || 'User'
 
   return (
     <DropdownMenu>
@@ -83,7 +76,10 @@ function UserMenu() {
           <p className="text-xs text-muted-foreground truncate">{actor?.email}</p>
         </div>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
+        <DropdownMenuItem
+          onClick={handleLogout}
+          className="text-destructive focus:text-destructive"
+        >
           <LogOut className="h-4 w-4 mr-2" />
           Sign out
         </DropdownMenuItem>

@@ -1,89 +1,90 @@
-import React, { useState } from "react";
-import { Plus, Trash2, Edit2, Mail, Loader2 } from "lucide-react";
-import { Button, Input, Textarea, Label, Badge } from "@projectx/ui";
+import React, { useState } from 'react'
+import { Plus, Trash2, Edit2, Mail, Loader2 } from 'lucide-react'
+import { Button, Input, Textarea, Label, Badge } from '@projectx/ui'
 
 interface Template {
-  key: string;
-  channel: string;
-  subject?: string;
-  body: string;
-  locale: string;
-  isSystem: boolean;
+  key: string
+  channel: string
+  subject?: string
+  body: string
+  locale: string
+  isSystem: boolean
 }
 
 interface NotificationTemplatesRouteProps {
   templatesApi?: {
-    list: () => Promise<{ data?: { templates?: Template[] } }>;
-    create: (data: Partial<Template>) => Promise<unknown>;
-    update: (key: string, data: Partial<Template>) => Promise<unknown>;
-    delete: (key: string) => Promise<unknown>;
-  };
+    list: () => Promise<{ data?: { templates?: Template[] } }>
+    create: (data: Partial<Template>) => Promise<unknown>
+    update: (key: string, data: Partial<Template>) => Promise<unknown>
+    delete: (key: string) => Promise<unknown>
+  }
 }
 
-export function NotificationTemplatesRoute({
-  templatesApi,
-}: NotificationTemplatesRouteProps) {
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [showForm, setShowForm] = useState(false);
-  const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
-  const [formData, setFormData] = useState({ key: "", subject: "", body: "" });
+export function NotificationTemplatesRoute({ templatesApi }: NotificationTemplatesRouteProps) {
+  const [templates, setTemplates] = useState<Template[]>([])
+  const [loading, setLoading] = useState(false)
+  const [showForm, setShowForm] = useState(false)
+  const [editingTemplate, setEditingTemplate] = useState<Template | null>(null)
+  const [formData, setFormData] = useState({ key: '', subject: '', body: '' })
 
   const loadTemplates = async () => {
-    if (!templatesApi) { setLoading(false); return; }
-    setLoading(true);
-    try {
-      const response = await templatesApi.list();
-      if (response.data?.templates) setTemplates(response.data.templates);
-    } catch (e) {
-      console.error("Failed to load templates:", e);
-    } finally {
-      setLoading(false);
+    if (!templatesApi) {
+      setLoading(false)
+      return
     }
-  };
+    setLoading(true)
+    try {
+      const response = await templatesApi.list()
+      if (response.data?.templates) setTemplates(response.data.templates)
+    } catch (e) {
+      console.error('Failed to load templates:', e)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!templatesApi) return;
+    e.preventDefault()
+    if (!templatesApi) return
     try {
       if (editingTemplate) {
         await templatesApi.update(editingTemplate.key, {
           subject: formData.subject,
           body: formData.body,
-        });
+        })
       } else {
         await templatesApi.create({
           key: formData.key,
-          channel: "email",
+          channel: 'email',
           subject: formData.subject,
           body: formData.body,
-        });
+        })
       }
-      setShowForm(false);
-      setEditingTemplate(null);
-      setFormData({ key: "", subject: "", body: "" });
-      loadTemplates();
+      setShowForm(false)
+      setEditingTemplate(null)
+      setFormData({ key: '', subject: '', body: '' })
+      loadTemplates()
     } catch (e) {
-      console.error("Failed to save template:", e);
+      console.error('Failed to save template:', e)
     }
-  };
+  }
 
   const handleDelete = async (key: string) => {
-    if (!templatesApi) return;
-    if (!confirm("Are you sure you want to delete this template?")) return;
+    if (!templatesApi) return
+    if (!confirm('Are you sure you want to delete this template?')) return
     try {
-      await templatesApi.delete(key);
-      loadTemplates();
+      await templatesApi.delete(key)
+      loadTemplates()
     } catch (e) {
-      console.error("Failed to delete template:", e);
+      console.error('Failed to delete template:', e)
     }
-  };
+  }
 
   const openEdit = (template: Template) => {
-    setEditingTemplate(template);
-    setFormData({ key: template.key, subject: template.subject || "", body: template.body });
-    setShowForm(true);
-  };
+    setEditingTemplate(template)
+    setFormData({ key: template.key, subject: template.subject || '', body: template.body })
+    setShowForm(true)
+  }
 
   return (
     <div className="space-y-4">
@@ -91,9 +92,9 @@ export function NotificationTemplatesRoute({
         <Button
           size="sm"
           onClick={() => {
-            setShowForm(true);
-            setEditingTemplate(null);
-            setFormData({ key: "", subject: "", body: "" });
+            setShowForm(true)
+            setEditingTemplate(null)
+            setFormData({ key: '', subject: '', body: '' })
           }}
         >
           <Plus className="h-4 w-4 mr-1.5" />
@@ -104,7 +105,7 @@ export function NotificationTemplatesRoute({
       {showForm && (
         <div className="border rounded-md p-4 space-y-4">
           <p className="text-sm font-medium">
-            {editingTemplate ? "Edit Template" : "New Template"}
+            {editingTemplate ? 'Edit Template' : 'New Template'}
           </p>
           <form onSubmit={handleSubmit} className="space-y-3">
             {!editingTemplate && (
@@ -141,13 +142,16 @@ export function NotificationTemplatesRoute({
             </div>
             <div className="flex gap-2">
               <Button type="submit" size="sm">
-                {editingTemplate ? "Update" : "Create"}
+                {editingTemplate ? 'Update' : 'Create'}
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 type="button"
-                onClick={() => { setShowForm(false); setEditingTemplate(null); }}
+                onClick={() => {
+                  setShowForm(false)
+                  setEditingTemplate(null)
+                }}
               >
                 Cancel
               </Button>
@@ -177,13 +181,13 @@ export function NotificationTemplatesRoute({
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium">{template.key}</span>
                       {template.isSystem && (
-                        <Badge variant="secondary" className="text-xs">System</Badge>
+                        <Badge variant="secondary" className="text-xs">
+                          System
+                        </Badge>
                       )}
                     </div>
                     {template.subject && (
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {template.subject}
-                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{template.subject}</p>
                     )}
                   </div>
                 </div>
@@ -216,5 +220,5 @@ export function NotificationTemplatesRoute({
         )}
       </div>
     </div>
-  );
+  )
 }

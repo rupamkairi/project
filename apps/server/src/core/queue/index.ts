@@ -7,8 +7,8 @@
  * @packageDocumentation
  */
 
-import type { ID, Timestamp } from "../entity";
-import type { SystemContext } from "../context";
+import type { ID, Timestamp } from '../entity'
+import type { SystemContext } from '../context'
 
 // ---------------------------------------------------------------------------
 // Job types
@@ -25,12 +25,7 @@ import type { SystemContext } from "../context";
  *
  * @category Core
  */
-export type JobStatus =
-  | "waiting"
-  | "active"
-  | "completed"
-  | "failed"
-  | "delayed";
+export type JobStatus = 'waiting' | 'active' | 'completed' | 'failed' | 'delayed'
 
 /**
  * Job processing options.
@@ -50,29 +45,29 @@ export type JobStatus =
  */
 export interface JobOptions {
   /** Priority tier — affects worker concurrency and queue ordering */
-  priority?: "critical" | "standard" | "bulk";
+  priority?: 'critical' | 'standard' | 'bulk'
 
   /** Delay in milliseconds before the job becomes available */
-  delay?: number;
+  delay?: number
 
   /** Retry count before the job moves to the DLQ (default: 3) */
-  attempts?: number;
+  attempts?: number
 
   /** Backoff strategy for retries */
   backoff?: {
-    type: "fixed" | "exponential";
+    type: 'fixed' | 'exponential'
     /** Base delay in milliseconds */
-    delay: number;
-  };
+    delay: number
+  }
 
   /** Idempotency key — duplicate adds with the same jobId are ignored */
-  jobId?: string;
+  jobId?: string
 
   /** Milliseconds before a hung job is considered timed out */
-  timeout?: number;
+  timeout?: number
 
   /** Remove the job record after successful completion (default: true) */
-  removeOnComplete?: boolean;
+  removeOnComplete?: boolean
 }
 
 /**
@@ -83,34 +78,34 @@ export interface JobOptions {
  */
 export interface Job<T = unknown> {
   /** Unique job identifier */
-  id: ID;
+  id: ID
 
   /** Job type name */
-  name: string;
+  name: string
 
   /** Job data payload */
-  payload: T;
+  payload: T
 
   /** Current job status */
-  status: JobStatus;
+  status: JobStatus
 
   /** Number of processing attempts made so far */
-  attempts: number;
+  attempts: number
 
   /** When the job was created */
-  createdAt: Timestamp;
+  createdAt: Timestamp
 
   /** When the job was picked up for processing */
-  processedAt?: Timestamp;
+  processedAt?: Timestamp
 
   /** When the job finished (success or failure) */
-  completedAt?: Timestamp;
+  completedAt?: Timestamp
 
   /** Failure reason, if the job failed */
-  failedReason?: string;
+  failedReason?: string
 
   /** Progress percentage (0–100) for long-running jobs */
-  progress?: number;
+  progress?: number
 }
 
 /**
@@ -119,10 +114,7 @@ export interface Job<T = unknown> {
  * @typeParam T - Job payload type
  * @category Core
  */
-export type JobHandler<T = unknown> = (
-  job: Job<T>,
-  ctx: SystemContext,
-) => Promise<void>;
+export type JobHandler<T = unknown> = (job: Job<T>, ctx: SystemContext) => Promise<void>
 
 // ---------------------------------------------------------------------------
 // Queue interface
@@ -156,7 +148,7 @@ export interface Queue {
    * @param opts - Job options
    * @returns The created job
    */
-  add<T>(name: string, payload: T, opts?: JobOptions): Promise<Job<T>>;
+  add<T>(name: string, payload: T, opts?: JobOptions): Promise<Job<T>>
 
   /**
    * Adds multiple jobs of the same type in one call.
@@ -166,11 +158,7 @@ export interface Queue {
    * @param opts - Shared job options applied to all jobs
    * @returns Array of created jobs
    */
-  addBatch<T>(
-    name: string,
-    payloads: T[],
-    opts?: JobOptions,
-  ): Promise<Job<T>[]>;
+  addBatch<T>(name: string, payloads: T[], opts?: JobOptions): Promise<Job<T>[]>
 
   /**
    * Registers a job processor. Called during module boot.
@@ -179,11 +167,7 @@ export interface Queue {
    * @param handler - Handler function
    * @param concurrency - Maximum parallel executions (default: 1)
    */
-  process<T>(
-    name: string,
-    handler: JobHandler<T>,
-    concurrency?: number,
-  ): void;
+  process<T>(name: string, handler: JobHandler<T>, concurrency?: number): void
 
   /**
    * Gets a job by ID.
@@ -191,28 +175,28 @@ export interface Queue {
    * @param id - Job ID
    * @returns The job or null if not found
    */
-  getJob<T>(id: ID): Promise<Job<T> | null>;
+  getJob<T>(id: ID): Promise<Job<T> | null>
 
   /**
    * Retries a failed job.
    *
    * @param id - Job ID
    */
-  retry(id: ID): Promise<void>;
+  retry(id: ID): Promise<void>
 
   /**
    * Cancels a job (removes it from the queue).
    *
    * @param id - Job ID
    */
-  cancel(id: ID): Promise<void>;
+  cancel(id: ID): Promise<void>
 
   /**
    * Waits for all jobs in the named queue to complete.
    *
    * @param name - Queue name
    */
-  drain(name: string): Promise<void>;
+  drain(name: string): Promise<void>
 
   /**
    * Returns all jobs that have exhausted their retries (Dead Letter Queue).
@@ -220,7 +204,7 @@ export interface Queue {
    * @param name - Queue name
    * @returns Array of dead-lettered jobs
    */
-  getDLQ(name: string): Promise<Job[]>;
+  getDLQ(name: string): Promise<Job[]>
 
   /**
    * Re-queues dead-lettered jobs for another attempt.
@@ -228,7 +212,7 @@ export interface Queue {
    * @param name - Queue name
    * @param limit - Maximum number of jobs to replay (default: all)
    */
-  replayDLQ(name: string, limit?: number): Promise<void>;
+  replayDLQ(name: string, limit?: number): Promise<void>
 }
 
 // ---------------------------------------------------------------------------
@@ -242,16 +226,16 @@ export interface Queue {
  */
 export interface ScheduledJob {
   /** Unique name identifying this scheduled job */
-  name: string;
+  name: string
 
   /** Cron expression for recurring jobs */
-  cron: string;
+  cron: string
 
   /** Next scheduled execution time */
-  next: Timestamp;
+  next: Timestamp
 
   /** Whether the job is active or paused */
-  status: "active" | "paused";
+  status: 'active' | 'paused'
 }
 
 /**
@@ -261,13 +245,13 @@ export interface ScheduledJob {
  */
 export interface SchedulerOptions {
   /** IANA timezone string (e.g. "Asia/Kolkata", "UTC") */
-  timezone?: string;
+  timezone?: string
 
   /** Allow concurrent runs if a previous execution has not finished (default: false) */
-  overlap?: boolean;
+  overlap?: boolean
 
   /** Re-run missed executions after downtime (default: false) */
-  catchUp?: boolean;
+  catchUp?: boolean
 }
 
 // ---------------------------------------------------------------------------
@@ -299,12 +283,7 @@ export interface Scheduler {
    * @param handler - Handler to execute on each tick
    * @param opts - Scheduler options
    */
-  define(
-    name: string,
-    cron: string,
-    handler: JobHandler,
-    opts?: SchedulerOptions,
-  ): void;
+  define(name: string, cron: string, handler: JobHandler, opts?: SchedulerOptions): void
 
   /**
    * Schedules a one-shot job that fires once at a specific time.
@@ -314,40 +293,35 @@ export interface Scheduler {
    * @param payload - Data to pass to the handler
    * @param handler - Handler to execute once
    */
-  runOnce(
-    name: string,
-    at: Date | Timestamp,
-    payload: unknown,
-    handler: JobHandler,
-  ): void;
+  runOnce(name: string, at: Date | Timestamp, payload: unknown, handler: JobHandler): void
 
   /**
    * Cancels and removes a scheduled job.
    *
    * @param name - Scheduled job name
    */
-  cancel(name: string): void;
+  cancel(name: string): void
 
   /**
    * Pauses a scheduled job without removing it.
    *
    * @param name - Scheduled job name
    */
-  pause(name: string): void;
+  pause(name: string): void
 
   /**
    * Resumes a paused scheduled job.
    *
    * @param name - Scheduled job name
    */
-  resume(name: string): void;
+  resume(name: string): void
 
   /**
    * Lists all registered scheduled jobs.
    *
    * @returns Array of scheduled job entries
    */
-  list(): ScheduledJob[];
+  list(): ScheduledJob[]
 
   /**
    * Returns the next scheduled execution time for a named job.
@@ -355,7 +329,7 @@ export interface Scheduler {
    * @param name - Scheduled job name
    * @returns Unix timestamp (ms) of the next run, or null if not found / paused
    */
-  getNext(name: string): Timestamp | null;
+  getNext(name: string): Timestamp | null
 }
 
 // ---------------------------------------------------------------------------
@@ -371,76 +345,65 @@ export interface Scheduler {
  * @category Core
  */
 export class InMemoryQueue implements Queue {
-  private jobs = new Map<string, Job<unknown>>();
-  private handlers = new Map<
-    string,
-    { handler: JobHandler<unknown>; concurrency: number }
-  >();
-  private dlq = new Map<string, Job<unknown>[]>();
-  private idCounter = 0;
+  private jobs = new Map<string, Job<unknown>>()
+  private handlers = new Map<string, { handler: JobHandler<unknown>; concurrency: number }>()
+  private dlq = new Map<string, Job<unknown>[]>()
+  private idCounter = 0
 
   private makeId(): ID {
-    return `job-${++this.idCounter}` as ID;
+    return `job-${++this.idCounter}` as ID
   }
 
   async add<T>(name: string, payload: T, opts?: JobOptions): Promise<Job<T>> {
-    const id = (opts?.jobId ?? this.makeId()) as ID;
+    const id = (opts?.jobId ?? this.makeId()) as ID
 
     // Idempotency: ignore duplicate jobId
     if (this.jobs.has(id as string)) {
-      return this.jobs.get(id as string) as Job<T>;
+      return this.jobs.get(id as string) as Job<T>
     }
 
     const job: Job<T> = {
       id,
       name,
       payload,
-      status: opts?.delay ? "delayed" : "waiting",
+      status: opts?.delay ? 'delayed' : 'waiting',
       attempts: 0,
       createdAt: Date.now(),
       progress: 0,
-    };
-
-    this.jobs.set(id as string, job as Job<unknown>);
-    return job;
-  }
-
-  async addBatch<T>(
-    name: string,
-    payloads: T[],
-    opts?: JobOptions,
-  ): Promise<Job<T>[]> {
-    const results: Job<T>[] = [];
-    for (const payload of payloads) {
-      results.push(await this.add(name, payload, opts));
     }
-    return results;
+
+    this.jobs.set(id as string, job as Job<unknown>)
+    return job
   }
 
-  process<T>(
-    name: string,
-    handler: JobHandler<T>,
-    concurrency = 1,
-  ): void {
+  async addBatch<T>(name: string, payloads: T[], opts?: JobOptions): Promise<Job<T>[]> {
+    const results: Job<T>[] = []
+    for (const payload of payloads) {
+      results.push(await this.add(name, payload, opts))
+    }
+    return results
+  }
+
+  process<T>(name: string, handler: JobHandler<T>, concurrency = 1): void {
     this.handlers.set(name, {
       handler: handler as JobHandler<unknown>,
       concurrency,
-    });
+    })
   }
 
   async getJob<T>(id: ID): Promise<Job<T> | null> {
-    return (this.jobs.get(id as string) as Job<T>) ?? null;
+    return (this.jobs.get(id as string) as Job<T>) ?? null
   }
 
   async retry(id: ID): Promise<void> {
-    const job = this.jobs.get(id as string);
-    if (!job) return;
-    job.status = "waiting";
-    job.failedReason = undefined;
+    const job = this.jobs.get(id as string)
+    if (!job) return
+    job.status = 'waiting'
+    delete job.failedReason
   }
 
   async cancel(id: ID): Promise<void> {
-    this.jobs.delete(id as string);
+    this.jobs.delete(id as string)
   }
 
   async drain(_name: string): Promise<void> {
@@ -448,22 +411,22 @@ export class InMemoryQueue implements Queue {
   }
 
   async getDLQ(name: string): Promise<Job[]> {
-    return this.dlq.get(name) ?? [];
+    return this.dlq.get(name) ?? []
   }
 
   async replayDLQ(name: string, limit?: number): Promise<void> {
-    const dead = this.dlq.get(name) ?? [];
-    const toReplay = limit !== undefined ? dead.slice(0, limit) : dead;
+    const dead = this.dlq.get(name) ?? []
+    const toReplay = limit !== undefined ? dead.slice(0, limit) : dead
 
     for (const job of toReplay) {
-      job.status = "waiting";
-      job.failedReason = undefined;
-      job.attempts = 0;
-      this.jobs.set(job.id as string, job);
+      job.status = 'waiting'
+      delete job.failedReason
+      job.attempts = 0
+      this.jobs.set(job.id as string, job)
     }
 
-    const remaining = limit !== undefined ? dead.slice(limit) : [];
-    this.dlq.set(name, remaining);
+    const remaining = limit !== undefined ? dead.slice(limit) : []
+    this.dlq.set(name, remaining)
   }
 
   /**
@@ -473,29 +436,29 @@ export class InMemoryQueue implements Queue {
    * @param ctx - SystemContext to pass to the handler
    */
   async _runJob(id: ID, ctx: SystemContext): Promise<void> {
-    const job = this.jobs.get(id as string);
-    if (!job) throw new Error(`Job ${id} not found`);
+    const job = this.jobs.get(id as string)
+    if (!job) throw new Error(`Job ${id} not found`)
 
-    const entry = this.handlers.get(job.name);
-    if (!entry) throw new Error(`No handler for job type '${job.name}'`);
+    const entry = this.handlers.get(job.name)
+    if (!entry) throw new Error(`No handler for job type '${job.name}'`)
 
-    job.status = "active";
-    job.processedAt = Date.now();
-    job.attempts += 1;
+    job.status = 'active'
+    job.processedAt = Date.now()
+    job.attempts += 1
 
     try {
-      await entry.handler(job, ctx);
-      job.status = "completed";
-      job.completedAt = Date.now();
+      await entry.handler(job, ctx)
+      job.status = 'completed'
+      job.completedAt = Date.now()
     } catch (err) {
-      job.status = "failed";
-      job.failedReason = String(err);
-      job.completedAt = Date.now();
+      job.status = 'failed'
+      job.failedReason = String(err)
+      job.completedAt = Date.now()
 
       // Move to DLQ
-      const dead = this.dlq.get(job.name) ?? [];
-      dead.push(job);
-      this.dlq.set(job.name, dead);
+      const dead = this.dlq.get(job.name) ?? []
+      dead.push(job)
+      this.dlq.set(job.name, dead)
     }
   }
 }
@@ -512,66 +475,56 @@ export class InMemoryScheduler implements Scheduler {
   private jobs = new Map<
     string,
     {
-      cron: string;
-      handler: JobHandler;
-      opts?: SchedulerOptions;
-      status: "active" | "paused";
-      next: Timestamp;
+      cron: string
+      handler: JobHandler
+      opts?: SchedulerOptions
+      status: 'active' | 'paused'
+      next: Timestamp
     }
-  >();
+  >()
 
   private computeNext(_cron: string): Timestamp {
     // Minimal stub: returns 1 hour from now.
     // Real implementations use a cron parser (e.g. croner, cron-parser).
-    return Date.now() + 3_600_000;
+    return Date.now() + 3_600_000
   }
 
-  define(
-    name: string,
-    cron: string,
-    handler: JobHandler,
-    opts?: SchedulerOptions,
-  ): void {
+  define(name: string, cron: string, handler: JobHandler, opts?: SchedulerOptions): void {
     this.jobs.set(name, {
       cron,
       handler,
-      opts,
-      status: "active",
+      ...(opts !== undefined && { opts }),
+      status: 'active',
       next: this.computeNext(cron),
-    });
+    })
   }
 
-  runOnce(
-    name: string,
-    at: Date | Timestamp,
-    payload: unknown,
-    handler: JobHandler,
-  ): void {
-    const next = at instanceof Date ? at.getTime() : at;
+  runOnce(name: string, at: Date | Timestamp, payload: unknown, handler: JobHandler): void {
+    const next = at instanceof Date ? at.getTime() : at
     this.jobs.set(name, {
-      cron: "@once",
+      cron: '@once',
       handler,
-      status: "active",
+      status: 'active',
       next,
-    });
+    })
     // Attach payload for test introspection
-    (this.jobs.get(name) as Record<string, unknown>).payload = payload;
+    ;(this.jobs.get(name) as Record<string, unknown>).payload = payload
   }
 
   cancel(name: string): void {
-    this.jobs.delete(name);
+    this.jobs.delete(name)
   }
 
   pause(name: string): void {
-    const entry = this.jobs.get(name);
-    if (entry) entry.status = "paused";
+    const entry = this.jobs.get(name)
+    if (entry) entry.status = 'paused'
   }
 
   resume(name: string): void {
-    const entry = this.jobs.get(name);
+    const entry = this.jobs.get(name)
     if (entry) {
-      entry.status = "active";
-      entry.next = this.computeNext(entry.cron);
+      entry.status = 'active'
+      entry.next = this.computeNext(entry.cron)
     }
   }
 
@@ -581,12 +534,12 @@ export class InMemoryScheduler implements Scheduler {
       cron: entry.cron,
       next: entry.next,
       status: entry.status,
-    }));
+    }))
   }
 
   getNext(name: string): Timestamp | null {
-    const entry = this.jobs.get(name);
-    return entry?.next ?? null;
+    const entry = this.jobs.get(name)
+    return entry?.next ?? null
   }
 }
 
@@ -599,9 +552,9 @@ export class InMemoryScheduler implements Scheduler {
  * This alias exists to avoid breaking the core barrel export.
  */
 export interface BulkJob<T = unknown> {
-  name: string;
-  data: T;
-  opts?: JobOptions;
+  name: string
+  data: T
+  opts?: JobOptions
 }
 
 /**
@@ -609,14 +562,14 @@ export interface BulkJob<T = unknown> {
  * Kept so core/index.ts barrel re-exports compile.
  */
 export interface Worker {
-  run(): Promise<void>;
-  stop(): Promise<void>;
+  run(): Promise<void>
+  stop(): Promise<void>
   on(
-    event: "completed" | "failed" | "progress",
+    event: 'completed' | 'failed' | 'progress',
     handler: (job: Job, result?: unknown) => void,
-  ): void;
+  ): void
   off(
-    event: "completed" | "failed" | "progress",
+    event: 'completed' | 'failed' | 'progress',
     handler: (job: Job, result?: unknown) => void,
-  ): void;
+  ): void
 }

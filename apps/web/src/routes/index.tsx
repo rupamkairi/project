@@ -1,12 +1,12 @@
-import { createRoute } from "@tanstack/react-router";
-import { ComposeDashboard } from "@projectx/ui";
-import { dashboardSections, sharedRootRoute } from "@projectx/shared-router";
+import { createRoute } from '@tanstack/react-router'
+import { ComposeDashboard } from '@projectx/ui'
+import { dashboardSections, sharedRootRoute } from '@projectx/shared-router'
 
 export const Route = createRoute({
   getParentRoute: () => sharedRootRoute,
-  path: "/",
+  path: '/',
   component: HomePage,
-});
+})
 
 function HomePage() {
   return (
@@ -15,5 +15,5 @@ function HomePage() {
       description="Pick a compose. Cards are grouped by family so the shell stays uniform across routes."
       sections={dashboardSections}
     />
-  );
+  )
 }

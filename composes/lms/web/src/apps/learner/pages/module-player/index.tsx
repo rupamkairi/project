@@ -1,31 +1,31 @@
-import { useParams } from "@tanstack/react-router"
-import { useQuery } from "@tanstack/react-query"
-import { lmsApi } from "../../../../api/lms-client"
-import { cn } from "@projectx/ui"
-import { ModuleIcon } from "../../../../components/shared/ModuleIcon"
-import { QuizModule } from "./QuizModule"
+import { useParams } from '@tanstack/react-router'
+import { useQuery } from '@tanstack/react-query'
+import { lmsApi } from '../../../../api/lms-client'
+import { cn } from '@projectx/ui'
+import { ModuleIcon } from '../../../../components/shared/ModuleIcon'
+import { QuizModule } from './QuizModule'
 
 const typeIcon: Record<string, string> = {
-  video: "▶",
-  article: "📄",
-  quiz: "✏",
-  assignment: "📋",
-  "live-session": "🎥",
-  download: "⬇",
+  video: '▶',
+  article: '📄',
+  quiz: '✏',
+  assignment: '📋',
+  'live-session': '🎥',
+  download: '⬇',
 }
 
 export function ModulePlayerPage() {
   const { slug, moduleId } = useParams({
-    from: "/lms/learn/courses/$slug/modules/$moduleId",
+    from: '/lms/learn/courses/$slug/modules/$moduleId',
   })
 
   const { data: module } = useQuery({
-    queryKey: ["module", slug, moduleId],
+    queryKey: ['module', slug, moduleId],
     queryFn: () => lmsApi.get<any>(`/courses/${slug}/modules/${moduleId}`),
   })
 
   const { data: course } = useQuery({
-    queryKey: ["course", slug],
+    queryKey: ['course', slug],
     queryFn: () => lmsApi.get<any>(`/courses/${slug}`),
   })
 
@@ -37,7 +37,7 @@ export function ModulePlayerPage() {
       <aside className="w-64 border-r overflow-y-auto shrink-0 bg-muted/20">
         <div className="p-3">
           <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
-            {course?.title ?? "Course"}
+            {course?.title ?? 'Course'}
           </h3>
           <div className="space-y-1">
             {modules.map((m: any, i: number) => {
@@ -50,15 +50,15 @@ export function ModulePlayerPage() {
                   key={m.id}
                   href={`/lms/learn/courses/${slug}/modules/${m.id}`}
                   className={cn(
-                    "flex items-center gap-2 px-2 py-1.5 rounded text-xs transition-colors",
+                    'flex items-center gap-2 px-2 py-1.5 rounded text-xs transition-colors',
                     isCurrent
-                      ? "bg-primary/10 text-primary font-medium"
-                      : "hover:bg-muted text-muted-foreground",
-                    isLocked && "opacity-50 pointer-events-none",
+                      ? 'bg-primary/10 text-primary font-medium'
+                      : 'hover:bg-muted text-muted-foreground',
+                    isLocked && 'opacity-50 pointer-events-none',
                   )}
                 >
                   <span className="shrink-0 w-4 text-center">
-                    {isCompleted ? "✓" : isLocked ? "🔒" : typeIcon[m.type] ?? "📄"}
+                    {isCompleted ? '✓' : isLocked ? '🔒' : (typeIcon[m.type] ?? '📄')}
                   </span>
                   <span className="truncate flex-1">{m.title}</span>
                   {m.estimatedMinutes && (
@@ -90,34 +90,32 @@ export function ModulePlayerPage() {
           <h1 className="text-xl font-semibold mb-6">{module?.title}</h1>
 
           {module?.description && (
-            <p className="text-sm text-muted-foreground mb-6">
-              {module.description}
-            </p>
+            <p className="text-sm text-muted-foreground mb-6">{module.description}</p>
           )}
 
-          {module?.type === "video" && module?.contentUrl && (
+          {module?.type === 'video' && module?.contentUrl && (
             <div className="aspect-video bg-muted rounded-lg overflow-hidden mb-6">
               <video src={module.contentUrl} controls className="w-full h-full" />
             </div>
           )}
 
-          {module?.type === "article" && module?.contentBody && (
+          {module?.type === 'article' && module?.contentBody && (
             <div
               className="prose prose-sm max-w-none mb-6"
               dangerouslySetInnerHTML={{ __html: module.contentBody }}
             />
           )}
 
-          {module?.type === "quiz" && (
+          {module?.type === 'quiz' && (
             <QuizModule
               moduleId={moduleId}
-              enrollmentId={""} // Will be resolved from enrollment store
+              enrollmentId={''} // Will be resolved from enrollment store
               attemptsUsed={module?.quizAttempts ?? 0}
               maxAttempts={3}
             />
           )}
 
-          {module?.type === "download" && module?.contentUrl && (
+          {module?.type === 'download' && module?.contentUrl && (
             <a
               href={module.contentUrl}
               download

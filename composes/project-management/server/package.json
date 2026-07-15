@@ -1,0 +1,29 @@
+{
+  "name": "@projectx/project-management-server",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "Project Management Compose Server — portfolios, projects, work items, sprints, boards, PSA, reports",
+  "exports": {
+    ".": "./src/index.ts",
+    "./db/schema/project-management": "./src/db/schema/project-management.ts",
+    "./db/seed/project-management": "./src/db/seed/project-management.ts"
+  },
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist node_modules",
+    "lint": "eslint .",
+    "format:check": "prettier --check .",
+    "format:write": "prettier --write ."
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.45.1",
+    "elysia": "^1.4.25"
+  },
+  "devDependencies": {
+    "@projectx/config": "workspace:*",
+    "@types/bun": "^1.3.9",
+    "typescript": "^5.3.3"
+  }
+}

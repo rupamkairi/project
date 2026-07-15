@@ -1,2 +1,2 @@
 // Queue infrastructure exports
-export * from "./client";
+export * from './client'

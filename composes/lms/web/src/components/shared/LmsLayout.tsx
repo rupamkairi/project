@@ -1,4 +1,4 @@
-import { Outlet } from "@tanstack/react-router"
+import { Outlet } from '@tanstack/react-router'
 import {
   NavBar,
   Avatar,
@@ -8,8 +8,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-} from "@projectx/ui"
-import type { NavBarItem } from "@projectx/ui"
+} from '@projectx/ui'
+import type { NavBarItem } from '@projectx/ui'
 import {
   LayoutDashboard,
   BookOpen,
@@ -22,50 +22,51 @@ import {
   Tag,
   Settings,
   LogOut,
-} from "lucide-react"
-import { useNavigate } from "@tanstack/react-router"
-import { useLmsAuthStore } from "../../stores/auth-store"
+} from 'lucide-react'
+import { useNavigate } from '@tanstack/react-router'
+import { useAuthStore } from '@projectx/plugin-auth-web'
+import { useLmsAuthStore } from '../../stores/auth-store'
 
 const NAV_ITEMS: Record<string, NavBarItem[]> = {
   learner: [
-    { label: "Dashboard", href: "/lms/learn/dashboard", icon: LayoutDashboard },
-    { label: "Catalog", href: "/lms/learn/catalog", icon: Compass },
-    { label: "Certificates", href: "/lms/learn/certificates", icon: Award },
+    { label: 'Dashboard', href: '/lms/learn/dashboard', icon: LayoutDashboard },
+    { label: 'Catalog', href: '/lms/learn/catalog', icon: Compass },
+    { label: 'Certificates', href: '/lms/learn/certificates', icon: Award },
   ],
   instructor: [
-    { label: "Dashboard", href: "/lms/teach/dashboard", icon: LayoutDashboard },
-    { label: "My Courses", href: "/lms/teach/courses", icon: BookOpen },
-    { label: "Analytics", href: "/lms/teach/analytics", icon: BarChart3 },
+    { label: 'Dashboard', href: '/lms/teach/dashboard', icon: LayoutDashboard },
+    { label: 'My Courses', href: '/lms/teach/courses', icon: BookOpen },
+    { label: 'Analytics', href: '/lms/teach/analytics', icon: BarChart3 },
   ],
   admin: [
-    { label: "Dashboard", href: "/lms/admin/dashboard", icon: LayoutDashboard },
-    { label: "Courses", href: "/lms/admin/courses", icon: BookOpen },
-    { label: "Enrollments", href: "/lms/admin/enrollments", icon: Users },
-    { label: "Instructors", href: "/lms/admin/instructors", icon: UserCheck },
-    { label: "Analytics", href: "/lms/admin/analytics", icon: BarChart3 },
-    { label: "Coupons", href: "/lms/admin/coupons", icon: Tag },
-    { label: "Settings", href: "/lms/admin/config", icon: Settings },
+    { label: 'Dashboard', href: '/lms/admin/dashboard', icon: LayoutDashboard },
+    { label: 'Courses', href: '/lms/admin/courses', icon: BookOpen },
+    { label: 'Enrollments', href: '/lms/admin/enrollments', icon: Users },
+    { label: 'Instructors', href: '/lms/admin/instructors', icon: UserCheck },
+    { label: 'Analytics', href: '/lms/admin/analytics', icon: BarChart3 },
+    { label: 'Coupons', href: '/lms/admin/coupons', icon: Tag },
+    { label: 'Settings', href: '/lms/admin/config', icon: Settings },
   ],
 }
 
 const APP_BACK_LINKS: Record<string, NavBarItem> = {
-  learner: { label: "Back to Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  instructor: { label: "Back to Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  admin: { label: "Back to Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  learner: { label: 'Back to Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  instructor: { label: 'Back to Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  admin: { label: 'Back to Dashboard', href: '/dashboard', icon: LayoutDashboard },
 }
 
 function UserMenu() {
   const navigate = useNavigate()
   const { actor, clear } = useLmsAuthStore()
+  const logout = useAuthStore((state) => state.logout)
 
-  const initials =
-    [actor?.name?.[0]].filter(Boolean).join("").toUpperCase() || "?"
-  const fullName = actor?.name || "User"
+  const initials = [actor?.name?.[0]].filter(Boolean).join('').toUpperCase() || '?'
+  const fullName = actor?.name || 'User'
 
-  const handleLogout = () => {
-    localStorage.removeItem("platform_token")
+  const handleLogout = async () => {
+    await logout()
     clear()
-    navigate({ to: "/login" })
+    navigate({ to: '/login' })
   }
 
   return (
@@ -88,13 +89,13 @@ function UserMenu() {
             <DropdownMenuSeparator />
           </>
         )}
-        <DropdownMenuItem onClick={() => navigate({ to: "/dashboard" })}>
+        <DropdownMenuItem onClick={() => navigate({ to: '/dashboard' })}>
           <LayoutDashboard className="h-4 w-4 mr-2" />
           Main Dashboard
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          onClick={handleLogout}
+          onClick={() => void handleLogout()}
           className="text-destructive focus:text-destructive"
         >
           <LogOut className="h-4 w-4 mr-2" />
@@ -106,12 +107,12 @@ function UserMenu() {
 }
 
 interface LmsLayoutProps {
-  app: "learner" | "instructor" | "admin"
+  app: 'learner' | 'instructor' | 'admin'
 }
 
 export function LmsLayout({ app }: LmsLayoutProps) {
   const items = NAV_ITEMS[app] ?? []
-  const backLink = APP_BACK_LINKS[app]
+  const backLink = APP_BACK_LINKS[app]!
 
   return (
     <div className="flex flex-col min-h-screen bg-background">

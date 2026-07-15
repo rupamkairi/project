@@ -1,18 +1,27 @@
-import { useState } from "react"
-import { useQuery } from "@tanstack/react-query"
-import { lmsApi } from "../../../../api/lms-client"
-import { Card, CardHeader, CardTitle, CardContent, DataTable, Button, Input, Label } from "@projectx/ui"
-import { AmountDisplay } from "../../../../components/shared/AmountDisplay"
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { lmsApi } from '../../../../api/lms-client'
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  DataTable,
+  Button,
+  Input,
+  Label,
+} from '@projectx/ui'
+import { AmountDisplay } from '../../../../components/shared/AmountDisplay'
 
 export function LmsRevenueReportPage() {
   const today = new Date()
   const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
 
-  const [dateFrom, setDateFrom] = useState(startOfMonth.toISOString().split("T")[0])
-  const [dateTo, setDateTo] = useState(today.toISOString().split("T")[0])
+  const [dateFrom, setDateFrom] = useState(startOfMonth.toISOString().split('T')[0])
+  const [dateTo, setDateTo] = useState(today.toISOString().split('T')[0])
 
   const { data } = useQuery({
-    queryKey: ["lms-revenue", dateFrom, dateTo],
+    queryKey: ['lms-revenue', dateFrom, dateTo],
     queryFn: () =>
       lmsApi.get<any>(
         `/admin/analytics/revenue?dateFrom=${dateFrom}&dateTo=${dateTo}&granularity=day`,
@@ -20,31 +29,31 @@ export function LmsRevenueReportPage() {
   })
 
   const revenueColumns = [
-    { accessorKey: "title", header: "Course" },
-    { accessorKey: "enrollments", header: "Enrollments" },
+    { accessorKey: 'title', header: 'Course' },
+    { accessorKey: 'enrollments', header: 'Enrollments' },
     {
-      accessorKey: "gross",
-      header: "Gross",
+      accessorKey: 'gross',
+      header: 'Gross',
       cell: ({ row }: any) => <AmountDisplay amount={row.original.gross} />,
     },
     {
-      accessorKey: "refunds",
-      header: "Refunds",
+      accessorKey: 'refunds',
+      header: 'Refunds',
       cell: ({ row }: any) => <AmountDisplay amount={row.original.refunds} />,
     },
     {
-      accessorKey: "net",
-      header: "Net",
+      accessorKey: 'net',
+      header: 'Net',
       cell: ({ row }: any) => <AmountDisplay amount={row.original.net} />,
     },
   ]
 
   const couponColumns = [
-    { accessorKey: "code", header: "Code" },
-    { accessorKey: "usedCount", header: "Uses" },
+    { accessorKey: 'code', header: 'Code' },
+    { accessorKey: 'usedCount', header: 'Uses' },
     {
-      accessorKey: "discountTotal",
-      header: "Discount Given",
+      accessorKey: 'discountTotal',
+      header: 'Discount Given',
       cell: ({ row }: any) => <AmountDisplay amount={row.original.discountTotal} />,
     },
   ]
@@ -53,9 +62,7 @@ export function LmsRevenueReportPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-semibold">Revenue Reports</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Track course revenue and coupon usage
-        </p>
+        <p className="text-sm text-muted-foreground mt-1">Track course revenue and coupon usage</p>
       </div>
 
       <div className="flex items-center gap-3">

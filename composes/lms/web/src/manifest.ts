@@ -1,19 +1,19 @@
-import type { ComposeManifest } from "@projectx/shared-router";
+import type { ComposeManifest } from '@projectx/shared-router'
 
 function ManifestIcon(_props: { className?: string }) {
-  return null;
+  return null
 }
 
 export const lmsManifest: ComposeManifest = {
-  id: "lms",
-  label: "LMS",
+  id: 'lms',
+  label: 'LMS',
   icon: ManifestIcon,
-  prefix: "/lms",
+  prefix: '/lms',
   navItems: [
-    { label: "Learner", path: "/lms/learn/dashboard", icon: ManifestIcon },
-    { label: "Instructor", path: "/lms/teach/dashboard", icon: ManifestIcon },
-    { label: "Admin", path: "/lms/admin/dashboard", icon: ManifestIcon },
-    { label: "Verify Certificate", path: "/lms/verify/$code", icon: ManifestIcon },
+    { label: 'Learner', path: '/lms/learn/dashboard', icon: ManifestIcon },
+    { label: 'Instructor', path: '/lms/teach/dashboard', icon: ManifestIcon },
+    { label: 'Admin', path: '/lms/admin/dashboard', icon: ManifestIcon },
+    { label: 'Verify Certificate', path: '/lms/verify/$code', icon: ManifestIcon },
   ],
-  description: "Learning management",
-};
+  description: 'Learning management',
+}

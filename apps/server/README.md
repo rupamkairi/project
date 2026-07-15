@@ -20,11 +20,13 @@ bun run worker:dev # start queue worker
 ## Architecture
 
 This app is a **shell**. All feature logic lives in:
+
 - `src/core/` — primitives (entity, event, CQRS, FSM, repository, queue...)
 - `src/modules/` — domain modules (identity, catalog, ledger, workflow...)
 - `composes/{name}/server/` — compose plugins mounted here
 
 Read before working here:
+
 - [docs/README.md](../../docs/README.md) — repository orientation
 - [docs/architecture.md](../../docs/architecture.md) — live runtime map
 - [docs/development.md](../../docs/development.md) — Bun, database, and API artifact commands

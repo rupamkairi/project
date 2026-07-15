@@ -1,8 +1,7 @@
-import { createRoute } from "@tanstack/react-router"
-import { Outlet, useNavigate } from "@tanstack/react-router"
-import { useAuthStore } from "../stores/auth"
-import { AuthGuard } from "../components/auth-guard"
-import { sharedRootRoute } from "@projectx/shared-router"
+import { createRoute } from '@tanstack/react-router'
+import { Outlet, useNavigate } from '@tanstack/react-router'
+import { useAuthStore, AuthGuard, requireAuth } from '@projectx/plugin-auth-web'
+import { sharedRootRoute } from '@projectx/shared-router'
 import {
   NavBar,
   Avatar,
@@ -12,8 +11,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-} from "@projectx/ui"
-import type { NavBarItem } from "@projectx/ui"
+} from '@projectx/ui'
+import type { NavBarItem } from '@projectx/ui'
 import {
   LayoutDashboard,
   Gauge,
@@ -28,17 +27,14 @@ import {
   Bell,
   FolderOpen,
   LogOut,
-} from "lucide-react"
-import { platformNavItems } from "@projectx/shared-router"
+} from 'lucide-react'
+import { platformNavItems } from '@projectx/shared-router'
 
 export const Route = createRoute({
   getParentRoute: () => sharedRootRoute,
-  path: "/dashboard",
+  path: '/dashboard',
   beforeLoad: () => {
-    const { isAuthenticated, isLoading } = useAuthStore.getState()
-    if (!isLoading && !isAuthenticated) {
-      throw new Error("UNAUTHENTICATED")
-    }
+    requireAuth()
   },
   component: DashboardLayout,
 })
@@ -51,30 +47,22 @@ function UserMenu() {
 
   const handleLogout = async () => {
     await logout()
-    navigate({ to: "/login" })
+    navigate({ to: '/login' })
   }
 
   const initials =
-    [actor?.firstName?.[0], actor?.lastName?.[0]]
-      .filter(Boolean)
-      .join("")
-      .toUpperCase() || "?"
+    [actor?.firstName?.[0], actor?.lastName?.[0]].filter(Boolean).join('').toUpperCase() || '?'
 
-  const fullName =
-    [actor?.firstName, actor?.lastName].filter(Boolean).join(" ") || "User"
+  const fullName = [actor?.firstName, actor?.lastName].filter(Boolean).join(' ') || 'User'
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-accent outline-none">
           <Avatar className="h-7 w-7 shrink-0">
-            <AvatarFallback className="text-xs">
-              {initials}
-            </AvatarFallback>
+            <AvatarFallback className="text-xs">{initials}</AvatarFallback>
           </Avatar>
-          <span className="hidden sm:block text-sm font-medium text-foreground">
-            {fullName}
-          </span>
+          <span className="hidden sm:block text-sm font-medium text-foreground">{fullName}</span>
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
@@ -99,10 +87,7 @@ function DashboardLayout() {
   return (
     <AuthGuard>
       <div className="flex flex-col min-h-screen bg-background">
-        <NavBar
-          items={NAV_ITEMS}
-          actions={<UserMenu />}
-        />
+        <NavBar items={NAV_ITEMS} actions={<UserMenu />} />
         <main className="flex-1">
           <Outlet />
         </main>

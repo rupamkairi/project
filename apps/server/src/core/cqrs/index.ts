@@ -7,10 +7,10 @@
  * @packageDocumentation
  */
 
-import type { ID } from "../entity";
-import { generateId } from "../entity";
-import type { SystemContext, Logger } from "../context";
-import { AuthorizationError, ValidationError } from "../errors";
+import type { ID } from '../entity'
+import { generateId } from '../entity'
+import type { SystemContext, Logger } from '../context'
+import { AuthorizationError, ValidationError } from '../errors'
 
 /**
  * Command interface for write operations.
@@ -34,37 +34,37 @@ export interface Command<T = unknown> {
   /**
    * Command type (e.g., "user.create", "order.submit")
    */
-  type: string;
+  type: string
 
   /**
    * Command payload containing operation data
    */
-  payload: T;
+  payload: T
 
   /**
    * ID of the actor issuing the command
    */
-  actorId: ID;
+  actorId: ID
 
   /**
    * Organization ID for multi-tenancy
    */
-  orgId: ID;
+  orgId: ID
 
   /**
    * Correlation ID for tracing command chains
    */
-  correlationId: ID;
+  correlationId: ID
 
   /**
    * ID of the causing event (for event-driven commands)
    */
-  causedBy?: ID;
+  causedBy?: ID
 
   /**
    * Idempotency key for duplicate detection
    */
-  idempotencyKey?: string;
+  idempotencyKey?: string
 }
 
 /**
@@ -88,22 +88,22 @@ export interface Query<T = unknown> {
   /**
    * Query type (e.g., "user.get", "order.list")
    */
-  type: string;
+  type: string
 
   /**
    * Query parameters
    */
-  params: T;
+  params: T
 
   /**
    * ID of the actor issuing the query
    */
-  actorId: ID;
+  actorId: ID
 
   /**
    * Organization ID for multi-tenancy
    */
-  orgId: ID;
+  orgId: ID
 }
 
 /**
@@ -121,7 +121,7 @@ export interface Query<T = unknown> {
 export type CommandHandler<TPayload = unknown, TResult = unknown> = (
   command: Command<TPayload>,
   context: SystemContext,
-) => Promise<TResult>;
+) => Promise<TResult>
 
 /**
  * Query handler function signature.
@@ -134,14 +134,14 @@ export type CommandHandler<TPayload = unknown, TResult = unknown> = (
 export type QueryHandler<TPayload = unknown, TResult = unknown> = (
   query: Query<TPayload>,
   context: SystemContext,
-) => Promise<TResult>;
+) => Promise<TResult>
 
 /**
  * Re-export SystemContext so that existing imports of
  * `SystemContext` from "../cqrs" continue to resolve.
  * The canonical definition lives in ../context.
  */
-export type { SystemContext } from "../context";
+export type { SystemContext } from '../context'
 
 /**
  * Mediator middleware function signature.
@@ -165,7 +165,7 @@ export type MediatorMiddleware = (
   request: Command | Query,
   ctx: SystemContext,
   next: () => Promise<unknown>,
-) => Promise<unknown>;
+) => Promise<unknown>
 
 /**
  * Mediator interface for dispatching commands and queries.
@@ -206,7 +206,7 @@ export interface Mediator {
    * @param cmd - Command to dispatch
    * @returns Handler result
    */
-  dispatch<R = unknown>(cmd: Command): Promise<R>;
+  dispatch<R = unknown>(cmd: Command): Promise<R>
 
   /**
    * Sends a query to its handler.
@@ -215,7 +215,7 @@ export interface Mediator {
    * @param q - Query to send
    * @returns Handler result
    */
-  query<R = unknown>(q: Query): Promise<R>;
+  query<R = unknown>(q: Query): Promise<R>
 
   /**
    * Registers a command handler.
@@ -223,7 +223,7 @@ export interface Mediator {
    * @param type - Command type
    * @param handler - Handler function
    */
-  registerCommand(type: string, handler: CommandHandler<any>): void;
+  registerCommand(type: string, handler: CommandHandler<any>): void
 
   /**
    * Registers a query handler.
@@ -231,14 +231,14 @@ export interface Mediator {
    * @param type - Query type
    * @param handler - Handler function
    */
-  registerQuery(type: string, handler: QueryHandler<any>): void;
+  registerQuery(type: string, handler: QueryHandler<any>): void
 
   /**
    * Adds middleware to the execution pipeline.
    *
    * @param middleware - Middleware function
    */
-  use(middleware: MediatorMiddleware): void;
+  use(middleware: MediatorMiddleware): void
 }
 
 // ---------------------------------------------------------------------------
@@ -265,21 +265,18 @@ export interface Mediator {
  * @category Core
  */
 export function AuthorizationMiddleware(
-  check: (
-    req: Command | Query,
-    ctx: SystemContext,
-  ) => boolean | Promise<boolean>,
+  check: (req: Command | Query, ctx: SystemContext) => boolean | Promise<boolean>,
 ): MediatorMiddleware {
   return async (request, ctx, next) => {
-    const allowed = await check(request, ctx);
+    const allowed = await check(request, ctx)
     if (!allowed) {
-      throw new AuthorizationError(
-        `Authorization denied for ${request.type}`,
-        { type: request.type, actorId: request.actorId },
-      );
+      throw new AuthorizationError(`Authorization denied for ${request.type}`, {
+        type: request.type,
+        actorId: request.actorId,
+      })
     }
-    return next();
-  };
+    return next()
+  }
 }
 
 /**
@@ -312,16 +309,14 @@ export function ValidationMiddleware(
     | Promise<Array<{ field: string; message: string }>>,
 ): MediatorMiddleware {
   return async (request, _ctx, next) => {
-    const failures = await validator(request);
+    const failures = await validator(request)
     if (failures.length > 0) {
-      throw new ValidationError(
-        `Validation failed for ${request.type}`,
-        failures,
-        { type: request.type },
-      );
+      throw new ValidationError(`Validation failed for ${request.type}`, failures, {
+        type: request.type,
+      })
     }
-    return next();
-  };
+    return next()
+  }
 }
 
 /**
@@ -342,36 +337,39 @@ export function ValidationMiddleware(
  * @category Core
  */
 export function IdempotencyMiddleware(opts?: { ttl?: number }): MediatorMiddleware {
-  const ttl = opts?.ttl ?? 24 * 60 * 60 * 1000; // default 24 h
-  const cache = new Map<string, { result: unknown; expiresAt: number }>();
+  const ttl = opts?.ttl ?? 24 * 60 * 60 * 1000 // default 24 h
+  const cache = new Map<string, { result: unknown; expiresAt: number }>()
 
   // Periodic cleanup — runs in the background every hour
-  setInterval(() => {
-    const now = Date.now();
-    for (const [key, entry] of cache) {
-      if (entry.expiresAt < now) {
-        cache.delete(key);
+  setInterval(
+    () => {
+      const now = Date.now()
+      for (const [key, entry] of cache) {
+        if (entry.expiresAt < now) {
+          cache.delete(key)
+        }
       }
-    }
-  }, 60 * 60 * 1000);
+    },
+    60 * 60 * 1000,
+  )
 
   return async (request, _ctx, next) => {
     // Only Commands can carry an idempotency key
-    const cmd = request as Command;
+    const cmd = request as Command
     if (!cmd.idempotencyKey) {
-      return next();
+      return next()
     }
 
-    const key = `${cmd.type}:${cmd.idempotencyKey}`;
-    const entry = cache.get(key);
+    const key = `${cmd.type}:${cmd.idempotencyKey}`
+    const entry = cache.get(key)
     if (entry && entry.expiresAt > Date.now()) {
-      return entry.result;
+      return entry.result
     }
 
-    const result = await next();
-    cache.set(key, { result, expiresAt: Date.now() + ttl });
-    return result;
-  };
+    const result = await next()
+    cache.set(key, { result, expiresAt: Date.now() + ttl })
+    return result
+  }
 }
 
 /**
@@ -392,23 +390,23 @@ export function IdempotencyMiddleware(opts?: { ttl?: number }): MediatorMiddlewa
  */
 export function LoggingMiddleware(logger: Logger): MediatorMiddleware {
   return async (request, _ctx, next) => {
-    const start = Date.now();
+    const start = Date.now()
     try {
-      const result = await next();
+      const result = await next()
       logger.info(`[mediator] ${request.type} completed`, {
         type: request.type,
         durationMs: Date.now() - start,
-      });
-      return result;
+      })
+      return result
     } catch (err) {
       logger.error(`[mediator] ${request.type} failed`, {
         type: request.type,
         durationMs: Date.now() - start,
         error: err instanceof Error ? err.message : String(err),
-      });
-      throw err;
+      })
+      throw err
     }
-  };
+  }
 }
 
 /**
@@ -417,12 +415,12 @@ export function LoggingMiddleware(logger: Logger): MediatorMiddleware {
  * @internal
  */
 interface TraceSpan {
-  requestId: string;
-  correlationId: string | undefined;
-  type: string;
-  serviceName: string;
-  startedAt: number;
-  endedAt?: number;
+  requestId: string
+  correlationId: string | undefined
+  type: string
+  serviceName: string
+  startedAt: number
+  endedAt?: number
 }
 
 /**
@@ -432,7 +430,7 @@ interface TraceSpan {
  *
  * @category Core
  */
-export const tracingStore: TraceSpan[] = [];
+export const tracingStore: TraceSpan[] = []
 
 /**
  * Tracing middleware factory.
@@ -452,14 +450,12 @@ export const tracingStore: TraceSpan[] = [];
  * @category Core
  */
 export function TracingMiddleware(opts?: { serviceName?: string }): MediatorMiddleware {
-  const serviceName = opts?.serviceName ?? "server";
+  const serviceName = opts?.serviceName ?? 'server'
 
   return async (request, _ctx, next) => {
-    const requestId = generateId();
+    const requestId = generateId()
     const correlationId =
-      "correlationId" in request
-        ? (request as Command).correlationId
-        : undefined;
+      'correlationId' in request ? (request as Command).correlationId : undefined
 
     const span: TraceSpan = {
       requestId,
@@ -467,19 +463,19 @@ export function TracingMiddleware(opts?: { serviceName?: string }): MediatorMidd
       type: request.type,
       serviceName,
       startedAt: Date.now(),
-    };
+    }
 
-    tracingStore.push(span);
+    tracingStore.push(span)
 
     try {
-      const result = await next();
-      span.endedAt = Date.now();
-      return result;
+      const result = await next()
+      span.endedAt = Date.now()
+      return result
     } catch (err) {
-      span.endedAt = Date.now();
-      throw err;
+      span.endedAt = Date.now()
+      throw err
     }
-  };
+  }
 }
 
 /**
@@ -488,8 +484,8 @@ export function TracingMiddleware(opts?: { serviceName?: string }): MediatorMidd
  * @internal
  */
 interface RateLimitWindow {
-  count: number;
-  resetAt: number;
+  count: number
+  resetAt: number
 }
 
 /**
@@ -510,41 +506,35 @@ interface RateLimitWindow {
  *
  * @category Core
  */
-export function RateLimitMiddleware(opts: {
-  limit: number;
-  windowMs: number;
-}): MediatorMiddleware {
-  const { limit, windowMs } = opts;
+export function RateLimitMiddleware(opts: { limit: number; windowMs: number }): MediatorMiddleware {
+  const { limit, windowMs } = opts
   // Key: `actorId:type` → window entry
-  const windows = new Map<string, RateLimitWindow>();
+  const windows = new Map<string, RateLimitWindow>()
 
   return async (request, _ctx, next) => {
-    const key = `${request.actorId}:${request.type}`;
-    const now = Date.now();
+    const key = `${request.actorId}:${request.type}`
+    const now = Date.now()
 
-    let window = windows.get(key);
+    let window = windows.get(key)
     if (!window || window.resetAt <= now) {
-      window = { count: 0, resetAt: now + windowMs };
-      windows.set(key, window);
+      window = { count: 0, resetAt: now + windowMs }
+      windows.set(key, window)
     }
 
-    window.count += 1;
+    window.count += 1
 
     if (window.count > limit) {
-      throw new AuthorizationError(
-        `Rate limit exceeded for ${request.type}`,
-        {
-          type: request.type,
-          actorId: request.actorId,
-          limit,
-          windowMs,
-          resetAt: window.resetAt,
-        },
-      );
+      throw new AuthorizationError(`Rate limit exceeded for ${request.type}`, {
+        type: request.type,
+        actorId: request.actorId,
+        limit,
+        windowMs,
+        resetAt: window.resetAt,
+      })
     }
 
-    return next();
-  };
+    return next()
+  }
 }
 
 /**
@@ -559,7 +549,7 @@ export interface MediatorOptions {
    * Must be wired at module boot. If omitted, dispatch/query will throw a
    * clear error on the first call so mis-wiring fails loudly.
    */
-  contextFactory?: (request: Command | Query) => SystemContext;
+  contextFactory?: (request: Command | Query) => SystemContext
 }
 
 /**
@@ -580,9 +570,9 @@ export interface MediatorOptions {
  * @category Core
  */
 export function createMediator(options?: MediatorOptions): Mediator {
-  const commandHandlers = new Map<string, CommandHandler<any>>();
-  const queryHandlers = new Map<string, QueryHandler<any>>();
-  const middlewares: MediatorMiddleware[] = [];
+  const commandHandlers = new Map<string, CommandHandler<any>>()
+  const queryHandlers = new Map<string, QueryHandler<any>>()
+  const middlewares: MediatorMiddleware[] = []
 
   // Build middleware pipeline
   async function executeMiddleware(
@@ -592,60 +582,56 @@ export function createMediator(options?: MediatorOptions): Mediator {
   ): Promise<unknown> {
     if (index >= middlewares.length) {
       // Last middleware - execute handler
-      if ("type" in request && "payload" in request) {
+      if ('type' in request && 'payload' in request) {
         // It's a command
-        const handler = commandHandlers.get(request.type);
+        const handler = commandHandlers.get(request.type)
         if (!handler) {
-          throw new Error(`No handler registered for command: ${request.type}`);
+          throw new Error(`No handler registered for command: ${request.type}`)
         }
-        return handler(request, context);
+        return handler(request, context)
       } else {
         // It's a query
-        const handler = queryHandlers.get(request.type);
+        const handler = queryHandlers.get(request.type)
         if (!handler) {
-          throw new Error(`No handler registered for query: ${request.type}`);
+          throw new Error(`No handler registered for query: ${request.type}`)
         }
-        return handler(request, context);
+        return handler(request, context)
       }
     }
 
-    const middleware = middlewares[index];
+    const middleware = middlewares[index]
     if (!middleware) {
-      throw new Error(`Middleware at index ${index} not found`);
+      throw new Error(`Middleware at index ${index} not found`)
     }
-    return middleware(request, context, () =>
-      executeMiddleware(request, context, index + 1),
-    );
+    return middleware(request, context, () => executeMiddleware(request, context, index + 1))
   }
 
   function buildContext(request: Command | Query): SystemContext {
     if (!options?.contextFactory) {
-      throw new Error(
-        "Mediator: contextFactory not configured (wire it at module boot)",
-      );
+      throw new Error('Mediator: contextFactory not configured (wire it at module boot)')
     }
-    return options.contextFactory(request);
+    return options.contextFactory(request)
   }
 
   return {
     async dispatch<R = unknown>(cmd: Command): Promise<R> {
-      return executeMiddleware(cmd, buildContext(cmd), 0) as R;
+      return executeMiddleware(cmd, buildContext(cmd), 0) as R
     },
 
     async query<R = unknown>(q: Query): Promise<R> {
-      return executeMiddleware(q, buildContext(q), 0) as R;
+      return executeMiddleware(q, buildContext(q), 0) as R
     },
 
     registerCommand(type: string, handler: CommandHandler<any>): void {
-      commandHandlers.set(type, handler);
+      commandHandlers.set(type, handler)
     },
 
     registerQuery(type: string, handler: QueryHandler<any>): void {
-      queryHandlers.set(type, handler);
+      queryHandlers.set(type, handler)
     },
 
     use(middleware: MediatorMiddleware): void {
-      middlewares.push(middleware);
+      middlewares.push(middleware)
     },
-  };
+  }
 }

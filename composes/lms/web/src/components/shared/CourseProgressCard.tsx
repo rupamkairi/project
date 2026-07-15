@@ -1,18 +1,18 @@
-import { Card, CardContent, Progress, cn } from "@projectx/ui";
-import { useNavigate } from "@tanstack/react-router";
+import { Card, CardContent, Progress, cn } from '@projectx/ui'
+import { useNavigate } from '@tanstack/react-router'
 
 interface CourseProgressCardProps {
   enrollment: {
-    id: string;
-    courseSlug: string;
-    courseTitle: string;
-    completionPct: number;
-    thumbnailUrl?: string;
-  };
+    id: string
+    courseSlug: string
+    courseTitle: string
+    completionPct: number
+    thumbnailUrl?: string
+  }
 }
 
 export function CourseProgressCard({ enrollment }: CourseProgressCardProps) {
-  const navigate = useNavigate();
+  const navigate = useNavigate()
 
   return (
     <Card
@@ -22,11 +22,7 @@ export function CourseProgressCard({ enrollment }: CourseProgressCardProps) {
       <CardContent className="flex items-center gap-4 p-3">
         {enrollment.thumbnailUrl && (
           <div className="w-16 h-9 rounded overflow-hidden shrink-0 bg-muted">
-            <img
-              src={enrollment.thumbnailUrl}
-              alt=""
-              className="w-full h-full object-cover"
-            />
+            <img src={enrollment.thumbnailUrl} alt="" className="w-full h-full object-cover" />
           </div>
         )}
         <div className="flex-1 min-w-0">
@@ -40,5 +36,5 @@ export function CourseProgressCard({ enrollment }: CourseProgressCardProps) {
         </div>
       </CardContent>
     </Card>
-  );
+  )
 }

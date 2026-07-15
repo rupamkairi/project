@@ -17,6 +17,8 @@
       "@db/*": ["../../../apps/server/src/infra/db/*"],
       "@db/client": ["../../../apps/server/src/infra/db/client.ts"],
       "@db/schema/*": ["../../../apps/server/src/infra/db/schema/*"],
+      "drizzle-orm": ["../../../apps/server/node_modules/drizzle-orm"],
+      "drizzle-orm/*": ["../../../apps/server/node_modules/drizzle-orm/*"],
       "@projectx/plugin-auth-server": ["../../../plugins/auth/server/src/index.ts"],
       "@projectx/plugin-auth-server/*": ["../../../plugins/auth/server/src/*"]
     }

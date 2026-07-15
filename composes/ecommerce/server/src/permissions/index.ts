@@ -49,22 +49,22 @@ export const ECOMMERCE_PERMISSIONS = {
     account: { read: true, update: true },
     addresses: { create: true, read: true, update: true, delete: true },
   },
-} as const;
+} as const
 
-export type EcommerceRole = keyof typeof ECOMMERCE_PERMISSIONS;
-export type EcommerceResource = string;
-export type EcommerceAction = "create" | "read" | "update" | "delete";
+export type EcommerceRole = keyof typeof ECOMMERCE_PERMISSIONS
+export type EcommerceResource = string
+export type EcommerceAction = 'create' | 'read' | 'update' | 'delete'
 
 export function hasPermission(
   role: EcommerceRole,
   resource: EcommerceResource,
-  action: EcommerceAction
+  action: EcommerceAction,
 ): boolean {
-  const rolePermissions = ECOMMERCE_PERMISSIONS[role];
-  if (!rolePermissions) return false;
+  const rolePermissions = ECOMMERCE_PERMISSIONS[role]
+  if (!rolePermissions) return false
 
-  const resourcePermissions = (rolePermissions as Record<string, Record<string, boolean>>)[resource];
-  if (!resourcePermissions) return false;
+  const resourcePermissions = (rolePermissions as Record<string, Record<string, boolean>>)[resource]
+  if (!resourcePermissions) return false
 
-  return resourcePermissions[action] === true;
+  return resourcePermissions[action] === true
 }

@@ -1,4 +1,4 @@
-import { createRootRoute, Link, Outlet } from "@tanstack/react-router";
+import { createRootRoute, Link, Outlet } from '@tanstack/react-router'
 
 export const rootRouteLayout = () => (
   <div className="min-h-screen">
@@ -7,4 +7,4 @@ export const rootRouteLayout = () => (
       <Outlet />
     </main>
   </div>
-);
+)

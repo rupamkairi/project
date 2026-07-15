@@ -15,6 +15,7 @@
 
 # Code Style
 - Use TypeScript strict mode. No semicolons, single quotes, trailing commas (Prettier). kebab-case files, PascalCase components, camelCase functions/variables. Confidence: 1.0
+- Do not prefix filenames with compose name within a compose directory (e.g., hooks.ts not workplace.hooks.ts, jobs.ts not erp.jobs.ts). Confidence: 0.85
 - Use Bun test (not Jest/Vitest). Core tests must pass before changes to core. Confidence: 1.0
 - Docs are source of truth — when code and docs conflict, docs win. Plans go in plans/{task-slug}.{agent}.plan.md. Confidence: 1.0
 
@@ -24,3 +25,6 @@
 
 # Communication
 - Caveman mode: respond tersely, no filler words, all technical substance preserved. Confidence: 0.80
+
+# Workflow
+- After creating a new Compose, run these next steps: (1) generate DB migrations via `drizzle-kit generate`, (2) install packages with `bun install`, (3) run type-check with `tsc --noEmit`, (4) verify completeness against the compose plan file. Confidence: 0.70

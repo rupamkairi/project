@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react"
-import { useMutation } from "@tanstack/react-query"
-import { lmsApi } from "../../../../api/lms-client"
-import { Button, Input, Label, Switch } from "@projectx/ui"
-import { Loader2 } from "lucide-react"
+import { useState, useEffect } from 'react'
+import { useMutation } from '@tanstack/react-query'
+import { lmsApi } from '../../../../api/lms-client'
+import { Button, Input, Label, Switch } from '@projectx/ui'
+import { Loader2 } from 'lucide-react'
 
 interface Props {
   course: any
@@ -10,16 +10,16 @@ interface Props {
 }
 
 export function PricingForm({ course, courseId }: Props) {
-  const [price, setPrice] = useState("")
-  const [compareAtPrice, setCompareAtPrice] = useState("")
-  const [currency, setCurrency] = useState("USD")
+  const [price, setPrice] = useState('')
+  const [compareAtPrice, setCompareAtPrice] = useState('')
+  const [currency, setCurrency] = useState('USD')
   const [isFree, setIsFree] = useState(false)
 
   useEffect(() => {
     if (course) {
-      setPrice(course.price ?? "0")
-      setCompareAtPrice(course.compareAtPrice ?? "")
-      setCurrency(course.currency ?? "USD")
+      setPrice(course.price ?? '0')
+      setCompareAtPrice(course.compareAtPrice ?? '')
+      setCurrency(course.currency ?? 'USD')
       setIsFree(!course.price || parseFloat(course.price) === 0)
     }
   }, [course])
@@ -27,7 +27,7 @@ export function PricingForm({ course, courseId }: Props) {
   const update = useMutation({
     mutationFn: () =>
       lmsApi.patch(`/instructor/courses/${courseId}`, {
-        price: isFree ? "0" : price,
+        price: isFree ? '0' : price,
         compareAtPrice: compareAtPrice || undefined,
         currency,
       }),
@@ -91,7 +91,7 @@ export function PricingForm({ course, courseId }: Props) {
 
       {update.isSuccess && <p className="text-sm text-green-600">Pricing saved</p>}
       {update.isError && (
-        <p className="text-sm text-red-500">{(update.error as any)?.message ?? "Save failed"}</p>
+        <p className="text-sm text-red-500">{(update.error as any)?.message ?? 'Save failed'}</p>
       )}
 
       <Button type="submit" disabled={update.isPending}>
@@ -101,7 +101,7 @@ export function PricingForm({ course, courseId }: Props) {
             Saving...
           </>
         ) : (
-          "Save Pricing"
+          'Save Pricing'
         )}
       </Button>
     </form>

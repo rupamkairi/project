@@ -17,32 +17,32 @@ export interface Logger {
   /**
    * Logs a fatal error (application crash)
    */
-  fatal: (msg: string, meta?: Record<string, unknown>) => void;
+  fatal: (msg: string, meta?: Record<string, unknown>) => void
 
   /**
    * Logs an error (operation failed)
    */
-  error: (msg: string, meta?: Record<string, unknown>) => void;
+  error: (msg: string, meta?: Record<string, unknown>) => void
 
   /**
    * Logs a warning (potential issue)
    */
-  warn: (msg: string, meta?: Record<string, unknown>) => void;
+  warn: (msg: string, meta?: Record<string, unknown>) => void
 
   /**
    * Logs an info message (normal operation)
    */
-  info: (msg: string, meta?: Record<string, unknown>) => void;
+  info: (msg: string, meta?: Record<string, unknown>) => void
 
   /**
    * Logs a debug message (debugging info)
    */
-  debug: (msg: string, meta?: Record<string, unknown>) => void;
+  debug: (msg: string, meta?: Record<string, unknown>) => void
 
   /**
    * Logs a trace message (detailed debugging)
    */
-  trace: (msg: string, meta?: Record<string, unknown>) => void;
+  trace: (msg: string, meta?: Record<string, unknown>) => void
 
   /**
    * Creates a child logger with additional context.
@@ -50,5 +50,5 @@ export interface Logger {
    * @param bindings - Additional context to attach to logs
    * @returns Child logger instance
    */
-  child(bindings: Record<string, unknown>): Logger;
+  child(bindings: Record<string, unknown>): Logger
 }

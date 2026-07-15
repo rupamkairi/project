@@ -1,9 +1,10 @@
 import {
   Activity,
-  BookOpen,
+  Briefcase,
   Building2,
   FileText,
   Bell,
+  FolderKanban,
   GraduationCap,
   LayoutDashboard,
   Mail,
@@ -11,165 +12,119 @@ import {
   MapPin,
   Package,
   Receipt,
-  Settings,
   Shield,
   ShoppingBag,
-  Store,
   Users,
   UtensilsCrossed,
   type LucideIcon,
-} from "lucide-react";
+} from 'lucide-react'
 
 export interface DashboardCard {
-  title: string;
-  description: string;
-  href: string;
-  icon: LucideIcon;
-  count: number;
+  title: string
+  description: string
+  href: string
+  icon: LucideIcon
+  count: number
 }
 
 export interface DashboardSection {
-  title: string;
-  description?: string;
-  cards: DashboardCard[];
+  title: string
+  description?: string
+  cards: DashboardCard[]
+}
+
+/** The shell-owned registry for the one canonical entry point of each Compose. */
+export interface ComposeEntry extends DashboardCard {
+  id: string
 }
 
 export const platformNavItems = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, exact: true },
-  { label: "Overview", href: "/dashboard/overview", icon: Activity },
-  { label: "Persons", href: "/dashboard/persons", icon: Users },
-  { label: "Parties", href: "/dashboard/parties", icon: Building2 },
-  { label: "Locations", href: "/dashboard/locations", icon: MapPin },
-  { label: "Transactions", href: "/dashboard/transactions", icon: Receipt },
-  { label: "Pipelines", href: "/dashboard/pipelines", icon: GitBranch },
-  { label: "Activities", href: "/dashboard/activities", icon: Activity },
-  { label: "Users", href: "/dashboard/users", icon: Users },
-  { label: "Roles", href: "/dashboard/roles", icon: Shield },
-  { label: "Invites", href: "/dashboard/invites", icon: Mail },
-  { label: "Notifications", href: "/dashboard/notifications", icon: Bell },
-  { label: "Files", href: "/dashboard/files", icon: FileText },
-] as const;
+  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, exact: true },
+  { label: 'Overview', href: '/dashboard/overview', icon: Activity },
+  { label: 'Persons', href: '/dashboard/persons', icon: Users },
+  { label: 'Parties', href: '/dashboard/parties', icon: Building2 },
+  { label: 'Locations', href: '/dashboard/locations', icon: MapPin },
+  { label: 'Transactions', href: '/dashboard/transactions', icon: Receipt },
+  { label: 'Pipelines', href: '/dashboard/pipelines', icon: GitBranch },
+  { label: 'Activities', href: '/dashboard/activities', icon: Activity },
+  { label: 'Users', href: '/dashboard/users', icon: Users },
+  { label: 'Roles', href: '/dashboard/roles', icon: Shield },
+  { label: 'Invites', href: '/dashboard/invites', icon: Mail },
+  { label: 'Notifications', href: '/dashboard/notifications', icon: Bell },
+  { label: 'Files', href: '/dashboard/files', icon: FileText },
+] as const
 
-export const dashboardSections: DashboardSection[] = [
+// Internal Compose surfaces remain in their Compose navigation and are not
+// independently exposed by Home or Platform dashboard cards.
+export const composeEntries: readonly ComposeEntry[] = [
   {
-    title: "Platform",
-    cards: [
-      {
-        title: "Platform",
-        description: "Platform admin and shared utilities",
-        href: "/dashboard",
-        icon: LayoutDashboard,
-        count: 6,
-      },
-    ],
+    id: 'platform',
+    title: 'Platform',
+    description: 'Platform admin',
+    href: '/dashboard',
+    icon: LayoutDashboard,
+    count: 6,
   },
   {
-    title: "CRM",
-    cards: [
-      {
-        title: "CRM",
-        description: "Contacts, deals, leads, campaigns, and support tickets",
-        href: "/crm",
-        icon: Users,
-        count: 9,
-      },
-    ],
+    id: 'crm',
+    title: 'CRM',
+    description: 'Customer relationship management',
+    href: '/crm',
+    icon: Users,
+    count: 9,
   },
   {
-    title: "Ecommerce",
-    cards: [
-      {
-        title: "Ecommerce Admin",
-        description: "Store operations",
-        href: "/ecommerce/admin",
-        icon: ShoppingBag,
-        count: 9,
-      },
-      {
-        title: "Ecommerce Storefront",
-        description: "Customer storefront",
-        href: "/ecommerce/store",
-        icon: Store,
-        count: 6,
-      },
-    ],
+    id: 'ecommerce',
+    title: 'Ecommerce',
+    description: 'Store operations',
+    href: '/ecommerce',
+    icon: ShoppingBag,
+    count: 9,
+  },
+  { id: 'erp', title: 'ERP', description: 'ERP operations', href: '/erp', icon: Package, count: 7 },
+  {
+    id: 'lms',
+    title: 'Learning Management',
+    description: 'Learning management',
+    href: '/lms',
+    icon: GraduationCap,
+    count: 4,
   },
   {
-    title: "ERP",
-    cards: [
-      {
-        title: "ERP",
-        description: "ERP operations",
-        href: "/erp",
-        icon: Package,
-        count: 9,
-      },
-    ],
+    id: 'restaurant',
+    title: 'Restaurant Management',
+    description: 'Multi-outlet restaurant operations',
+    href: '/restaurants',
+    icon: UtensilsCrossed,
+    count: 5,
   },
   {
-    title: "Learning Management",
-    cards: [
-      {
-        title: "My Learning",
-        description: "Browse courses, track progress, and view certificates",
-        href: "/lms/learn/dashboard",
-        icon: GraduationCap,
-        count: 4,
-      },
-      {
-        title: "Teaching",
-        description: "Create and manage courses, view analytics",
-        href: "/lms/teach/dashboard",
-        icon: BookOpen,
-        count: 6,
-      },
-      {
-        title: "LMS Admin",
-        description: "Manage courses, enrollments, instructors, and settings",
-        href: "/lms/admin/dashboard",
-        icon: Settings,
-        count: 7,
-      },
-    ],
+    id: 'workplace',
+    title: 'Workplace',
+    description: 'Recruitment, HR, payroll, expenses, and office management',
+    href: '/workplace',
+    icon: Briefcase,
+    count: 12,
   },
   {
-    title: "Restaurant",
-    cards: [
-      {
-        title: "POS",
-        description: "Order entry and table service",
-        href: "/restaurants/pos/orders",
-        icon: Receipt,
-        count: 4,
-      },
-      {
-        title: "KDS",
-        description: "Kitchen display and ticket handling",
-        href: "/restaurants/kds",
-        icon: Activity,
-        count: 1,
-      },
-      {
-        title: "Delivery",
-        description: "Dispatch and rider operations",
-        href: "/restaurants/delivery/dispatch",
-        icon: Users,
-        count: 2,
-      },
-      {
-        title: "Customer",
-        description: "Customer menu, cart, and order tracking",
-        href: "/restaurants/customer/menu",
-        icon: Store,
-        count: 3,
-      },
-      {
-        title: "Admin",
-        description: "Restaurant operations and analytics",
-        href: "/restaurants/admin/dashboard",
-        icon: UtensilsCrossed,
-        count: 5,
-      },
-    ],
+    id: 'hospitality',
+    title: 'Hospitality Management',
+    description: 'Multi-property hospitality management',
+    href: '/hospitality',
+    icon: Building2,
+    count: 10,
   },
-];
+  {
+    id: 'project-management',
+    title: 'Project Management',
+    description: 'Portfolios, projects, work items, sprints, boards, and PSA',
+    href: '/projects',
+    icon: FolderKanban,
+    count: 5,
+  },
+]
+
+export const dashboardSections: DashboardSection[] = composeEntries.map((entry) => ({
+  title: entry.title,
+  cards: [entry],
+}))

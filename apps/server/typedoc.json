@@ -17,13 +17,7 @@
   "excludeNotDocumented": false,
 
   /* Source */
-  "exclude": [
-    "**/node_modules/**",
-    "**/*.spec.ts",
-    "**/*.test.ts",
-    "**/infra/**",
-    "**/worker.ts"
-  ],
+  "exclude": ["**/node_modules/**", "**/*.spec.ts", "**/*.test.ts", "**/infra/**", "**/worker.ts"],
   "sourceLinkTemplate": "https://github.com/your-org/projectx/blob/{gitRevision}/{path}#L{line}",
 
   /* Theme */
@@ -41,15 +35,7 @@
 
   /* Categories */
   "categorizeByGroup": true,
-  "categoryOrder": [
-    "Core",
-    "Modules",
-    "Types",
-    "Interfaces",
-    "Classes",
-    "Functions",
-    "*"
-  ],
+  "categoryOrder": ["Core", "Modules", "Types", "Interfaces", "Classes", "Functions", "*"],
 
   /* JSDoc */
   "commentStyle": "jsdoc",

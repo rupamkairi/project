@@ -1,27 +1,27 @@
 // Queue client - BullMQ + Redis
 
-import Redis from "ioredis";
-import { Queue as BullQueue, Worker as BullWorker } from "bullmq";
-import { env } from "../env";
+import Redis from 'ioredis'
+import { Queue as BullQueue, Worker as BullWorker } from 'bullmq'
+import { env } from '../env'
 
 // Create Redis connection for queue
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const redis = new Redis(env.REDIS_URL, {
   maxRetriesPerRequest: null,
   enableReadyCheck: false,
-});
+})
 
 // Track created queues and workers
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const queues = new Map<string, any>();
+const queues = new Map<string, any>()
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const workers = new Map<string, any>();
+const workers = new Map<string, any>()
 
 // Create a queue
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function createQueue(name: string): any {
   if (queues.has(name)) {
-    return queues.get(name)!;
+    return queues.get(name)!
   }
 
   const queue = new BullQueue(name, {
@@ -31,10 +31,10 @@ export function createQueue(name: string): any {
       removeOnComplete: 100,
       removeOnFail: 100,
     },
-  });
+  })
 
-  queues.set(name, queue);
-  return queue;
+  queues.set(name, queue)
+  return queue
 }
 
 // Create a worker
@@ -44,12 +44,12 @@ export function createWorker(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   processor: (job: any) => Promise<unknown>,
   options?: {
-    concurrency?: number;
-    lockDuration?: number;
+    concurrency?: number
+    lockDuration?: number
   },
 ): BullWorker {
   if (workers.has(name)) {
-    return workers.get(name)!;
+    return workers.get(name)!
   }
 
   const worker = new BullWorker(name, processor, {
@@ -57,10 +57,10 @@ export function createWorker(
     connection: redis as any,
     concurrency: options?.concurrency ?? 5,
     lockDuration: options?.lockDuration ?? 30000,
-  });
+  })
 
-  workers.set(name, worker);
-  return worker;
+  workers.set(name, worker)
+  return worker
 }
 
 // Close all queues and workers
@@ -68,6 +68,6 @@ export async function closeQueueConnections(): Promise<void> {
   await Promise.all([
     ...Array.from(queues.values()).map((q: any) => q.close()),
     ...Array.from(workers.values()).map((w: any) => w.close()),
-  ]);
-  await redis.quit();
+  ])
+  await redis.quit()
 }

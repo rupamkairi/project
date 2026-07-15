@@ -1,21 +1,21 @@
-import { useState } from "react"
-import { useNavigate } from "@tanstack/react-router"
-import { useMutation } from "@tanstack/react-query"
-import { lmsApi } from "../../../../api/lms-client"
-import { Button, Input, Label, Textarea, Card, CardContent } from "@projectx/ui"
-import { ArrowLeft, Loader2 } from "lucide-react"
+import { useState } from 'react'
+import { useNavigate } from '@tanstack/react-router'
+import { useMutation } from '@tanstack/react-query'
+import { lmsApi } from '../../../../api/lms-client'
+import { Button, Input, Label, Textarea, Card, CardContent } from '@projectx/ui'
+import { ArrowLeft, Loader2 } from 'lucide-react'
 
 export function NewCoursePage() {
   const navigate = useNavigate()
-  const [title, setTitle] = useState("")
-  const [description, setDescription] = useState("")
-  const [level, setLevel] = useState("beginner")
-  const [language, setLanguage] = useState("en")
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [level, setLevel] = useState('beginner')
+  const [language, setLanguage] = useState('en')
   const [error, setError] = useState<string | null>(null)
 
   const create = useMutation({
     mutationFn: () =>
-      lmsApi.post<{ id: string; slug: string }>("/instructor/courses", {
+      lmsApi.post<{ id: string; slug: string }>('/instructor/courses', {
         title,
         description,
         level,
@@ -25,7 +25,7 @@ export function NewCoursePage() {
       navigate({ to: `/lms/teach/courses/${data.id}/edit` })
     },
     onError: (err: any) => {
-      setError(err.message ?? "Failed to create course")
+      setError(err.message ?? 'Failed to create course')
     },
   })
 
@@ -33,7 +33,7 @@ export function NewCoursePage() {
     e.preventDefault()
     setError(null)
     if (!title.trim()) {
-      setError("Title is required")
+      setError('Title is required')
       return
     }
     create.mutate()
@@ -42,7 +42,7 @@ export function NewCoursePage() {
   return (
     <div className="max-w-2xl">
       <button
-        onClick={() => navigate({ to: "/lms/teach/courses" })}
+        onClick={() => navigate({ to: '/lms/teach/courses' })}
         className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4"
       >
         <ArrowLeft className="h-4 w-4" />
@@ -109,28 +109,23 @@ export function NewCoursePage() {
               </div>
             </div>
 
-            {error && (
-              <p className="text-sm text-red-500">{error}</p>
-            )}
+            {error && <p className="text-sm text-red-500">{error}</p>}
 
             <div className="flex gap-2 pt-2">
-              <Button
-                type="submit"
-                disabled={create.isPending || !title.trim()}
-              >
+              <Button type="submit" disabled={create.isPending || !title.trim()}>
                 {create.isPending ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
                     Creating...
                   </>
                 ) : (
-                  "Create Course"
+                  'Create Course'
                 )}
               </Button>
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate({ to: "/lms/teach/courses" })}
+                onClick={() => navigate({ to: '/lms/teach/courses' })}
               >
                 Cancel
               </Button>

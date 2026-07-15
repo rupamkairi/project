@@ -10,10 +10,14 @@
   "scripts": {
     "test": "bun test",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist node_modules"
+    "clean": "rm -rf dist node_modules",
+    "lint": "eslint .",
+    "format:check": "prettier --check .",
+    "format:write": "prettier --write ."
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
+    "@projectx/plugin-auth-web": "workspace:*",
     "@projectx/plugin-notification-web": "workspace:*",
     "@projectx/plugin-storage-web": "workspace:*",
     "@projectx/shared-router": "workspace:*",

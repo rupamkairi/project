@@ -1,12 +1,12 @@
 // Scheduling Module
 
-import type { AppModule, BootRegistry } from "@core";
+import type { AppModule, BootRegistry } from '@core'
 
 export const SchedulingModule: AppModule = {
   manifest: {
-    id: "scheduling",
-    version: "0.1.0",
-    dependsOn: ["identity", "catalog"],
+    id: 'scheduling',
+    version: '0.1.0',
+    dependsOn: ['identity', 'catalog'],
     entities: [],
     idPrefixes: {},
     events: [],
@@ -26,4 +26,4 @@ export const SchedulingModule: AppModule = {
   async shutdown(): Promise<void> {
     // Cleanup
   },
-};
+}

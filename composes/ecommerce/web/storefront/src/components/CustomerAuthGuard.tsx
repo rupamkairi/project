@@ -1,8 +1,8 @@
-import { useCustomerStore } from "../stores/customer";
-import { Navigate } from "@tanstack/react-router";
+import { useCustomerStore } from '../stores/customer'
+import { Navigate } from '@tanstack/react-router'
 
 export function CustomerAuthGuard({ children }: { children: React.ReactNode }) {
-  const token = useCustomerStore((s) => s.token);
-  if (!token) return <Navigate to="/ecommerce/store/auth/login" />;
-  return <>{children}</>;
+  const token = useCustomerStore((s) => s.token)
+  if (!token) return <Navigate to="/ecommerce/store/auth/login" />
+  return <>{children}</>
 }

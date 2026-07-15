@@ -1,13 +1,11 @@
-import { Route as ErpLayoutRoute } from "./erp.layout";
-import { Route as ErpIndexRoute } from "./erp.index";
-import { Route as ProcurementRoute } from "./erp.procurement";
-import { Route as SalesRoute } from "./erp.sales";
-import { Route as InventoryRoute } from "./erp.inventory";
-import { Route as FinanceRoute } from "./erp.finance";
-import { Route as ManufacturingRoute } from "./erp.manufacturing";
-import { Route as HrRoute } from "./erp.hr";
-import { Route as PayrollRoute } from "./erp.payroll";
-import { Route as TaxRoute } from "./erp.tax";
+import { Route as ErpLayoutRoute } from './layout'
+import { Route as ErpIndexRoute } from './index-page'
+import { Route as ProcurementRoute } from './procurement'
+import { Route as SalesRoute } from './sales'
+import { Route as InventoryRoute } from './inventory'
+import { Route as FinanceRoute } from './finance'
+import { Route as ManufacturingRoute } from './manufacturing'
+import { Route as TaxRoute } from './tax'
 
 export const erpRoutes = [
   ErpLayoutRoute.addChildren([
@@ -17,11 +15,9 @@ export const erpRoutes = [
     InventoryRoute,
     FinanceRoute,
     ManufacturingRoute,
-    HrRoute,
-    PayrollRoute,
     TaxRoute,
   ]),
-];
+]
 
 export {
   ErpLayoutRoute,
@@ -31,7 +27,5 @@ export {
   InventoryRoute,
   FinanceRoute,
   ManufacturingRoute,
-  HrRoute,
-  PayrollRoute,
   TaxRoute,
-};
+}

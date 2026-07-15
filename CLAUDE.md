@@ -60,6 +60,13 @@ Use the existing local package and route conventions; source code is canonical.
 
 ---
 
+## Agent Skills
+
+- Triage issues: use the `triage` skill. Issues and triage labels are tracked as local markdown under `docs/agents/`.
+- Domain glossary (ubiquitous language): `docs/agents/domain.md`.
+
+---
+
 ## No Tests. No App Verification.
 
 NEVER write tests unless explicitly asked ("write a test", "add test coverage").

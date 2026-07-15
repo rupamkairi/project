@@ -7,9 +7,9 @@
  * @packageDocumentation
  */
 
-import type { ID, Timestamp, Meta } from "../entity";
-import { generateId } from "../entity";
-import type { Transaction } from "../repository";
+import type { ID, Timestamp, Meta } from '../entity'
+import { generateId } from '../entity'
+import type { Transaction } from '../repository'
 
 /**
  * Domain event interface for event sourcing.
@@ -41,67 +41,67 @@ export interface DomainEvent<T = unknown> {
   /**
    * Unique event identifier
    */
-  id: ID;
+  id: ID
 
   /**
    * Event type in dot notation (e.g., "user.created", "order.completed")
    */
-  type: string;
+  type: string
 
   /**
    * ID of the aggregate that produced this event
    */
-  aggregateId: ID;
+  aggregateId: ID
 
   /**
    * Type of the aggregate (e.g., "User", "Order")
    */
-  aggregateType: string;
+  aggregateType: string
 
   /**
    * Event payload containing event-specific data
    */
-  payload: T;
+  payload: T
 
   /**
    * Timestamp when the event occurred (Unix epoch ms)
    */
-  occurredAt: Timestamp;
+  occurredAt: Timestamp
 
   /**
    * ID of the actor who caused the event (optional)
    */
-  actorId?: ID;
+  actorId?: ID
 
   /**
    * Organization ID for multi-tenancy
    */
-  orgId: ID;
+  orgId: ID
 
   /**
    * Correlation ID for tracing related events across aggregates
    */
-  correlationId: ID;
+  correlationId: ID
 
   /**
    * ID of the causing event (for event chains)
    */
-  causedBy?: ID;
+  causedBy?: ID
 
   /**
    * Aggregate version at time of event emission
    */
-  version: number;
+  version: number
 
   /**
    * Module ID that emitted this event
    */
-  source: string;
+  source: string
 
   /**
    * Additional metadata
    */
-  metadata?: Meta;
+  metadata?: Meta
 }
 
 /**
@@ -110,7 +110,7 @@ export interface DomainEvent<T = unknown> {
  * @category Core
  */
 export interface EventHandler {
-  (event: DomainEvent): Promise<void>;
+  (event: DomainEvent): Promise<void>
 }
 
 /**
@@ -122,18 +122,18 @@ export interface SubscribeOptions {
   /**
    * If true, unsubscribe after first matched event
    */
-  once?: boolean;
+  once?: boolean
 
   /**
    * Lower number = higher priority. Handlers are sorted by priority before calling.
    */
-  priority?: number;
+  priority?: number
 
   /**
    * Fine-grained predicate applied after pattern matching, before calling the handler.
    * Return false to skip this handler for the event.
    */
-  filter?: (event: DomainEvent) => boolean;
+  filter?: (event: DomainEvent) => boolean
 }
 
 /**
@@ -144,7 +144,7 @@ export interface SubscribeOptions {
  * @category Core
  */
 export interface Unsubscribe {
-  (): void;
+  (): void
 }
 
 /**
@@ -176,14 +176,14 @@ export interface EventBus {
    *
    * @param event - Event to publish
    */
-  publish(event: DomainEvent): Promise<void>;
+  publish(event: DomainEvent): Promise<void>
 
   /**
    * Publishes multiple events.
    *
    * @param events - Events to publish
    */
-  publishBatch(events: DomainEvent[]): Promise<void>;
+  publishBatch(events: DomainEvent[]): Promise<void>
 
   /**
    * Subscribes to events matching a pattern.
@@ -193,11 +193,7 @@ export interface EventBus {
    * @param opts - Subscription options
    * @returns Unsubscribe function
    */
-  subscribe(
-    pattern: string,
-    handler: EventHandler,
-    opts?: SubscribeOptions,
-  ): Unsubscribe;
+  subscribe(pattern: string, handler: EventHandler, opts?: SubscribeOptions): Unsubscribe
 }
 
 /**
@@ -209,22 +205,22 @@ export interface ReadOptions {
   /**
    * Version cursor — read events with version > after (exclusive)
    */
-  after?: number;
+  after?: number
 
   /**
    * Start timestamp (inclusive)
    */
-  from?: Timestamp;
+  from?: Timestamp
 
   /**
    * End timestamp (inclusive)
    */
-  to?: Timestamp;
+  to?: Timestamp
 
   /**
    * Maximum number of events to return
    */
-  limit?: number;
+  limit?: number
 }
 
 /**
@@ -236,22 +232,22 @@ export interface EventFilter {
   /**
    * Filter by one or more event types
    */
-  types?: string[];
+  types?: string[]
 
   /**
    * Filter by aggregate type
    */
-  aggregateType?: string;
+  aggregateType?: string
 
   /**
    * Filter by organization ID
    */
-  orgId?: ID;
+  orgId?: ID
 
   /**
    * Filter by actor ID
    */
-  actorId?: ID;
+  actorId?: ID
 }
 
 /**
@@ -283,14 +279,14 @@ export interface EventStore {
    *
    * @param event - Event to append
    */
-  append(event: DomainEvent): Promise<void>;
+  append(event: DomainEvent): Promise<void>
 
   /**
    * Appends multiple events atomically.
    *
    * @param events - Events to append
    */
-  appendBatch(events: DomainEvent[]): Promise<void>;
+  appendBatch(events: DomainEvent[]): Promise<void>
 
   /**
    * Reads events for a specific aggregate.
@@ -299,7 +295,7 @@ export interface EventStore {
    * @param opts - Read options (after, from, to, limit)
    * @returns Async iterable of events
    */
-  read(aggregateId: ID, opts?: ReadOptions): AsyncIterable<DomainEvent>;
+  read(aggregateId: ID, opts?: ReadOptions): AsyncIterable<DomainEvent>
 
   /**
    * Reads events by type.
@@ -308,7 +304,7 @@ export interface EventStore {
    * @param opts - Read options
    * @returns Async iterable of events
    */
-  readByType(type: string, opts?: ReadOptions): AsyncIterable<DomainEvent>;
+  readByType(type: string, opts?: ReadOptions): AsyncIterable<DomainEvent>
 
   /**
    * Replays events matching a filter from a point in time.
@@ -317,7 +313,7 @@ export interface EventStore {
    * @param from - Start timestamp (Unix epoch ms)
    * @returns Async iterable of events
    */
-  replay(filter: EventFilter, from: Timestamp): AsyncIterable<DomainEvent>;
+  replay(filter: EventFilter, from: Timestamp): AsyncIterable<DomainEvent>
 
   /**
    * Gets the current version of an aggregate.
@@ -325,7 +321,7 @@ export interface EventStore {
    * @param aggregateId - Aggregate ID
    * @returns Current version number
    */
-  getVersion(aggregateId: ID): Promise<number>;
+  getVersion(aggregateId: ID): Promise<number>
 }
 
 /**
@@ -337,32 +333,32 @@ export interface OutboxRecord {
   /**
    * Unique record identifier
    */
-  id: ID;
+  id: ID
 
   /**
    * The domain event to publish
    */
-  event: DomainEvent;
+  event: DomainEvent
 
   /**
    * Number of publish attempts
    */
-  attempts: number;
+  attempts: number
 
   /**
    * Last error message (if failed)
    */
-  lastError?: string;
+  lastError?: string
 
   /**
    * Creation timestamp
    */
-  createdAt: Timestamp;
+  createdAt: Timestamp
 
   /**
    * Timestamp when successfully published
    */
-  publishedAt?: Timestamp;
+  publishedAt?: Timestamp
 }
 
 /**
@@ -380,7 +376,7 @@ export interface EventOutbox {
    * @param event - Event to write
    * @param tx - Database transaction
    */
-  write(event: DomainEvent, tx: Transaction): Promise<void>;
+  write(event: DomainEvent, tx: Transaction): Promise<void>
 
   /**
    * Writes multiple events to the outbox within a transaction.
@@ -388,7 +384,7 @@ export interface EventOutbox {
    * @param events - Events to write
    * @param tx - Database transaction (optional for in-memory)
    */
-  writeBatch(events: DomainEvent[], tx?: Transaction): Promise<void>;
+  writeBatch(events: DomainEvent[], tx?: Transaction): Promise<void>
 
   /**
    * Polls for unpublished events.
@@ -396,14 +392,14 @@ export interface EventOutbox {
    * @param limit - Maximum number of records to return
    * @returns Array of outbox records
    */
-  pollUnpublished(limit: number): Promise<OutboxRecord[]>;
+  pollUnpublished(limit: number): Promise<OutboxRecord[]>
 
   /**
    * Marks a record as successfully published.
    *
    * @param id - Record ID
    */
-  markPublished(id: ID): Promise<void>;
+  markPublished(id: ID): Promise<void>
 
   /**
    * Marks a record as failed.
@@ -411,7 +407,7 @@ export interface EventOutbox {
    * @param id - Record ID
    * @param error - Error message
    */
-  markFailed(id: ID, error: string): Promise<void>;
+  markFailed(id: ID, error: string): Promise<void>
 }
 
 /**
@@ -423,32 +419,32 @@ export interface CreateDomainEventOptions {
   /**
    * ID of the actor who caused the event
    */
-  actorId?: ID;
+  actorId?: ID
 
   /**
    * Correlation ID for tracing (auto-generated if not provided)
    */
-  correlationId?: ID;
+  correlationId?: ID
 
   /**
    * ID of the causing event
    */
-  causedBy?: ID;
+  causedBy?: ID
 
   /**
    * Aggregate version (default: 1)
    */
-  version?: number;
+  version?: number
 
   /**
    * Source module ID (default: "unknown")
    */
-  source?: string;
+  source?: string
 
   /**
    * Additional metadata
    */
-  metadata?: Meta;
+  metadata?: Meta
 }
 
 /**
@@ -498,12 +494,12 @@ export function createDomainEvent<T>(
     occurredAt: Date.now() as Timestamp,
     orgId,
     correlationId: options?.correlationId ?? generateId(),
-    actorId: options?.actorId,
-    causedBy: options?.causedBy,
+    ...(options?.actorId !== undefined && { actorId: options.actorId }),
+    ...(options?.causedBy !== undefined && { causedBy: options.causedBy }),
     version: options?.version ?? 1,
-    source: options?.source ?? "unknown",
-    metadata: options?.metadata,
-  };
+    source: options?.source ?? 'unknown',
+    ...(options?.metadata !== undefined && { metadata: options.metadata }),
+  }
 }
 
 /**
@@ -512,11 +508,11 @@ export function createDomainEvent<T>(
  * @internal
  */
 interface Subscription {
-  pattern: string[];
-  handler: EventHandler;
-  once: boolean;
-  priority: number;
-  filter?: (event: DomainEvent) => boolean;
+  pattern: string[]
+  handler: EventHandler
+  once: boolean
+  priority: number
+  filter?: (event: DomainEvent) => boolean
 }
 
 /**
@@ -546,7 +542,7 @@ interface Subscription {
  * @category Core
  */
 export class InMemoryEventBus implements EventBus {
-  private subscriptions: Subscription[] = [];
+  private subscriptions: Subscription[] = []
 
   /**
    * Publishes an event to all matching subscribers.
@@ -558,30 +554,26 @@ export class InMemoryEventBus implements EventBus {
    */
   async publish(event: DomainEvent): Promise<void> {
     // Sort by priority ascending (lower number = higher priority)
-    const sorted = [...this.subscriptions].sort(
-      (a, b) => a.priority - b.priority,
-    );
+    const sorted = [...this.subscriptions].sort((a, b) => a.priority - b.priority)
 
-    const matched: Subscription[] = [];
-    const promises: Promise<void>[] = [];
+    const matched: Subscription[] = []
+    const promises: Promise<void>[] = []
 
     for (const sub of sorted) {
-      if (!this.matchesPattern(event.type, sub.pattern)) continue;
-      if (sub.filter && !sub.filter(event)) continue;
+      if (!this.matchesPattern(event.type, sub.pattern)) continue
+      if (sub.filter && !sub.filter(event)) continue
 
-      matched.push(sub);
-      promises.push(sub.handler(event));
+      matched.push(sub)
+      promises.push(sub.handler(event))
     }
 
-    await Promise.all(promises);
+    await Promise.all(promises)
 
     // F1 FIX: only remove once-subs that were actually matched and called
     if (matched.length > 0) {
-      const toRemove = new Set(matched.filter((s) => s.once));
+      const toRemove = new Set(matched.filter((s) => s.once))
       if (toRemove.size > 0) {
-        this.subscriptions = this.subscriptions.filter(
-          (sub) => !toRemove.has(sub),
-        );
+        this.subscriptions = this.subscriptions.filter((sub) => !toRemove.has(sub))
       }
     }
   }
@@ -592,7 +584,7 @@ export class InMemoryEventBus implements EventBus {
    * @param events - Events to publish
    */
   async publishBatch(events: DomainEvent[]): Promise<void> {
-    await Promise.all(events.map((event) => this.publish(event)));
+    await Promise.all(events.map((event) => this.publish(event)))
   }
 
   /**
@@ -603,26 +595,22 @@ export class InMemoryEventBus implements EventBus {
    * @param opts - Subscription options
    * @returns Unsubscribe function
    */
-  subscribe(
-    pattern: string,
-    handler: EventHandler,
-    opts?: SubscribeOptions,
-  ): Unsubscribe {
+  subscribe(pattern: string, handler: EventHandler, opts?: SubscribeOptions): Unsubscribe {
     const subscription: Subscription = {
-      pattern: pattern.split("."),
+      pattern: pattern.split('.'),
       handler,
       once: opts?.once ?? false,
       priority: opts?.priority ?? 0,
-      filter: opts?.filter,
-    };
-    this.subscriptions.push(subscription);
+      ...(opts?.filter !== undefined && { filter: opts.filter }),
+    }
+    this.subscriptions.push(subscription)
 
     return () => {
-      const index = this.subscriptions.indexOf(subscription);
+      const index = this.subscriptions.indexOf(subscription)
       if (index > -1) {
-        this.subscriptions.splice(index, 1);
+        this.subscriptions.splice(index, 1)
       }
-    };
+    }
   }
 
   /**
@@ -635,28 +623,28 @@ export class InMemoryEventBus implements EventBus {
    * @internal
    */
   private matchesPattern(eventType: string, pattern: string[]): boolean {
-    const eventParts = eventType.split(".");
+    const eventParts = eventType.split('.')
 
     for (let i = 0; i < pattern.length; i++) {
-      const patternPart = pattern[i];
+      const patternPart = pattern[i]
 
-      if (patternPart === "*") {
+      if (patternPart === '*') {
         // Wildcard matches anything
-        continue;
+        continue
       }
 
-      if (patternPart === "**") {
+      if (patternPart === '**') {
         // Double wildcard matches any remaining parts
-        return true;
+        return true
       }
 
       // Specific match required
       if (i >= eventParts.length || patternPart !== eventParts[i]) {
-        return false;
+        return false
       }
     }
 
-    return pattern.length === eventParts.length;
+    return pattern.length === eventParts.length
   }
 }
 
@@ -682,7 +670,7 @@ export class InMemoryEventBus implements EventBus {
  * @category Core
  */
 export class InMemoryEventStore implements EventStore {
-  private events: Map<ID, DomainEvent[]> = new Map();
+  private events: Map<ID, DomainEvent[]> = new Map()
 
   /**
    * Appends a single event.
@@ -690,9 +678,9 @@ export class InMemoryEventStore implements EventStore {
    * @param event - Event to append
    */
   async append(event: DomainEvent): Promise<void> {
-    const existing = this.events.get(event.aggregateId) ?? [];
-    existing.push(event);
-    this.events.set(event.aggregateId, existing);
+    const existing = this.events.get(event.aggregateId) ?? []
+    existing.push(event)
+    this.events.set(event.aggregateId, existing)
   }
 
   /**
@@ -702,7 +690,7 @@ export class InMemoryEventStore implements EventStore {
    */
   async appendBatch(events: DomainEvent[]): Promise<void> {
     for (const event of events) {
-      await this.append(event);
+      await this.append(event)
     }
   }
 
@@ -716,20 +704,20 @@ export class InMemoryEventStore implements EventStore {
    * @returns Async iterable of events
    */
   async *read(aggregateId: ID, opts?: ReadOptions): AsyncIterable<DomainEvent> {
-    const events = this.events.get(aggregateId) ?? [];
-    const afterVersion = opts?.after ?? 0;
-    const from = opts?.from;
-    const to = opts?.to;
-    const limit = opts?.limit ?? Infinity;
+    const events = this.events.get(aggregateId) ?? []
+    const afterVersion = opts?.after ?? 0
+    const from = opts?.from
+    const to = opts?.to
+    const limit = opts?.limit ?? Infinity
 
-    let count = 0;
+    let count = 0
     for (const event of events) {
-      if (count >= limit) break;
-      if (event.version <= afterVersion) continue;
-      if (from !== undefined && event.occurredAt < from) continue;
-      if (to !== undefined && event.occurredAt > to) continue;
-      yield event;
-      count++;
+      if (count >= limit) break
+      if (event.version <= afterVersion) continue
+      if (from !== undefined && event.occurredAt < from) continue
+      if (to !== undefined && event.occurredAt > to) continue
+      yield event
+      count++
     }
   }
 
@@ -740,27 +728,24 @@ export class InMemoryEventStore implements EventStore {
    * @param opts - Read options
    * @returns Async iterable of events
    */
-  async *readByType(
-    type: string,
-    opts?: ReadOptions,
-  ): AsyncIterable<DomainEvent> {
-    const afterVersion = opts?.after ?? 0;
-    const from = opts?.from;
-    const to = opts?.to;
-    const limit = opts?.limit ?? Infinity;
-    let count = 0;
+  async *readByType(type: string, opts?: ReadOptions): AsyncIterable<DomainEvent> {
+    const afterVersion = opts?.after ?? 0
+    const from = opts?.from
+    const to = opts?.to
+    const limit = opts?.limit ?? Infinity
+    let count = 0
 
     for (const [, events] of this.events) {
       for (const event of events) {
-        if (count >= limit) break;
-        if (event.type !== type) continue;
-        if (event.version <= afterVersion) continue;
-        if (from !== undefined && event.occurredAt < from) continue;
-        if (to !== undefined && event.occurredAt > to) continue;
-        yield event;
-        count++;
+        if (count >= limit) break
+        if (event.type !== type) continue
+        if (event.version <= afterVersion) continue
+        if (from !== undefined && event.occurredAt < from) continue
+        if (to !== undefined && event.occurredAt > to) continue
+        yield event
+        count++
       }
-      if (count >= limit) break;
+      if (count >= limit) break
     }
   }
 
@@ -771,15 +756,12 @@ export class InMemoryEventStore implements EventStore {
    * @param from - Start timestamp (inclusive)
    * @returns Async iterable of events
    */
-  async *replay(
-    filter: EventFilter,
-    from: Timestamp,
-  ): AsyncIterable<DomainEvent> {
+  async *replay(filter: EventFilter, from: Timestamp): AsyncIterable<DomainEvent> {
     for (const [, events] of this.events) {
       for (const event of events) {
-        if (event.occurredAt < from) continue;
+        if (event.occurredAt < from) continue
         if (this.matchesFilter(event, filter)) {
-          yield event;
+          yield event
         }
       }
     }
@@ -792,10 +774,10 @@ export class InMemoryEventStore implements EventStore {
    * @returns Current version (0 if no events)
    */
   async getVersion(aggregateId: ID): Promise<number> {
-    const events = this.events.get(aggregateId) ?? [];
-    if (events.length === 0) return 0;
-    const lastEvent = events[events.length - 1];
-    return lastEvent ? lastEvent.version : 0;
+    const events = this.events.get(aggregateId) ?? []
+    if (events.length === 0) return 0
+    const lastEvent = events[events.length - 1]
+    return lastEvent ? lastEvent.version : 0
   }
 
   /**
@@ -809,13 +791,12 @@ export class InMemoryEventStore implements EventStore {
    */
   private matchesFilter(event: DomainEvent, filter: EventFilter): boolean {
     if (filter.types && filter.types.length > 0) {
-      if (!filter.types.includes(event.type)) return false;
+      if (!filter.types.includes(event.type)) return false
     }
-    if (filter.aggregateType && event.aggregateType !== filter.aggregateType)
-      return false;
-    if (filter.orgId && event.orgId !== filter.orgId) return false;
-    if (filter.actorId && event.actorId !== filter.actorId) return false;
-    return true;
+    if (filter.aggregateType && event.aggregateType !== filter.aggregateType) return false
+    if (filter.orgId && event.orgId !== filter.orgId) return false
+    if (filter.actorId && event.actorId !== filter.actorId) return false
+    return true
   }
 }
 
@@ -828,7 +809,7 @@ export class InMemoryEventStore implements EventStore {
  * @category Core
  */
 export class InMemoryEventOutbox implements EventOutbox {
-  private records: Map<ID, OutboxRecord> = new Map();
+  private records: Map<ID, OutboxRecord> = new Map()
 
   /**
    * Writes a single event to the outbox.
@@ -842,9 +823,8 @@ export class InMemoryEventOutbox implements EventOutbox {
       event,
       attempts: 0,
       createdAt: Date.now() as Timestamp,
-      publishedAt: undefined,
-    };
-    this.records.set(record.id, record);
+    }
+    this.records.set(record.id, record)
   }
 
   /**
@@ -860,9 +840,8 @@ export class InMemoryEventOutbox implements EventOutbox {
         event,
         attempts: 0,
         createdAt: Date.now() as Timestamp,
-        publishedAt: undefined,
-      };
-      this.records.set(record.id, record);
+      }
+      this.records.set(record.id, record)
     }
   }
 
@@ -873,14 +852,14 @@ export class InMemoryEventOutbox implements EventOutbox {
    * @returns Array of unpublished outbox records
    */
   async pollUnpublished(limit: number): Promise<OutboxRecord[]> {
-    const results: OutboxRecord[] = [];
+    const results: OutboxRecord[] = []
     for (const record of this.records.values()) {
-      if (results.length >= limit) break;
+      if (results.length >= limit) break
       if (!record.publishedAt) {
-        results.push(record);
+        results.push(record)
       }
     }
-    return results;
+    return results
   }
 
   /**
@@ -889,10 +868,10 @@ export class InMemoryEventOutbox implements EventOutbox {
    * @param id - Record ID
    */
   async markPublished(id: ID): Promise<void> {
-    const record = this.records.get(id);
+    const record = this.records.get(id)
     if (record) {
-      record.publishedAt = Date.now() as Timestamp;
-      record.attempts += 1;
+      record.publishedAt = Date.now() as Timestamp
+      record.attempts += 1
     }
   }
 
@@ -903,10 +882,10 @@ export class InMemoryEventOutbox implements EventOutbox {
    * @param error - Error message
    */
   async markFailed(id: ID, error: string): Promise<void> {
-    const record = this.records.get(id);
+    const record = this.records.get(id)
     if (record) {
-      record.attempts += 1;
-      record.lastError = error;
+      record.attempts += 1
+      record.lastError = error
     }
   }
 }

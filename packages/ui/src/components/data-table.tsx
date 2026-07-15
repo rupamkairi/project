@@ -1,22 +1,22 @@
-import * as React from "react"
+import * as React from 'react'
 import {
   flexRender,
   getCoreRowModel,
   useReactTable,
   getPaginationRowModel,
   getFilteredRowModel,
-} from "@tanstack/react-table"
+} from '@tanstack/react-table'
 import type {
   ColumnDef,
   SortingState,
   ColumnFiltersState,
   RowSelectionState,
-} from "@tanstack/react-table"
-import { ChevronDown, ChevronUp, MoreHorizontal } from "lucide-react"
+} from '@tanstack/react-table'
+import { ChevronDown, ChevronUp, MoreHorizontal } from 'lucide-react'
 
-import { cn } from "../lib/utils"
-import { Button } from "./ui/button"
-import { Input } from "./ui/input"
+import { cn } from '../lib/utils'
+import { Button } from './ui/button'
+import { Input } from './ui/input'
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -25,15 +25,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "./ui/dropdown-menu"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "./ui/table"
+} from './ui/dropdown-menu'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table'
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -60,21 +53,17 @@ function DataTable<TData, TValue>({
   onRowSelectionChange,
   onSortingChange,
   onSearchChange,
-  searchPlaceholder = "Search...",
+  searchPlaceholder = 'Search...',
   showSearch = true,
   showColumnVisibility = false,
   showPagination = true,
   className,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    []
-  )
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({})
-  const [columnVisibility, setColumnVisibility] = React.useState<
-    Record<string, boolean>
-  >({})
-  const [globalFilter, setGlobalFilter] = React.useState("")
+  const [columnVisibility, setColumnVisibility] = React.useState<Record<string, boolean>>({})
+  const [globalFilter, setGlobalFilter] = React.useState('')
 
   const table = useReactTable({
     data,
@@ -82,16 +71,14 @@ function DataTable<TData, TValue>({
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: (updater) => {
-      const newSorting =
-        typeof updater === "function" ? updater(sorting) : updater
+      const newSorting = typeof updater === 'function' ? updater(sorting) : updater
       setSorting(newSorting)
       onSortingChange?.(newSorting)
     },
     onColumnFiltersChange: setColumnFilters,
     getFilteredRowModel: getFilteredRowModel(),
     onRowSelectionChange: (updater) => {
-      const newSelection =
-        typeof updater === "function" ? updater(rowSelection) : updater
+      const newSelection = typeof updater === 'function' ? updater(rowSelection) : updater
       setRowSelection(newSelection)
       onRowSelectionChange?.(newSelection)
     },
@@ -113,12 +100,12 @@ function DataTable<TData, TValue>({
   })
 
   return (
-    <div className={cn("space-y-3", className)}>
+    <div className={cn('space-y-3', className)}>
       {showSearch && (
         <div className="flex items-center gap-2">
           <Input
             placeholder={searchPlaceholder}
-            value={globalFilter ?? ""}
+            value={globalFilter ?? ''}
             onChange={(event) => {
               setGlobalFilter(event.target.value)
               onSearchChange?.(event.target.value)
@@ -141,9 +128,7 @@ function DataTable<TData, TValue>({
                       key={column.id}
                       className="capitalize"
                       checked={column.getIsVisible()}
-                      onCheckedChange={(value) =>
-                        column.toggleVisibility(!!value)
-                      }
+                      onCheckedChange={(value) => column.toggleVisibility(!!value)}
                     >
                       {column.id}
                     </DropdownMenuCheckboxItem>
@@ -163,10 +148,7 @@ function DataTable<TData, TValue>({
                   <TableHead key={header.id}>
                     {header.isPlaceholder
                       ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
+                      : flexRender(header.column.columnDef.header, header.getContext())}
                   </TableHead>
                 ))}
               </TableRow>
@@ -175,16 +157,10 @@ function DataTable<TData, TValue>({
           <TableBody>
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                >
+                <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'}>
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
                 </TableRow>
@@ -238,7 +214,7 @@ function SortableHeader({
     <Button
       variant="ghost"
       size="sm"
-      onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
       className="-ml-3 h-8 data-[state=open]:bg-accent"
     >
       {children}
@@ -257,13 +233,7 @@ interface ActionItem<TData> {
   destructive?: boolean
 }
 
-function ActionCell<TData>({
-  row,
-  actions,
-}: {
-  row: TData
-  actions: ActionItem<TData>[]
-}) {
+function ActionCell<TData>({ row, actions }: { row: TData; actions: ActionItem<TData>[] }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -279,7 +249,7 @@ function ActionCell<TData>({
           <DropdownMenuItem
             key={action.label}
             onClick={() => action.onClick(row)}
-            variant={action.destructive ? "destructive" : "default"}
+            variant={action.destructive ? 'destructive' : 'default'}
           >
             {action.icon}
             {action.label}

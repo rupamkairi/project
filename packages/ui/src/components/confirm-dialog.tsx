@@ -1,6 +1,6 @@
-import * as React from "react"
+import * as React from 'react'
 
-import { Button } from "./ui/button"
+import { Button } from './ui/button'
 import {
   Dialog,
   DialogContent,
@@ -8,7 +8,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "./ui/dialog"
+} from './ui/dialog'
 
 interface ConfirmDialogProps {
   open: boolean
@@ -18,7 +18,7 @@ interface ConfirmDialogProps {
   confirmLabel?: string
   cancelLabel?: string
   onConfirm: () => void
-  variant?: "default" | "destructive"
+  variant?: 'default' | 'destructive'
   loading?: boolean
 }
 
@@ -27,10 +27,10 @@ function ConfirmDialog({
   onOpenChange,
   title,
   description,
-  confirmLabel = "Confirm",
-  cancelLabel = "Cancel",
+  confirmLabel = 'Confirm',
+  cancelLabel = 'Cancel',
   onConfirm,
-  variant = "destructive",
+  variant = 'destructive',
   loading = false,
 }: ConfirmDialogProps) {
   return (
@@ -38,9 +38,7 @@ function ConfirmDialog({
       <DialogContent showCloseButton={false} className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          {description && (
-            <DialogDescription>{description}</DialogDescription>
-          )}
+          {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>
         <DialogFooter>
           <Button
@@ -52,12 +50,12 @@ function ConfirmDialog({
             {cancelLabel}
           </Button>
           <Button
-            variant={variant === "destructive" ? "destructive" : "default"}
+            variant={variant === 'destructive' ? 'destructive' : 'default'}
             size="sm"
             onClick={onConfirm}
             disabled={loading}
           >
-            {loading ? "Processing..." : confirmLabel}
+            {loading ? 'Processing...' : confirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

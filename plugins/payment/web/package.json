@@ -8,6 +8,13 @@
     "./api": "./src/lib/api.ts"
   },
   "devDependencies": {
-    "@projectx/config": "workspace:*"
+    "@projectx/config": "workspace:*",
+    "typescript": "^5.9.3"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format:check": "prettier --check .",
+    "format:write": "prettier --write ."
   }
 }

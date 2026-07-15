@@ -5,7 +5,7 @@
 // ---------------------------------------------------------------------------
 // Entity
 // ---------------------------------------------------------------------------
-export type { Entity, ID, Timestamp, Meta } from "./entity";
+export type { Entity, ID, Timestamp, Meta } from './entity'
 export {
   generateId,
   generatePrefixedId,
@@ -15,11 +15,11 @@ export {
   isDeleted,
   softDelete,
   updateEntity,
-} from "./entity";
+} from './entity'
 
 // IDGenerator
-export type { IDGenerator } from "./entity/id";
-export { createIdGenerator, defaultIdGenerator } from "./entity/id";
+export type { IDGenerator } from './entity/id'
+export { createIdGenerator, defaultIdGenerator } from './entity/id'
 
 // Schema system
 export type {
@@ -34,12 +34,12 @@ export type {
   GeoPoint,
   GeoPolygon,
   GeoLinestring,
-} from "./entity/schema";
-export { Validators } from "./entity/schema";
+} from './entity/schema'
+export { Validators } from './entity/schema'
 
 // EntitySchemaRegistry
-export type { EntitySchemaRegistry } from "./entity/registry";
-export { createEntitySchemaRegistry } from "./entity/registry";
+export type { EntitySchemaRegistry } from './entity/registry'
+export { createEntitySchemaRegistry } from './entity/registry'
 
 // ---------------------------------------------------------------------------
 // Events
@@ -56,13 +56,13 @@ export type {
   OutboxRecord,
   EventOutbox,
   CreateDomainEventOptions,
-} from "./event";
+} from './event'
 export {
   createDomainEvent,
   InMemoryEventBus,
   InMemoryEventStore,
   InMemoryEventOutbox,
-} from "./event";
+} from './event'
 
 // ---------------------------------------------------------------------------
 // State Machine
@@ -77,14 +77,14 @@ export type {
   TransitionResult,
   FSMEngine,
   StateMachineRegistry,
-} from "./state";
-export { createFSMEngine, createStateMachineRegistry } from "./state";
+} from './state'
+export { createFSMEngine, createStateMachineRegistry } from './state'
 
 // ---------------------------------------------------------------------------
 // Rules Engine
 // ---------------------------------------------------------------------------
-export type { RuleExpr, Op, RuleExplanation, RuleEngine, CompiledRule } from "./rule";
-export { createRuleEngine } from "./rule";
+export type { RuleExpr, Op, RuleExplanation, RuleEngine, CompiledRule } from './rule'
+export { createRuleEngine } from './rule'
 
 // ---------------------------------------------------------------------------
 // CQRS
@@ -97,7 +97,7 @@ export type {
   MediatorMiddleware,
   Mediator,
   MediatorOptions,
-} from "./cqrs";
+} from './cqrs'
 export {
   createMediator,
   AuthorizationMiddleware,
@@ -107,7 +107,7 @@ export {
   TracingMiddleware,
   RateLimitMiddleware,
   tracingStore,
-} from "./cqrs";
+} from './cqrs'
 
 // ---------------------------------------------------------------------------
 // Repository
@@ -121,8 +121,8 @@ export type {
   QueryOptions,
   PaginatedResult,
   Repository,
-} from "./repository";
-export { BaseRepository } from "./repository";
+} from './repository'
+export { BaseRepository } from './repository'
 
 // ---------------------------------------------------------------------------
 // Module System
@@ -135,8 +135,8 @@ export type {
   BootRegistry,
   AppModule,
   ModuleRegistry,
-} from "./module";
-export { createModuleRegistry } from "./module";
+} from './module'
+export { createModuleRegistry } from './module'
 
 // ---------------------------------------------------------------------------
 // Queue and Scheduler
@@ -152,8 +152,8 @@ export type {
   Scheduler,
   BulkJob,
   Worker,
-} from "./queue";
-export { InMemoryQueue, InMemoryScheduler } from "./queue";
+} from './queue'
+export { InMemoryQueue, InMemoryScheduler } from './queue'
 
 // ---------------------------------------------------------------------------
 // Real-Time
@@ -166,15 +166,15 @@ export type {
   RealtimeMessage,
   RealtimeServerMessageType,
   RealtimeServerMessage,
-} from "./realtime";
-export { createInMemoryGateway, createInMemoryBridge } from "./realtime";
+} from './realtime'
+export { createInMemoryGateway, createInMemoryBridge } from './realtime'
 
 // ---------------------------------------------------------------------------
 // Context
 // ---------------------------------------------------------------------------
-export type { SystemContext, SystemContextOptions } from "./context";
-export type { Logger } from "./context";
-export { createSystemContext } from "./context";
+export type { SystemContext, SystemContextOptions } from './context'
+export type { Logger } from './context'
+export { createSystemContext } from './context'
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -191,18 +191,14 @@ export {
   isOk,
   isErr,
   getHttpStatus,
-} from "./errors";
-export type { Result } from "./errors";
-export { Ok, Err } from "./errors";
+} from './errors'
+export type { Result } from './errors'
+export { Ok, Err } from './errors'
 
 // ---------------------------------------------------------------------------
 // Primitives
 // ---------------------------------------------------------------------------
-export type {
-  Money,
-  SortSpec,
-  PageOptions,
-} from "./primitives";
+export type { Money, SortSpec, PageOptions } from './primitives'
 export {
   moneyAdd,
   moneySubtract,
@@ -210,7 +206,7 @@ export {
   moneyFormat,
   createPaginatedResult,
   getDefaultPageOptions,
-} from "./primitives";
+} from './primitives'
 
 // ---------------------------------------------------------------------------
 // Adapters
@@ -226,6 +222,8 @@ export type {
   NotificationAdapter,
   PaymentAdapter,
   GeoAdapter,
+  SearchQuery,
+  SearchResult,
   SearchAdapter,
   TaxLineItem,
   TaxLine,
@@ -240,5 +238,5 @@ export type {
   CalendarSyncAdapter,
   CallRecord,
   TelephonyAdapter,
-} from "./adapters";
-export { createAdapterRegistry } from "./adapters";
+} from './adapters'
+export { createAdapterRegistry } from './adapters'

@@ -1,7 +1,7 @@
-import { createRoute } from "@tanstack/react-router"
-import { Route as dashboardLayoutRoute } from "./dashboard.layout"
-import { useState, useEffect } from "react"
-import { platformApi } from "../lib/api/platform"
+import { createRoute } from '@tanstack/react-router'
+import { Route as dashboardLayoutRoute } from './dashboard.layout'
+import { useState, useEffect } from 'react'
+import { platformApi } from '../lib/api/platform'
 import {
   PageHeader,
   Button,
@@ -25,26 +25,34 @@ import {
   Skeleton,
   Alert,
   AlertDescription,
-} from "@projectx/ui"
-import { Shield, Plus, Users, Pencil, Trash2 } from "lucide-react"
+} from '@projectx/ui'
+import { Shield, Plus, Users, Pencil, Trash2 } from 'lucide-react'
 
 export const Route = createRoute({
   getParentRoute: () => dashboardLayoutRoute,
-  path: "/roles",
+  path: '/roles',
   component: RolesPage,
 })
 
 const AVAILABLE_PERMISSIONS = [
-  { id: "users:read", name: "View Users", description: "Can view user list and details" },
-  { id: "users:write", name: "Manage Users", description: "Can create, update, and delete users" },
-  { id: "roles:read", name: "View Roles", description: "Can view role list and details" },
-  { id: "roles:write", name: "Manage Roles", description: "Can create, update, and delete roles" },
-  { id: "invites:read", name: "View Invites", description: "Can view invite list" },
-  { id: "invites:write", name: "Manage Invites", description: "Can create and manage invites" },
-  { id: "notifications:read", name: "View Notifications", description: "Can view notification settings" },
-  { id: "notifications:write", name: "Manage Notifications", description: "Can manage notification templates" },
-  { id: "settings:read", name: "View Settings", description: "Can view platform settings" },
-  { id: "settings:write", name: "Manage Settings", description: "Can update platform settings" },
+  { id: 'users:read', name: 'View Users', description: 'Can view user list and details' },
+  { id: 'users:write', name: 'Manage Users', description: 'Can create, update, and delete users' },
+  { id: 'roles:read', name: 'View Roles', description: 'Can view role list and details' },
+  { id: 'roles:write', name: 'Manage Roles', description: 'Can create, update, and delete roles' },
+  { id: 'invites:read', name: 'View Invites', description: 'Can view invite list' },
+  { id: 'invites:write', name: 'Manage Invites', description: 'Can create and manage invites' },
+  {
+    id: 'notifications:read',
+    name: 'View Notifications',
+    description: 'Can view notification settings',
+  },
+  {
+    id: 'notifications:write',
+    name: 'Manage Notifications',
+    description: 'Can manage notification templates',
+  },
+  { id: 'settings:read', name: 'View Settings', description: 'Can view platform settings' },
+  { id: 'settings:write', name: 'Manage Settings', description: 'Can update platform settings' },
 ]
 
 function RolesPage() {
@@ -72,8 +80,8 @@ function RolesPage() {
   })
 
   const [formData, setFormData] = useState({
-    name: "",
-    description: "",
+    name: '',
+    description: '',
     permissions: [] as string[],
   })
 
@@ -101,7 +109,7 @@ function RolesPage() {
     })
     if (!error && data) {
       setShowCreateModal(false)
-      setFormData({ name: "", description: "", permissions: [] })
+      setFormData({ name: '', description: '', permissions: [] })
       loadRoles(pagination.page)
     }
     setIsSubmitting(false)
@@ -119,7 +127,7 @@ function RolesPage() {
     if (!error && data) {
       setShowEditModal(false)
       setSelectedRole(null)
-      setFormData({ name: "", description: "", permissions: [] })
+      setFormData({ name: '', description: '', permissions: [] })
       loadRoles(pagination.page)
     }
     setIsSubmitting(false)
@@ -129,7 +137,7 @@ function RolesPage() {
     setSelectedRole(role)
     setFormData({
       name: role.name,
-      description: role.description || "",
+      description: role.description || '',
       permissions: role.permissions || [],
     })
     setShowEditModal(true)
@@ -137,15 +145,15 @@ function RolesPage() {
 
   const openDeleteConfirm = (role: any) => {
     if (role.isSystem) {
-      setDeleteError("Cannot delete system roles")
+      setDeleteError('Cannot delete system roles')
       return
     }
     if (role.isDefault) {
-      setDeleteError("Cannot delete default roles")
+      setDeleteError('Cannot delete default roles')
       return
     }
     if (role.memberCount > 0) {
-      setDeleteError("Cannot delete roles with assigned members")
+      setDeleteError('Cannot delete roles with assigned members')
       return
     }
     setDeleteError(null)
@@ -218,7 +226,7 @@ function RolesPage() {
           <Button
             size="sm"
             onClick={() => {
-              setFormData({ name: "", description: "", permissions: [] })
+              setFormData({ name: '', description: '', permissions: [] })
               setShowCreateModal(true)
             }}
           >
@@ -250,11 +258,21 @@ function RolesPage() {
             {isLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-40" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-8" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                  <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-24" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-40" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-8" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-20" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-16" />
+                  </TableCell>
                   <TableCell />
                 </TableRow>
               ))
@@ -274,7 +292,7 @@ function RolesPage() {
                     </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">
-                    {role.description || "-"}
+                    {role.description || '-'}
                   </TableCell>
                   <TableCell>
                     <button
@@ -299,9 +317,7 @@ function RolesPage() {
                         </Badge>
                       )}
                       {role.isDefault && <Badge variant="secondary">Default</Badge>}
-                      {!role.isSystem && !role.isDefault && (
-                        <Badge variant="outline">Custom</Badge>
-                      )}
+                      {!role.isSystem && !role.isDefault && <Badge variant="outline">Custom</Badge>}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -418,7 +434,7 @@ function RolesPage() {
                 Cancel
               </Button>
               <Button type="submit" size="sm" disabled={isSubmitting}>
-                {isSubmitting ? "Creating..." : "Create Role"}
+                {isSubmitting ? 'Creating...' : 'Create Role'}
               </Button>
             </DialogFooter>
           </form>
@@ -484,7 +500,7 @@ function RolesPage() {
                 Cancel
               </Button>
               <Button type="submit" size="sm" disabled={isSubmitting}>
-                {isSubmitting ? "Saving..." : "Save Changes"}
+                {isSubmitting ? 'Saving...' : 'Save Changes'}
               </Button>
             </DialogFooter>
           </form>
@@ -563,11 +579,7 @@ function RolesPage() {
             ))}
           </div>
           <DialogFooter className="pt-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowAssignModal(false)}
-            >
+            <Button variant="outline" size="sm" onClick={() => setShowAssignModal(false)}>
               Cancel
             </Button>
             <Button
@@ -575,7 +587,7 @@ function RolesPage() {
               onClick={handleAssign}
               disabled={isSubmitting || selectedUsers.length === 0}
             >
-              {isSubmitting ? "Assigning..." : `Assign (${selectedUsers.length})`}
+              {isSubmitting ? 'Assigning...' : `Assign (${selectedUsers.length})`}
             </Button>
           </DialogFooter>
         </DialogContent>

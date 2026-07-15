@@ -1,0 +1,29 @@
+{
+  "name": "@projectx/workplace-server",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "Workplace Compose Server — recruitment, people, leave, attendance, performance, payroll, expenses, office",
+  "exports": {
+    ".": "./src/index.ts",
+    "./db/schema/workplace": "./src/db/schema/workplace.ts",
+    "./db/seed/workplace": "./src/db/seed/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist node_modules",
+    "lint": "eslint .",
+    "format:check": "prettier --check .",
+    "format:write": "prettier --write ."
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.45.1",
+    "elysia": "^1.4.25",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@projectx/config": "workspace:*",
+    "@types/bun": "^1.3.9",
+    "typescript": "^5.3.3"
+  }
+}

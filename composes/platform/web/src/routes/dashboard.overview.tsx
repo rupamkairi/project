@@ -1,7 +1,7 @@
-import { createRoute, Link } from "@tanstack/react-router";
-import { Route as dashboardLayoutRoute } from "./dashboard.layout";
-import { useState, useEffect } from "react";
-import { platformApi } from "../lib/api/platform";
+import { createRoute, Link } from '@tanstack/react-router'
+import { Route as dashboardLayoutRoute } from './dashboard.layout'
+import { useState, useEffect } from 'react'
+import { platformApi } from '../lib/api/platform'
 import {
   PageHeader,
   Card,
@@ -16,7 +16,7 @@ import {
   TableRow,
   Badge,
   Skeleton,
-} from "@projectx/ui";
+} from '@projectx/ui'
 import {
   Users,
   Building2,
@@ -25,57 +25,57 @@ import {
   GitBranch,
   Activity as ActivityIcon,
   type LucideIcon,
-} from "lucide-react";
+} from 'lucide-react'
 
 export const Route = createRoute({
   getParentRoute: () => dashboardLayoutRoute,
-  path: "/overview",
+  path: '/overview',
   component: OverviewPage,
-});
+})
 
 type Counts = {
-  persons: number;
-  parties: number;
-  locations: number;
-  transactions: number;
-  pipelines: number;
-  activities: number;
-};
+  persons: number
+  parties: number
+  locations: number
+  transactions: number
+  pipelines: number
+  activities: number
+}
 
 const STATS: { key: keyof Counts; label: string; href: string; Icon: LucideIcon }[] = [
-  { key: "persons", label: "Persons", href: "/dashboard/persons", Icon: Users },
-  { key: "parties", label: "Parties", href: "/dashboard/parties", Icon: Building2 },
-  { key: "locations", label: "Locations", href: "/dashboard/locations", Icon: MapPin },
-  { key: "transactions", label: "Transactions", href: "/dashboard/transactions", Icon: Receipt },
-  { key: "pipelines", label: "Pipelines", href: "/dashboard/pipelines", Icon: GitBranch },
-  { key: "activities", label: "Activities", href: "/dashboard/activities", Icon: ActivityIcon },
-];
+  { key: 'persons', label: 'Persons', href: '/dashboard/persons', Icon: Users },
+  { key: 'parties', label: 'Parties', href: '/dashboard/parties', Icon: Building2 },
+  { key: 'locations', label: 'Locations', href: '/dashboard/locations', Icon: MapPin },
+  { key: 'transactions', label: 'Transactions', href: '/dashboard/transactions', Icon: Receipt },
+  { key: 'pipelines', label: 'Pipelines', href: '/dashboard/pipelines', Icon: GitBranch },
+  { key: 'activities', label: 'Activities', href: '/dashboard/activities', Icon: ActivityIcon },
+]
 
 function OverviewPage() {
-  const [counts, setCounts] = useState<Counts | null>(null);
-  const [modules, setModules] = useState<any[]>([]);
-  const [schemas, setSchemas] = useState<any[]>([]);
-  const [health, setHealth] = useState<{ status?: string } | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [counts, setCounts] = useState<Counts | null>(null)
+  const [modules, setModules] = useState<any[]>([])
+  const [schemas, setSchemas] = useState<any[]>([])
+  const [health, setHealth] = useState<{ status?: string } | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    (async () => {
-      setIsLoading(true);
+    ;(async () => {
+      setIsLoading(true)
       const [ov, mods, schs, hlth] = await Promise.all([
         platformApi.getOverview(),
         platformApi.getModules(),
         platformApi.getSchemas(),
         platformApi.getHealth(),
-      ]);
-      if (ov.data) setCounts(ov.data.counts);
-      if (mods.data) setModules(mods.data.modules ?? []);
-      if (schs.data) setSchemas(schs.data.schemas ?? []);
-      if (hlth.data) setHealth(hlth.data);
-      setIsLoading(false);
-    })();
-  }, []);
+      ])
+      if (ov.data) setCounts(ov.data.counts)
+      if (mods.data) setModules(mods.data.modules ?? [])
+      if (schs.data) setSchemas(schs.data.schemas ?? [])
+      if (hlth.data) setHealth(hlth.data)
+      setIsLoading(false)
+    })()
+  }, [])
 
-  const tableCount = schemas.reduce((n, s) => n + (s.tables?.length ?? 0), 0);
+  const tableCount = schemas.reduce((n, s) => n + (s.tables?.length ?? 0), 0)
 
   return (
     <div className="space-y-6 p-4">
@@ -83,8 +83,8 @@ function OverviewPage() {
         title="System Overview"
         description="Live view of master data, modules, and tables across the system."
         actions={
-          <Badge variant={health?.status === "ok" ? "default" : "destructive"}>
-            {health ? `Health: ${health.status}` : "Health: …"}
+          <Badge variant={health?.status === 'ok' ? 'default' : 'destructive'}>
+            {health ? `Health: ${health.status}` : 'Health: …'}
           </Badge>
         }
       />
@@ -146,9 +146,15 @@ function OverviewPage() {
                       <TableRow key={m.id}>
                         <TableCell className="font-medium">{m.id}</TableCell>
                         <TableCell className="text-muted-foreground">{m.version}</TableCell>
-                        <TableCell className="text-right tabular-nums">{m.commands?.length ?? 0}</TableCell>
-                        <TableCell className="text-right tabular-nums">{m.queries?.length ?? 0}</TableCell>
-                        <TableCell className="text-right tabular-nums">{m.events?.length ?? 0}</TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {m.commands?.length ?? 0}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {m.queries?.length ?? 0}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {m.events?.length ?? 0}
+                        </TableCell>
                       </TableRow>
                     ))
                   )}
@@ -185,7 +191,7 @@ function OverviewPage() {
                       <TableRow key={s.id}>
                         <TableCell className="font-medium">{s.name ?? s.id}</TableCell>
                         <TableCell className="text-xs text-muted-foreground">
-                          {(s.tables ?? []).join(", ")}
+                          {(s.tables ?? []).join(', ')}
                         </TableCell>
                       </TableRow>
                     ))
@@ -197,5 +203,5 @@ function OverviewPage() {
         </Card>
       </div>
     </div>
-  );
+  )
 }
