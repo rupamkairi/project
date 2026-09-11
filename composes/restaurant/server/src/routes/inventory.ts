@@ -1,7 +1,7 @@
 import Elysia from 'elysia'
 import type { Mediator, EventBus } from '@core'
 import { generateId, createDomainEvent, NotFoundError, ConflictError, ValidationError } from '@core'
-import { db } from '../lib/db.js'
+import { db } from '@db/client'
 import { rstRecipes, rstRecipeIngredients, rstStockMovements } from '../db/schema/restaurant.js'
 import { and, eq, gte, lte } from 'drizzle-orm'
 

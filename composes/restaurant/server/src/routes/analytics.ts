@@ -1,8 +1,9 @@
 import Elysia from 'elysia'
 import type { Mediator, EventBus } from '@core'
-import { db } from '../lib/db.js'
-import { rstBills, rstShifts, rstStockMovements } from '../db/schema/restaurant.js'
-import { and, eq, gte, lte } from 'drizzle-orm'
+import { db } from '@db/client'
+import { transactions } from '@db/schema/commerce'
+import { rstShifts, rstStockMovements, rstBillPayments } from '../db/schema/restaurant.js'
+import { and, eq, gte, lte, isNull } from 'drizzle-orm'
 
 export function createAnalyticsRoutes(mediator: Mediator, bus: EventBus) {
   return new Elysia({ prefix: '/analytics' })
@@ -69,18 +70,42 @@ export function createAnalyticsRoutes(mediator: Mediator, bus: EventBus) {
       const from = url.searchParams.get('from') ?? new Date().toISOString().slice(0, 10)
       const to = url.searchParams.get('to') ?? new Date().toISOString().slice(0, 10)
 
-      const where: any[] = [
-        eq(rstBills.organizationId, session.orgId),
-        gte(rstBills.createdAt, new Date(from + 'T00:00:00Z')),
-        lte(rstBills.createdAt, new Date(to + 'T23:59:59Z')),
-      ]
-      if (outletId) where.push(eq(rstBills.outletId, outletId))
-      const bills = (await db.query.rstBills.findMany({
-        where: and(...where),
-        with: { payments: true },
-      })) as any[]
+      const rows = await db
+        .select()
+        .from(transactions)
+        .where(
+          and(
+            eq(transactions.organizationId, session.orgId),
+            eq(transactions.type, 'bill'),
+            gte(transactions.createdAt, new Date(from + 'T00:00:00Z')),
+            lte(transactions.createdAt, new Date(to + 'T23:59:59Z')),
+            isNull(transactions.deletedAt),
+          ),
+        )
 
-      const settled = bills.filter((b: any) => b.status === 'settled')
+      const bills = await Promise.all(
+        rows.map(async (row) => {
+          const meta = (row.meta ?? {}) as Record<string, any>
+          const payments = await db
+            .select()
+            .from(rstBillPayments)
+            .where(eq(rstBillPayments.transactionId, row.id))
+          return {
+            id: row.id,
+            outletId: meta.outletId,
+            status: meta.status ?? 'open',
+            grandTotal: meta.grandTotal ?? String((row.totalAmount ?? 0) / 100),
+            taxTotal: meta.taxTotal ?? String((row.taxAmount ?? 0) / 100),
+            discountTotal: meta.discountTotal ?? '0',
+            tipAmount: meta.tipAmount ?? '0',
+            payments,
+          }
+        }),
+      )
+
+      const filtered = bills.filter((b) => !outletId || b.outletId === outletId)
+
+      const settled = filtered.filter((b: any) => b.status === 'settled')
       const totalRevenue = settled.reduce(
         (s: number, b: any) => s + parseFloat(String(b.grandTotal)),
         0,
@@ -94,8 +119,8 @@ export function createAnalyticsRoutes(mediator: Mediator, bus: EventBus) {
         (s: number, b: any) => s + parseFloat(String(b.tipAmount)),
         0,
       )
-      const voided = bills.filter((b: any) => b.status === 'voided').length
-      const refunded = bills.reduce(
+      const voided = filtered.filter((b: any) => b.status === 'voided').length
+      const refunded = filtered.reduce(
         (s: number, b: any) =>
           s +
           (b.payments as any[])
@@ -126,7 +151,7 @@ export function createAnalyticsRoutes(mediator: Mediator, bus: EventBus) {
           voidedBills: voided,
           totalRefunded: refunded,
           paymentMethods,
-          billCount: bills.length,
+          billCount: filtered.length,
           settledCount: settled.length,
         },
       }

@@ -57,7 +57,7 @@ CREATE TABLE "crm_campaigns" (
 );
 --> statement-breakpoint
 CREATE TABLE "crm_campaign_contacts" (
-	"id" text PRIMARY KEY NOT NULL,
+	"id" text NOT NULL,
 	"organization_id" text NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,

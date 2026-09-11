@@ -1,7 +1,7 @@
 import Elysia from 'elysia'
 import type { Mediator, EventBus } from '@core'
 import { generateId, NotFoundError, ConflictError } from '@core'
-import { db } from '../lib/db.js'
+import { db } from '@db/client'
 import { rstReservations, rstWaitlist } from '../db/schema/restaurant.js'
 import { and, eq, gte, lte } from 'drizzle-orm'
 
@@ -60,6 +60,23 @@ export function createReservationRoutes(mediator: Mediator, bus: EventBus) {
         if (conflicts.length > 0)
           throw new ConflictError('Table already reserved for this time slot')
       }
+      let personId = input.personId
+      if (!personId && (input.guestPhone || input.guestEmail)) {
+        const result = await mediator.dispatch({
+          type: 'person.createPerson',
+          payload: {
+            organizationId: session.orgId,
+            type: 'guest',
+            firstName: input.guestName,
+            email: input.guestEmail,
+            phone: input.guestPhone,
+          },
+          actorId: session.actorId,
+          orgId: session.orgId,
+          correlationId: generateId(),
+        })
+        personId = (result as any)?.id ?? result
+      }
       const [reservation] = await db
         .insert(rstReservations)
         .values({
@@ -67,7 +84,7 @@ export function createReservationRoutes(mediator: Mediator, bus: EventBus) {
           organizationId: session.orgId,
           locationId: input.outletId,
           tableId: input.tableId,
-          personId: input.personId,
+          personId: personId ? String(personId) : null,
           guestName: input.guestName,
           guestPhone: input.guestPhone,
           guestEmail: input.guestEmail,

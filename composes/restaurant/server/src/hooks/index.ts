@@ -1,6 +1,6 @@
 import type { Mediator, EventBus } from '@core'
 import { generateId, createDomainEvent } from '@core'
-import { db } from '../lib/db.js'
+import { db } from '@db/client'
 import { rstKot } from '../db/schema/restaurant.js'
 import { eq } from 'drizzle-orm'
 
@@ -14,7 +14,7 @@ export function registerRestaurantHooks(bus: EventBus, mediator: Mediator): void
     const order = (await mediator
       .query({
         type: 'commerce.getTransaction',
-        params: { transactionId: orderId },
+        params: { id: orderId },
         actorId: 'system',
         orgId,
       })
@@ -68,7 +68,7 @@ export function registerRestaurantHooks(bus: EventBus, mediator: Mediator): void
     const order = (await mediator
       .query({
         type: 'commerce.getTransaction',
-        params: { transactionId: orderId },
+        params: { id: orderId },
         actorId: 'system',
         orgId,
       })

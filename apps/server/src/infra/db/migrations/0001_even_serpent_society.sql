@@ -207,7 +207,7 @@ CREATE TABLE "pjm_milestones" (
 );
 --> statement-breakpoint
 CREATE TABLE "pjm_milestone_dependencies" (
-	"id" text PRIMARY KEY NOT NULL,
+	"id" text NOT NULL,
 	"organization_id" text NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
@@ -236,7 +236,7 @@ CREATE TABLE "pjm_portfolios" (
 );
 --> statement-breakpoint
 CREATE TABLE "pjm_portfolio_members" (
-	"id" text PRIMARY KEY NOT NULL,
+	"id" text NOT NULL,
 	"organization_id" text NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
@@ -274,7 +274,7 @@ CREATE TABLE "pjm_projects" (
 );
 --> statement-breakpoint
 CREATE TABLE "pjm_project_guests" (
-	"id" text PRIMARY KEY NOT NULL,
+	"id" text NOT NULL,
 	"organization_id" text NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
@@ -287,7 +287,7 @@ CREATE TABLE "pjm_project_guests" (
 );
 --> statement-breakpoint
 CREATE TABLE "pjm_project_members" (
-	"id" text PRIMARY KEY NOT NULL,
+	"id" text NOT NULL,
 	"organization_id" text NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
@@ -435,7 +435,7 @@ CREATE TABLE "pjm_work_item_assignments" (
 );
 --> statement-breakpoint
 CREATE TABLE "pjm_work_item_dependencies" (
-	"id" text PRIMARY KEY NOT NULL,
+	"id" text NOT NULL,
 	"organization_id" text NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
@@ -449,7 +449,7 @@ CREATE TABLE "pjm_work_item_dependencies" (
 );
 --> statement-breakpoint
 CREATE TABLE "pjm_work_item_labels" (
-	"id" text PRIMARY KEY NOT NULL,
+	"id" text NOT NULL,
 	"organization_id" text NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
@@ -462,7 +462,7 @@ CREATE TABLE "pjm_work_item_labels" (
 );
 --> statement-breakpoint
 CREATE TABLE "pjm_work_item_watchers" (
-	"id" text PRIMARY KEY NOT NULL,
+	"id" text NOT NULL,
 	"organization_id" text NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,

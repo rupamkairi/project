@@ -8,7 +8,6 @@ export default defineConfig({
   dialect: 'postgresql',
   schema: [
     './src/infra/db/schema/index.ts',
-    '../../composes/restaurant/server/src/db/schema/restaurant.ts',
     '../../composes/workplace/server/src/db/schema/workplace.ts',
     '../../composes/project-management/server/src/db/schema/project-management.ts',
     '../../composes/hospitality/server/src/db/schema/hospitality.ts',

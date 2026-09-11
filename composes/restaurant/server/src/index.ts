@@ -39,7 +39,6 @@ export function createRestaurantCompose(mediator: Mediator, bus: EventBus, sched
 export type RestaurantApp = ReturnType<typeof createRestaurantCompose>
 
 export {
-  rstCategories,
   rstKot,
   rstKotItems,
   rstShifts,
@@ -51,18 +50,13 @@ export {
   rstModifierGroups,
   rstAggregatorMappings,
   rstMenuPeriods,
-  rstItemVariants,
-  rstItemAllergens,
   rstStockMovements,
-  rstEquipment,
   rstEquipmentLogs,
   rstPartners,
   rstStaff,
-  rstBills,
   rstBillPayments,
   rstBillSplits,
   rstDiscounts,
-  rstOrderHistory,
 } from './db/schema/restaurant.js'
 
 export { seedRestaurant } from './db/seed/restaurant.js'

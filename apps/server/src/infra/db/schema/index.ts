@@ -157,7 +157,6 @@ export {
 
 // Restaurant schema - re-exported from compose
 import {
-  rstCategories,
   rstModifiers,
   rstModifierGroups,
   rstKot,
@@ -169,23 +168,17 @@ import {
   rstReservations,
   rstAggregatorMappings,
   rstMenuPeriods,
-  rstItemVariants,
-  rstItemAllergens,
   rstStockMovements,
-  rstEquipment,
   rstEquipmentLogs,
   rstPartners,
   rstStaff,
-  rstBills,
   rstBillPayments,
   rstBillSplits,
   rstDiscounts,
-  rstOrderHistory,
   rstWaitlist,
 } from '@projectx/restaurant-server/db/schema/restaurant'
 
 export {
-  rstCategories,
   rstModifiers,
   rstModifierGroups,
   rstKot,
@@ -197,17 +190,12 @@ export {
   rstReservations,
   rstAggregatorMappings,
   rstMenuPeriods,
-  rstItemVariants,
-  rstItemAllergens,
   rstStockMovements,
-  rstEquipment,
   rstEquipmentLogs,
   rstPartners,
   rstStaff,
-  rstBills,
   rstBillPayments,
   rstBillSplits,
   rstDiscounts,
-  rstOrderHistory,
   rstWaitlist,
 }

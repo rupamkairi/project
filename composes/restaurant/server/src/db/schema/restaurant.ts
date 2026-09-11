@@ -1,3 +1,27 @@
+// Restaurant Compose — detail tables (prefixed `rst_`).
+//
+// The restaurant compose reuses shared master tables (cat_items, cat_categories,
+// cat_variants, transactions, locations, persons, activities) and defines its
+// own detail tables here for the workflow it genuinely owns (menu periods,
+// modifiers, KOT, shifts, staff, reservations, recipes, stock movements,
+// partners, discounts, bill payments/splits, equipment logs). Each detail row
+// links to a master via a plain `text(...)` id column — no `references()`
+// (implicit FKs, per docs/conventions.md §7 and master-tables.md).
+//
+// Master-backed restaurant entities have NO schema file here:
+//   Outlet / Table      → locations
+//   Menu item           → cat_items (type = "menu_item")
+//   Menu category       → cat_categories
+//   Menu variant        → cat_variants
+//   Allergen            → cat_items.meta.allergens
+//   Order               → transactions (type = "order")
+//   Bill                → transactions (type = "bill")
+//   Equipment asset     → cat_items (type = "asset")
+//   Order history       → activities
+//
+// All tables extend `baseColumns` (id, organizationId, createdAt, updatedAt,
+// deletedAt, version, meta) imported from the identity module's helpers.
+
 import {
   pgTable,
   text,
@@ -8,67 +32,28 @@ import {
   jsonb,
   date,
   time,
+  index,
 } from 'drizzle-orm/pg-core'
-
-// ─── Categories ───────────────────────────────────────────────────────────────
-
-export const rstCategories = pgTable('rst_categories', {
-  id: text('id').primaryKey(),
-  organizationId: text('organization_id').notNull(),
-  name: text('name').notNull(),
-  description: text('description'),
-  sortOrder: integer('sort_order').default(0),
-  parentId: text('parent_id'),
-  isActive: boolean('is_active').default(true),
-  mealPeriod: text('meal_period').default('all'),
-  imageUrl: text('image_url'),
-  outletId: text('outlet_id'),
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow(),
-})
+import { baseColumns } from '@db/schema/helpers'
+import { relations } from 'drizzle-orm'
+import { transactions } from '@db/schema/commerce'
 
 // ─── Menu Periods ─────────────────────────────────────────────────────────────
 
 export const rstMenuPeriods = pgTable('rst_menu_periods', {
-  id: text('id').primaryKey(),
-  organizationId: text('organization_id').notNull(),
+  ...baseColumns,
   outletId: text('outlet_id').notNull(),
   name: text('name').notNull(),
   startTime: time('start_time').notNull(),
   endTime: time('end_time').notNull(),
   daysOfWeek: jsonb('days_of_week').$type<number[]>().default([0, 1, 2, 3, 4, 5, 6]),
   isActive: boolean('is_active').default(true),
-  createdAt: timestamp('created_at').defaultNow(),
-})
-
-// ─── Item Variants ────────────────────────────────────────────────────────────
-
-export const rstItemVariants = pgTable('rst_item_variants', {
-  id: text('id').primaryKey(),
-  organizationId: text('organization_id').notNull(),
-  itemId: text('item_id').notNull(),
-  name: text('name').notNull(),
-  priceAdjustment: numeric('price_adjustment', { precision: 8, scale: 2 }).default('0'),
-  isDefault: boolean('is_default').default(false),
-  isActive: boolean('is_active').default(true),
-  sortOrder: integer('sort_order').default(0),
-})
-
-// ─── Item Allergens ───────────────────────────────────────────────────────────
-
-export const rstItemAllergens = pgTable('rst_item_allergens', {
-  id: text('id').primaryKey(),
-  organizationId: text('organization_id').notNull(),
-  itemId: text('item_id').notNull(),
-  allergen: text('allergen').notNull(),
-  severity: text('severity').default('contains'),
 })
 
 // ─── Modifiers ────────────────────────────────────────────────────────────────
 
 export const rstModifiers = pgTable('rst_modifiers', {
-  id: text('id').primaryKey(),
-  organizationId: text('organization_id').notNull(),
+  ...baseColumns,
   name: text('name').notNull(),
   priceAdjustment: numeric('price_adjustment', { precision: 8, scale: 2 }).default('0'),
   isActive: boolean('is_active').default(true),
@@ -76,8 +61,7 @@ export const rstModifiers = pgTable('rst_modifiers', {
 })
 
 export const rstModifierGroups = pgTable('rst_modifier_groups', {
-  id: text('id').primaryKey(),
-  organizationId: text('organization_id').notNull(),
+  ...baseColumns,
   name: text('name').notNull(),
   selectionType: text('selection_type').notNull(),
   minSelections: integer('min_selections').default(0),
@@ -92,8 +76,7 @@ export const rstModifierGroups = pgTable('rst_modifier_groups', {
 // ─── KOT ──────────────────────────────────────────────────────────────────────
 
 export const rstKot = pgTable('rst_kot', {
-  id: text('id').primaryKey(),
-  organizationId: text('organization_id').notNull(),
+  ...baseColumns,
   transactionId: text('transaction_id').notNull(),
   locationId: text('location_id'),
   kotNumber: text('kot_number').notNull(),
@@ -112,11 +95,8 @@ export const rstKot = pgTable('rst_kot', {
 })
 
 export const rstKotItems = pgTable('rst_kot_items', {
-  id: text('id').primaryKey(),
-  organizationId: text('organization_id').notNull(),
-  kotId: text('kot_id')
-    .notNull()
-    .references(() => rstKot.id),
+  ...baseColumns,
+  kotId: text('kot_id').notNull(),
   transactionLineId: text('transaction_line_id').notNull(),
   itemId: text('item_id').notNull(),
   name: text('name').notNull(),
@@ -128,25 +108,10 @@ export const rstKotItems = pgTable('rst_kot_items', {
   status: text('status').default('pending'),
 })
 
-// ─── Order History ────────────────────────────────────────────────────────────
-
-export const rstOrderHistory = pgTable('rst_order_history', {
-  id: text('id').primaryKey(),
-  organizationId: text('organization_id').notNull(),
-  orderId: text('order_id').notNull(),
-  fromStatus: text('from_status'),
-  toStatus: text('to_status').notNull(),
-  actorId: text('actor_id'),
-  actorName: text('actor_name'),
-  note: text('note'),
-  changedAt: timestamp('changed_at').defaultNow(),
-})
-
 // ─── Shifts ───────────────────────────────────────────────────────────────────
 
 export const rstShifts = pgTable('rst_shifts', {
-  id: text('id').primaryKey(),
-  organizationId: text('organization_id').notNull(),
+  ...baseColumns,
   locationId: text('location_id').notNull(),
   date: date('date').notNull(),
   startTime: time('start_time').notNull(),
@@ -167,11 +132,8 @@ export const rstShifts = pgTable('rst_shifts', {
 })
 
 export const rstShiftAssignments = pgTable('rst_shift_assignments', {
-  id: text('id').primaryKey(),
-  organizationId: text('organization_id').notNull(),
-  shiftId: text('shift_id')
-    .notNull()
-    .references(() => rstShifts.id),
+  ...baseColumns,
+  shiftId: text('shift_id').notNull(),
   personId: text('person_id').notNull(),
   role: text('role').notNull(),
   clockIn: timestamp('clock_in'),
@@ -183,8 +145,7 @@ export const rstShiftAssignments = pgTable('rst_shift_assignments', {
 // ─── Staff ────────────────────────────────────────────────────────────────────
 
 export const rstStaff = pgTable('rst_staff', {
-  id: text('id').primaryKey(),
-  organizationId: text('organization_id').notNull(),
+  ...baseColumns,
   personId: text('person_id').notNull(),
   employeeCode: text('employee_code'),
   outletId: text('outlet_id').notNull(),
@@ -199,15 +160,12 @@ export const rstStaff = pgTable('rst_staff', {
     phone: string
     relation: string
   }>(),
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow(),
 })
 
 // ─── Reservations ─────────────────────────────────────────────────────────────
 
 export const rstReservations = pgTable('rst_reservations', {
-  id: text('id').primaryKey(),
-  organizationId: text('organization_id').notNull(),
+  ...baseColumns,
   locationId: text('location_id').notNull(),
   tableId: text('table_id'),
   personId: text('person_id'),
@@ -229,13 +187,10 @@ export const rstReservations = pgTable('rst_reservations', {
   cancelledAt: timestamp('cancelled_at'),
   cancelReason: text('cancel_reason'),
   noShowAt: timestamp('no_show_at'),
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow(),
 })
 
 export const rstWaitlist = pgTable('rst_waitlist', {
-  id: text('id').primaryKey(),
-  organizationId: text('organization_id').notNull(),
+  ...baseColumns,
   locationId: text('location_id').notNull(),
   guestName: text('guest_name').notNull(),
   guestPhone: text('guest_phone'),
@@ -252,11 +207,9 @@ export const rstWaitlist = pgTable('rst_waitlist', {
 // ─── Recipes ──────────────────────────────────────────────────────────────────
 
 export const rstRecipes = pgTable('rst_recipes', {
-  id: text('id').primaryKey(),
-  organizationId: text('organization_id').notNull(),
+  ...baseColumns,
   itemId: text('item_id').notNull(),
   name: text('name').notNull(),
-  version: integer('version').default(1),
   yieldQty: numeric('yield_qty', { precision: 6, scale: 2 }).notNull(),
   yieldUnit: text('yield_unit').default('portions'),
   isActive: boolean('is_active').default(true),
@@ -264,16 +217,11 @@ export const rstRecipes = pgTable('rst_recipes', {
   prepTimeMinutes: integer('prep_time_minutes'),
   cookTimeMinutes: integer('cook_time_minutes'),
   createdBy: text('created_by'),
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow(),
 })
 
 export const rstRecipeIngredients = pgTable('rst_recipe_ingredients', {
-  id: text('id').primaryKey(),
-  organizationId: text('organization_id').notNull(),
-  recipeId: text('recipe_id')
-    .notNull()
-    .references(() => rstRecipes.id),
+  ...baseColumns,
+  recipeId: text('recipe_id').notNull(),
   itemId: text('item_id').notNull(),
   qty: numeric('qty', { precision: 10, scale: 3 }).notNull(),
   unit: text('unit').notNull(),
@@ -284,8 +232,7 @@ export const rstRecipeIngredients = pgTable('rst_recipe_ingredients', {
 // ─── Stock Movements ──────────────────────────────────────────────────────────
 
 export const rstStockMovements = pgTable('rst_stock_movements', {
-  id: text('id').primaryKey(),
-  organizationId: text('organization_id').notNull(),
+  ...baseColumns,
   itemId: text('item_id').notNull(),
   outletId: text('outlet_id').notNull(),
   movementType: text('movement_type').notNull(),
@@ -298,34 +245,13 @@ export const rstStockMovements = pgTable('rst_stock_movements', {
   reason: text('reason'),
   performedBy: text('performed_by'),
   costPerUnit: numeric('cost_per_unit', { precision: 10, scale: 3 }),
-  createdAt: timestamp('created_at').defaultNow(),
 })
 
-// ─── Equipment ────────────────────────────────────────────────────────────────
-
-export const rstEquipment = pgTable('rst_equipment', {
-  id: text('id').primaryKey(),
-  organizationId: text('organization_id').notNull(),
-  outletId: text('outlet_id').notNull(),
-  category: text('category').notNull(),
-  name: text('name').notNull(),
-  serialNumber: text('serial_number'),
-  reference: text('reference'),
-  purchaseDate: date('purchase_date'),
-  warrantyExpiry: date('warranty_expiry'),
-  purchaseCost: numeric('purchase_cost', { precision: 10, scale: 2 }),
-  status: text('status').default('active'),
-  notes: text('notes'),
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow(),
-})
+// ─── Equipment Logs ───────────────────────────────────────────────────────────
 
 export const rstEquipmentLogs = pgTable('rst_equipment_logs', {
-  id: text('id').primaryKey(),
-  organizationId: text('organization_id').notNull(),
-  equipmentId: text('equipment_id')
-    .notNull()
-    .references(() => rstEquipment.id),
+  ...baseColumns,
+  itemId: text('item_id').notNull(),
   logType: text('log_type').notNull(),
   description: text('description').notNull(),
   serviceDate: date('service_date').notNull(),
@@ -333,14 +259,13 @@ export const rstEquipmentLogs = pgTable('rst_equipment_logs', {
   performedBy: text('performed_by'),
   notes: text('notes'),
   resolvedAt: timestamp('resolved_at'),
-  createdAt: timestamp('created_at').defaultNow(),
 })
 
 // ─── Partners ─────────────────────────────────────────────────────────────────
 
 export const rstPartners = pgTable('rst_partners', {
-  id: text('id').primaryKey(),
-  organizationId: text('organization_id').notNull(),
+  ...baseColumns,
+  partyId: text('party_id'),
   partnerType: text('partner_type').notNull(),
   name: text('name').notNull(),
   contactName: text('contact_name'),
@@ -354,15 +279,12 @@ export const rstPartners = pgTable('rst_partners', {
   handoffMethod: text('handoff_method').default('manual'),
   apiKeyHash: text('api_key_hash'),
   isActive: boolean('is_active').default(true),
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow(),
 })
 
 // ─── Aggregator Mappings ──────────────────────────────────────────────────────
 
 export const rstAggregatorMappings = pgTable('rst_aggregator_mappings', {
-  id: text('id').primaryKey(),
-  organizationId: text('organization_id').notNull(),
+  ...baseColumns,
   locationId: text('location_id').notNull(),
   platform: text('platform').notNull(),
   storeId: text('store_id').notNull(),
@@ -370,57 +292,24 @@ export const rstAggregatorMappings = pgTable('rst_aggregator_mappings', {
   isActive: boolean('is_active').default(true),
   lastSyncAt: timestamp('last_sync_at'),
   syncStatus: text('sync_status').default('idle'),
-  createdAt: timestamp('created_at').defaultNow(),
 })
 
-// ─── Bills ────────────────────────────────────────────────────────────────────
-
-export const rstBills = pgTable('rst_bills', {
-  id: text('id').primaryKey(),
-  organizationId: text('organization_id').notNull(),
-  orderId: text('order_id').notNull(),
-  outletId: text('outlet_id').notNull(),
-  billNumber: text('bill_number').notNull(),
-  subtotal: numeric('subtotal', { precision: 10, scale: 2 }).notNull().default('0'),
-  discountTotal: numeric('discount_total', { precision: 10, scale: 2 }).default('0'),
-  taxTotal: numeric('tax_total', { precision: 10, scale: 2 }).default('0'),
-  serviceCharge: numeric('service_charge', { precision: 10, scale: 2 }).default('0'),
-  tipAmount: numeric('tip_amount', { precision: 10, scale: 2 }).default('0'),
-  roundOff: numeric('round_off', { precision: 4, scale: 2 }).default('0'),
-  grandTotal: numeric('grand_total', { precision: 10, scale: 2 }).notNull().default('0'),
-  status: text('status').default('open'),
-  tableId: text('table_id'),
-  coverCount: integer('cover_count'),
-  cashierId: text('cashier_id'),
-  shiftId: text('shift_id'),
-  receiptNumber: text('receipt_number'),
-  createdAt: timestamp('created_at').defaultNow(),
-  settledAt: timestamp('settled_at'),
-  voidedAt: timestamp('voided_at'),
-  voidReason: text('void_reason'),
-})
+// ─── Bill Payments / Splits ───────────────────────────────────────────────────
 
 export const rstBillPayments = pgTable('rst_bill_payments', {
-  id: text('id').primaryKey(),
-  organizationId: text('organization_id').notNull(),
-  billId: text('bill_id')
-    .notNull()
-    .references(() => rstBills.id),
+  ...baseColumns,
+  transactionId: text('transaction_id').notNull(),
   method: text('method').notNull(),
   amount: numeric('amount', { precision: 10, scale: 2 }).notNull(),
   referenceNumber: text('reference_number'),
   cardLastFour: text('card_last_four'),
   isRefund: boolean('is_refund').default(false),
   refundReason: text('refund_reason'),
-  createdAt: timestamp('created_at').defaultNow(),
 })
 
 export const rstBillSplits = pgTable('rst_bill_splits', {
-  id: text('id').primaryKey(),
-  organizationId: text('organization_id').notNull(),
-  billId: text('bill_id')
-    .notNull()
-    .references(() => rstBills.id),
+  ...baseColumns,
+  transactionId: text('transaction_id').notNull(),
   guestLabel: text('guest_label').notNull(),
   itemIds: jsonb('item_ids').$type<string[]>().default([]),
   subtotal: numeric('subtotal', { precision: 10, scale: 2 }).default('0'),
@@ -429,8 +318,7 @@ export const rstBillSplits = pgTable('rst_bill_splits', {
 // ─── Discounts ────────────────────────────────────────────────────────────────
 
 export const rstDiscounts = pgTable('rst_discounts', {
-  id: text('id').primaryKey(),
-  organizationId: text('organization_id').notNull(),
+  ...baseColumns,
   name: text('name').notNull(),
   discountType: text('discount_type').notNull(),
   value: numeric('value', { precision: 8, scale: 2 }).notNull(),
@@ -439,5 +327,46 @@ export const rstDiscounts = pgTable('rst_discounts', {
   requiresApproval: boolean('requires_approval').default(false),
   isActive: boolean('is_active').default(true),
   outletId: text('outlet_id'),
-  createdAt: timestamp('created_at').defaultNow(),
 })
+
+// ---------------------------------------------------------------------------
+// Relations
+// ---------------------------------------------------------------------------
+
+export const rstKotRelations = relations(rstKot, ({ many }) => ({
+  items: many(rstKotItems),
+}))
+
+export const rstKotItemsRelations = relations(rstKotItems, ({ one }) => ({
+  kot: one(rstKot, { fields: [rstKotItems.kotId], references: [rstKot.id] }),
+}))
+
+export const rstRecipesRelations = relations(rstRecipes, ({ many }) => ({
+  ingredients: many(rstRecipeIngredients),
+}))
+
+export const rstRecipeIngredientsRelations = relations(rstRecipeIngredients, ({ one }) => ({
+  recipe: one(rstRecipes, { fields: [rstRecipeIngredients.recipeId], references: [rstRecipes.id] }),
+}))
+
+export const rstShiftAssignmentsRelations = relations(rstShiftAssignments, ({ one }) => ({
+  shift: one(rstShifts, { fields: [rstShiftAssignments.shiftId], references: [rstShifts.id] }),
+}))
+
+export const rstShiftsRelations = relations(rstShifts, ({ many }) => ({
+  assignments: many(rstShiftAssignments),
+}))
+
+export const rstBillPaymentsRelations = relations(rstBillPayments, ({ one }) => ({
+  bill: one(transactions, {
+    fields: [rstBillPayments.transactionId],
+    references: [transactions.id],
+  }),
+}))
+
+export const rstBillSplitsRelations = relations(rstBillSplits, ({ one }) => ({
+  bill: one(transactions, {
+    fields: [rstBillSplits.transactionId],
+    references: [transactions.id],
+  }),
+}))

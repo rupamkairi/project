@@ -1,7 +1,7 @@
 import Elysia from 'elysia'
 import type { Mediator, EventBus } from '@core'
 import { generateId } from '@core'
-import { db } from '../lib/db.js'
+import { db } from '@db/client'
 import { rstPartners } from '../db/schema/restaurant.js'
 import { and, eq } from 'drizzle-orm'
 
@@ -29,6 +29,7 @@ export function createPartnerRoutes(mediator: Mediator, bus: EventBus) {
         .values({
           id: generateId(),
           organizationId: session.orgId,
+          partyId: input.partyId,
           partnerType: input.partnerType,
           name: input.name,
           contactName: input.contactName,

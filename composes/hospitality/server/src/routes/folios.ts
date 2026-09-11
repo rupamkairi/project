@@ -37,15 +37,15 @@ export function createFoliosRoutes(mediator: Mediator) {
       const { id } = (ctx as any).params
       const result = await mediator.query({
         type: 'commerce.getTransaction',
-        params: { transactionId: id, orgId: actor.orgId },
+        params: { id },
         actorId: '',
         orgId: actor.orgId,
       })
-      if (!result?.data) {
+      if (!result) {
         ;(ctx as any).set.status = 404
         return { error: 'Folio not found' }
       }
-      return result.data
+      return result
     })
     .post('/', async (ctx) => {
       const actor = getActor(ctx)

@@ -1,9 +1,10 @@
 import Elysia from 'elysia'
 import type { Mediator, EventBus } from '@core'
 import { generateId, createDomainEvent, NotFoundError, ValidationError, ConflictError } from '@core'
-import { db } from '../lib/db.js'
-import { rstKot, rstKotItems, rstOrderHistory } from '../db/schema/restaurant.js'
-import { eq } from 'drizzle-orm'
+import { db } from '@db/client'
+import { activities } from '@db/schema/activity'
+import { rstKot, rstKotItems } from '../db/schema/restaurant.js'
+import { eq, and, asc } from 'drizzle-orm'
 
 const ORDER_TRANSITIONS: Record<string, string[]> = {
   draft: ['placed', 'cancelled'],
@@ -37,15 +38,50 @@ async function recordHistory(
   actorId: string,
   note?: string,
 ) {
-  await db.insert(rstOrderHistory).values({
+  await db.insert(activities).values({
     id: generateId(),
     organizationId: orgId,
-    orderId,
-    fromStatus,
-    toStatus,
+    type: 'log',
+    subject: `Order ${fromStatus ?? 'new'} → ${toStatus}`,
+    body: note ?? null,
+    status: 'done',
     actorId,
-    note,
+    entityId: orderId,
+    entityType: 'rst.order',
+    completedAt: new Date(),
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    version: 1,
+    meta: { fromStatus, toStatus },
   })
+}
+
+function mapHistory(a: typeof activities.$inferSelect) {
+  const meta = (a.meta ?? {}) as Record<string, any>
+  return {
+    id: a.id,
+    orderId: a.entityId,
+    fromStatus: meta.fromStatus ?? null,
+    toStatus: meta.toStatus ?? null,
+    actorId: a.actorId,
+    note: a.body,
+    changedAt: a.createdAt,
+  }
+}
+
+async function readHistory(orderId: string, orgId: string) {
+  const rows = await db
+    .select()
+    .from(activities)
+    .where(
+      and(
+        eq(activities.organizationId, orgId),
+        eq(activities.entityType, 'rst.order'),
+        eq(activities.entityId, orderId),
+      ),
+    )
+    .orderBy(asc(activities.createdAt))
+  return rows.map(mapHistory)
 }
 
 export function createOrderRoutes(mediator: Mediator, bus: EventBus) {
@@ -70,7 +106,7 @@ export function createOrderRoutes(mediator: Mediator, bus: EventBus) {
       const session = (request as any).session
       const order = await mediator.query({
         type: 'commerce.getTransaction',
-        params: { transactionId: params.id },
+        params: { id: params.id },
         actorId: session.actorId,
         orgId: session.orgId,
       })
@@ -79,10 +115,7 @@ export function createOrderRoutes(mediator: Mediator, bus: EventBus) {
         where: eq(rstKot.transactionId, params.id),
         with: { items: true },
       })
-      const history = await db.query.rstOrderHistory.findMany({
-        where: eq(rstOrderHistory.orderId, params.id),
-        orderBy: (t, { asc }) => [asc(t.changedAt)],
-      })
+      const history = await readHistory(params.id, session.orgId)
       return { data: { ...order, kots, history } }
     })
 
@@ -160,7 +193,7 @@ export function createOrderRoutes(mediator: Mediator, bus: EventBus) {
 
       const order = await mediator.query({
         type: 'commerce.getTransaction',
-        params: { transactionId: params.id },
+        params: { id: params.id },
         actorId: session.actorId,
         orgId: session.orgId,
       })
@@ -284,7 +317,7 @@ export function createOrderRoutes(mediator: Mediator, bus: EventBus) {
 
       const order = await mediator.query({
         type: 'commerce.getTransaction',
-        params: { transactionId: params.id },
+        params: { id: params.id },
         actorId: session.actorId,
         orgId: session.orgId,
       })
@@ -331,7 +364,7 @@ export function createOrderRoutes(mediator: Mediator, bus: EventBus) {
       const session = (request as any).session
       const order = await mediator.query({
         type: 'commerce.getTransaction',
-        params: { transactionId: params.id },
+        params: { id: params.id },
         actorId: session.actorId,
         orgId: session.orgId,
       })
@@ -356,7 +389,7 @@ export function createOrderRoutes(mediator: Mediator, bus: EventBus) {
       const input = body as any
       const order = await mediator.query({
         type: 'commerce.getTransaction',
-        params: { transactionId: params.id },
+        params: { id: params.id },
         actorId: session.actorId,
         orgId: session.orgId,
       })
@@ -395,10 +428,8 @@ export function createOrderRoutes(mediator: Mediator, bus: EventBus) {
     })
 
     .post('/:id/history', async ({ params, request }) => {
-      const history = await db.query.rstOrderHistory.findMany({
-        where: eq(rstOrderHistory.orderId, params.id),
-        orderBy: (t, { asc }) => [asc(t.changedAt)],
-      })
+      const session = (request as any).session
+      const history = await readHistory(params.id, session.orgId)
       return { data: history }
     })
 }

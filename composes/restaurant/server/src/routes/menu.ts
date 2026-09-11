@@ -1,16 +1,50 @@
 import Elysia from 'elysia'
 import type { Mediator, EventBus } from '@core'
 import { generateId, createDomainEvent, NotFoundError } from '@core'
-import { db } from '../lib/db.js'
+import { db } from '@db/client'
+import { catCategories, catItems, catVariants } from '@db/schema/catalog'
 import {
-  rstCategories,
   rstMenuPeriods,
-  rstItemVariants,
-  rstItemAllergens,
   rstModifiers,
   rstModifierGroups,
 } from '../db/schema/restaurant.js'
-import { eq, and } from 'drizzle-orm'
+import { eq, and, asc, isNull } from 'drizzle-orm'
+
+function slugify(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+}
+
+function mapCategory(c: typeof catCategories.$inferSelect) {
+  const meta = (c.meta ?? {}) as Record<string, any>
+  return {
+    id: c.id,
+    organizationId: c.organizationId,
+    name: c.name,
+    description: meta.description ?? null,
+    sortOrder: c.sortOrder,
+    parentId: c.parentId,
+    isActive: c.status === 'active',
+    mealPeriod: meta.mealPeriod ?? 'all',
+    imageUrl: meta.imageUrl ?? null,
+    outletId: meta.outletId ?? null,
+    createdAt: c.createdAt,
+    updatedAt: c.updatedAt,
+  }
+}
+
+function mapVariant(v: typeof catVariants.$inferSelect) {
+  const attributes = (v.attributes ?? {}) as Record<string, any>
+  return {
+    id: v.id,
+    organizationId: v.organizationId,
+    itemId: v.itemId,
+    name: attributes.name,
+    priceAdjustment: attributes.priceAdjustment ?? '0',
+    isDefault: attributes.isDefault ?? false,
+    isActive: v.status === 'active',
+    sortOrder: attributes.sortOrder ?? 0,
+  }
+}
 
 export function createMenuRoutes(mediator: Mediator, bus: EventBus) {
   return (
@@ -18,44 +52,85 @@ export function createMenuRoutes(mediator: Mediator, bus: EventBus) {
       // ── Categories ──
       .get('/categories', async ({ request }) => {
         const session = (request as any).session
-        const outletId = new URL(request.url).searchParams.get('outletId')
-        const cats = await db.query.rstCategories.findMany({
-          where: and(
-            eq(rstCategories.organizationId, session.orgId),
-            eq(rstCategories.isActive, true),
-          ),
-          orderBy: (t, { asc }) => [asc(t.sortOrder)],
-        })
-        return { data: cats }
+        const cats = await db
+          .select()
+          .from(catCategories)
+          .where(
+            and(
+              eq(catCategories.organizationId, session.orgId),
+              eq(catCategories.status, 'active'),
+              isNull(catCategories.deletedAt),
+            ),
+          )
+          .orderBy(asc(catCategories.sortOrder))
+        return { data: cats.map(mapCategory) }
       })
 
       .post('/categories', async ({ body, request }) => {
         const session = (request as any).session
         const input = body as any
+        const catId = generateId()
         const [cat] = await db
-          .insert(rstCategories)
+          .insert(catCategories)
           .values({
-            id: generateId(),
+            id: catId,
             organizationId: session.orgId,
             name: input.name,
-            description: input.description,
+            slug: slugify(input.name) + '-' + catId.slice(-6),
+            parentId: input.parentId ?? null,
             sortOrder: input.sortOrder ?? 0,
-            parentId: input.parentId,
-            mealPeriod: input.mealPeriod ?? 'all',
-            imageUrl: input.imageUrl,
-            outletId: input.outletId,
+            status: 'active',
+            meta: {
+              mealPeriod: input.mealPeriod ?? 'all',
+              outletId: input.outletId ?? null,
+              imageUrl: input.imageUrl ?? null,
+              description: input.description ?? null,
+            },
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            version: 1,
           })
           .returning()
-        return { data: cat }
+        return { data: mapCategory(cat!) }
       })
 
       .patch('/categories/:id', async ({ params, body, request }) => {
+        const input = body as any
+        const [existing] = await db
+          .select()
+          .from(catCategories)
+          .where(eq(catCategories.id, params.id))
+          .limit(1)
+        if (!existing) throw new NotFoundError('Category not found')
+
+        const existingMeta = (existing.meta ?? {}) as Record<string, any>
+        const nextMeta = {
+          ...existingMeta,
+          description: input.description ?? existingMeta.description ?? null,
+          mealPeriod: input.mealPeriod ?? existingMeta.mealPeriod ?? 'all',
+          imageUrl: input.imageUrl ?? existingMeta.imageUrl ?? null,
+          outletId: input.outletId ?? existingMeta.outletId ?? null,
+        }
+
         const [updated] = await db
-          .update(rstCategories)
-          .set({ ...(body as any), updatedAt: new Date() })
-          .where(eq(rstCategories.id, params.id))
+          .update(catCategories)
+          .set({
+            name: input.name ?? existing.name,
+            slug: input.name ? slugify(input.name) + '-' + existing.id.slice(-6) : existing.slug,
+            sortOrder: input.sortOrder ?? existing.sortOrder,
+            parentId: input.parentId !== undefined ? input.parentId : existing.parentId,
+            status:
+              input.isActive === undefined
+                ? existing.status
+                : input.isActive
+                  ? 'active'
+                  : 'inactive',
+            meta: nextMeta,
+            updatedAt: new Date(),
+          })
+          .where(eq(catCategories.id, params.id))
           .returning()
-        return { data: updated }
+        return { data: mapCategory(updated!) }
       })
 
       // ── Menu Periods ──
@@ -94,7 +169,6 @@ export function createMenuRoutes(mediator: Mediator, bus: EventBus) {
       .get('/items', async ({ request }) => {
         const session = (request as any).session
         const url = new URL(request.url)
-        const categoryId = url.searchParams.get('categoryId')
         const outletId = url.searchParams.get('outletId')
         const items = await mediator.query({
           type: 'catalog.listItems',
@@ -104,13 +178,18 @@ export function createMenuRoutes(mediator: Mediator, bus: EventBus) {
         })
         const enriched = await Promise.all(
           (items as any[]).map(async (item) => {
-            const variants = await db.query.rstItemVariants.findMany({
-              where: and(eq(rstItemVariants.itemId, item.id), eq(rstItemVariants.isActive, true)),
-            })
-            const allergens = await db.query.rstItemAllergens.findMany({
-              where: eq(rstItemAllergens.itemId, item.id),
-            })
-            return { ...item, variants, allergens }
+            const variants = await db
+              .select()
+              .from(catVariants)
+              .where(
+                and(
+                  eq(catVariants.itemId, item.id),
+                  eq(catVariants.status, 'active'),
+                  isNull(catVariants.deletedAt),
+                ),
+              )
+            const allergens = item.meta?.allergens ?? []
+            return { ...item, variants: variants.map(mapVariant), allergens }
           }),
         )
         return { data: enriched }
@@ -138,6 +217,7 @@ export function createMenuRoutes(mediator: Mediator, bus: EventBus) {
               taxPct: input.taxPct,
               thumbnailUrl: input.thumbnailUrl,
               sortOrder: input.sortOrder ?? 0,
+              allergens: input.allergens ?? [],
             },
           },
           actorId: session.actorId,
@@ -147,25 +227,22 @@ export function createMenuRoutes(mediator: Mediator, bus: EventBus) {
         const newItem = item as any
         if (input.variants?.length) {
           for (const v of input.variants) {
-            await db.insert(rstItemVariants).values({
+            await db.insert(catVariants).values({
               id: generateId(),
               organizationId: session.orgId,
               itemId: newItem.id,
-              name: v.name,
-              priceAdjustment: v.priceAdjustment ?? '0',
-              isDefault: v.isDefault ?? false,
-              sortOrder: v.sortOrder ?? 0,
-            })
-          }
-        }
-        if (input.allergens?.length) {
-          for (const a of input.allergens) {
-            await db.insert(rstItemAllergens).values({
-              id: generateId(),
-              organizationId: session.orgId,
-              itemId: newItem.id,
-              allergen: a.allergen,
-              severity: a.severity ?? 'contains',
+              sku: `${newItem.id}-${slugify(v.name)}`,
+              attributes: {
+                name: v.name,
+                priceAdjustment: v.priceAdjustment ?? '0',
+                isDefault: v.isDefault ?? false,
+                sortOrder: v.sortOrder ?? 0,
+              },
+              stockTracked: false,
+              status: 'active',
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              version: 1,
             })
           }
         }
@@ -212,50 +289,87 @@ export function createMenuRoutes(mediator: Mediator, bus: EventBus) {
         const session = (request as any).session
         const input = body as any
         const [variant] = await db
-          .insert(rstItemVariants)
+          .insert(catVariants)
           .values({
             id: generateId(),
             organizationId: session.orgId,
             itemId: params.id,
-            name: input.name,
-            priceAdjustment: input.priceAdjustment ?? '0',
-            isDefault: input.isDefault ?? false,
-            sortOrder: input.sortOrder ?? 0,
+            sku: `${params.id}-${slugify(input.name)}`,
+            attributes: {
+              name: input.name,
+              priceAdjustment: input.priceAdjustment ?? '0',
+              isDefault: input.isDefault ?? false,
+              sortOrder: input.sortOrder ?? 0,
+            },
+            stockTracked: false,
+            status: 'active',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            version: 1,
           })
           .returning()
-        return { data: variant }
+        return { data: mapVariant(variant!) }
       })
 
       .patch('/variants/:id', async ({ params, body, request }) => {
+        const input = body as any
+        const [existing] = await db
+          .select()
+          .from(catVariants)
+          .where(eq(catVariants.id, params.id))
+          .limit(1)
+        if (!existing) throw new NotFoundError('Variant not found')
+
+        const attributes = (existing.attributes ?? {}) as Record<string, any>
+        const nextAttributes = {
+          name: input.name ?? attributes.name,
+          priceAdjustment: input.priceAdjustment ?? attributes.priceAdjustment ?? '0',
+          isDefault: input.isDefault ?? attributes.isDefault ?? false,
+          sortOrder: input.sortOrder ?? attributes.sortOrder ?? 0,
+        }
+
         const [updated] = await db
-          .update(rstItemVariants)
-          .set({ ...(body as any) })
-          .where(eq(rstItemVariants.id, params.id))
+          .update(catVariants)
+          .set({
+            attributes: nextAttributes,
+            status:
+              input.isActive === undefined
+                ? existing.status
+                : input.isActive
+                  ? 'active'
+                  : 'inactive',
+            updatedAt: new Date(),
+          })
+          .where(eq(catVariants.id, params.id))
           .returning()
-        return { data: updated }
+        return { data: mapVariant(updated!) }
       })
 
       // ── Allergens ──
       .post('/items/:id/allergens', async ({ params, body, request }) => {
         const session = (request as any).session
         const input = body as any
-        const [allergen] = await db
-          .insert(rstItemAllergens)
-          .values({
-            id: generateId(),
-            organizationId: session.orgId,
-            itemId: params.id,
-            allergen: input.allergen,
-            severity: input.severity ?? 'contains',
-          })
-          .returning()
-        return { data: allergen }
+        const [item] = await db
+          .select()
+          .from(catItems)
+          .where(eq(catItems.id, params.id))
+          .limit(1)
+        if (!item) throw new NotFoundError('Menu item not found')
+
+        const existingMeta = (item.meta ?? {}) as Record<string, any>
+        const allergens = Array.isArray(existingMeta.allergens) ? [...existingMeta.allergens] : []
+        const newAllergen = { allergen: input.allergen, severity: input.severity ?? 'contains' }
+        allergens.push(newAllergen)
+        await db
+          .update(catItems)
+          .set({ meta: { ...existingMeta, allergens }, updatedAt: new Date() })
+          .where(eq(catItems.id, params.id))
+        return { data: { itemId: params.id, ...newAllergen } }
       })
 
       // ── Modifiers ──
       .get('/modifiers', async ({ request }) => {
         const session = (request as any).session
-        const outletId = new URL(request.url).searchParams.get('outletId')
         const modifiers = await db.query.rstModifiers.findMany({
           where: and(
             eq(rstModifiers.organizationId, session.orgId),
@@ -285,7 +399,6 @@ export function createMenuRoutes(mediator: Mediator, bus: EventBus) {
       // ── Modifier Groups ──
       .get('/modifier-groups', async ({ request }) => {
         const session = (request as any).session
-        const outletId = new URL(request.url).searchParams.get('outletId')
         const groups = await db.query.rstModifierGroups.findMany({
           where: and(
             eq(rstModifierGroups.organizationId, session.orgId),

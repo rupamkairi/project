@@ -1,7 +1,7 @@
 import Elysia from 'elysia'
 import type { Mediator, EventBus } from '@core'
 import { generateId, NotFoundError } from '@core'
-import { db } from '../lib/db.js'
+import { db } from '@db/client'
 import { rstStaff, rstShiftAssignments, rstShifts } from '../db/schema/restaurant.js'
 import { and, eq, gte, lte } from 'drizzle-orm'
 
@@ -60,12 +60,30 @@ export function createStaffRoutes(mediator: Mediator, bus: EventBus) {
     .post('/', async ({ body, request }) => {
       const session = (request as any).session
       const input = body as any
+      let personId = input.personId
+      if (!personId) {
+        const result = await mediator.dispatch({
+          type: 'person.createPerson',
+          payload: {
+            organizationId: session.orgId,
+            type: 'vendor_contact',
+            firstName: input.firstName,
+            lastName: input.lastName,
+            email: input.email,
+            phone: input.phone,
+          },
+          actorId: session.actorId,
+          orgId: session.orgId,
+          correlationId: generateId(),
+        })
+        personId = (result as any)?.id ?? result
+      }
       const [record] = await db
         .insert(rstStaff)
         .values({
           id: generateId(),
           organizationId: session.orgId,
-          personId: input.personId,
+          personId: String(personId),
           employeeCode: input.employeeCode ?? `EMP-${Date.now().toString(36).toUpperCase()}`,
           outletId: input.outletId,
           operationalRoles: input.operationalRoles ?? [],
