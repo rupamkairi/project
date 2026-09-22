@@ -4,8 +4,8 @@ import { generateId } from '@core'
 import { db } from '@db/client'
 import { catItems } from '@db/schema/catalog'
 import { locations } from '@db/schema/location'
-import { eq, and, inArray, desc } from 'drizzle-orm'
-import { erpStockLedger } from '../../db/schema/erp'
+import { eq, and, inArray } from 'drizzle-orm'
+import { invStockUnits } from '@db/schema/inventory'
 import { hasPermission } from '../../permissions/matrix'
 
 export function createItemRoutes(mediator: Mediator) {
@@ -88,13 +88,12 @@ export function createItemRoutes(mediator: Mediator) {
       for (const item of items) {
         const reorderQty = Number((item.meta as any)?.reorderQty ?? 0)
         if (reorderQty === 0) continue
-        const ledger = await db
-          .select({ balance: erpStockLedger.balance })
-          .from(erpStockLedger)
-          .where(eq(erpStockLedger.itemId, item.id))
-          .orderBy(desc(erpStockLedger.date))
+        const [unit] = await db
+          .select()
+          .from(invStockUnits)
+          .where(eq(invStockUnits.variantId, item.id))
           .limit(1)
-        const balance = Number(ledger[0]?.balance ?? 0)
+        const balance = Number(unit?.onHand ?? 0)
         if (balance < reorderQty) {
           result.push({ item, balance, reorderQty, shortage: reorderQty - balance })
         }
@@ -127,20 +126,14 @@ export function createItemRoutes(mediator: Mediator) {
         return { error: 'Forbidden' }
       }
       const { id } = (ctx as any).params
-      const ledgerRows = await db
-        .select()
-        .from(erpStockLedger)
-        .where(eq(erpStockLedger.itemId, id))
-        .orderBy(desc(erpStockLedger.date))
+      const units = await db.select().from(invStockUnits).where(eq(invStockUnits.variantId, id))
 
       const byWarehouse: Record<string, any> = {}
-      for (const row of ledgerRows) {
-        if (!byWarehouse[row.locationId]) {
-          byWarehouse[row.locationId] = {
-            locationId: row.locationId,
-            balance: Number(row.balance ?? 0),
-            valuationRate: Number(row.valuationRate ?? 0),
-          }
+      for (const row of units) {
+        byWarehouse[row.locationId] = {
+          locationId: row.locationId,
+          balance: Number(row.onHand ?? 0),
+          valuationRate: 0,
         }
       }
 

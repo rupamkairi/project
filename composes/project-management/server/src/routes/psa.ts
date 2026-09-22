@@ -426,5 +426,60 @@ export function createPsaRoutes(mediator: Mediator) {
 
         return { success: true }
       })
+      .post('/approvals', async (ctx) => {
+        const actor = getActor(ctx)
+        requirePermission(actor, 'psa:billing')
+        const body = (ctx as any).body ?? {}
+        const now = new Date()
+        const [row] = await db
+          .insert(pjmApproval)
+          .values({
+            id: generateId(),
+            organizationId: actor.orgId,
+            entityType: body.entityType,
+            entityId: body.entityId,
+            requestedById: actor.id,
+            status: 'pending',
+            createdAt: now,
+            updatedAt: now,
+            version: 1,
+            meta: {},
+          })
+          .returning()
+        const instance = await mediator
+          .dispatch({
+            type: 'workflow.startProcess',
+            payload: {
+              entityId: row!.id,
+              entityType: 'pjm_approval',
+              title: `Approve ${body.entityType}`,
+              assigneeId: body.assigneeId,
+            },
+            actorId: actor.id,
+            orgId: actor.orgId,
+            correlationId: generateId(),
+          })
+          .catch(() => null)
+        ;(ctx as any).set.status = 201
+        return { ...row, processInstanceId: (instance as any)?.id }
+      })
+      .post('/approvals/:id/decide', async (ctx) => {
+        const actor = getActor(ctx)
+        requirePermission(actor, 'psa:billing')
+        const { id } = (ctx as any).params
+        const body = (ctx as any).body ?? {}
+        const status = body.approved ? 'approved' : 'rejected'
+        await db
+          .update(pjmApproval)
+          .set({
+            status,
+            comment: body.comment,
+            approvedById: actor.id,
+            approvedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(pjmApproval.id, id))
+        return { success: true, status }
+      })
   )
 }

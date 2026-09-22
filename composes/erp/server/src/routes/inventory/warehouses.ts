@@ -4,8 +4,8 @@ import { generateId } from '@core'
 import { db } from '@db/client'
 import { locations } from '@db/schema/location'
 import { catItems } from '@db/schema/catalog'
-import { eq, and, desc, inArray } from 'drizzle-orm'
-import { erpStockLedger } from '../../db/schema/erp'
+import { eq, and, inArray } from 'drizzle-orm'
+import { invStockUnits } from '@db/schema/inventory'
 import { hasPermission } from '../../permissions/matrix'
 
 export function createWarehouseRoutes(mediator: Mediator) {
@@ -77,21 +77,15 @@ export function createWarehouseRoutes(mediator: Mediator) {
       }
       const { id } = (ctx as any).params
 
-      const ledgerRows = await db
-        .select()
-        .from(erpStockLedger)
-        .where(eq(erpStockLedger.locationId, id))
-        .orderBy(desc(erpStockLedger.date))
+      const units = await db.select().from(invStockUnits).where(eq(invStockUnits.locationId, id))
 
       const byItem: Record<string, any> = {}
-      for (const row of ledgerRows) {
-        if (!byItem[row.itemId]) {
-          byItem[row.itemId] = {
-            itemId: row.itemId,
-            balance: Number(row.balance ?? 0),
-            valuationRate: Number(row.valuationRate ?? 0),
-            stockValue: Number(row.balance ?? 0) * Number(row.valuationRate ?? 0),
-          }
+      for (const row of units) {
+        byItem[row.variantId] = {
+          itemId: row.variantId,
+          balance: Number(row.onHand ?? 0),
+          valuationRate: 0,
+          stockValue: 0,
         }
       }
 

@@ -1,7 +1,7 @@
 // CRM Compose — /crm/accounts routes.
 //
 // Accounts are backed by the `parties` master table (type = "company"). Compose
-// reads/writes directly via @db/client per master-tables.md.
+// reads/writes directly via @db/client per docs/agents/master-tables.md.
 
 import Elysia from 'elysia'
 import { generateId } from '@core'

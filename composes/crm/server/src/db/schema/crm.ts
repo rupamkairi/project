@@ -4,7 +4,7 @@
 // pipeline_stages, activities) and defines its own detail tables here for the
 // columns it genuinely owns (leads sequencing, deals, campaigns, segments,
 // email). Each detail row links to a master via a plain `text(...)` id column —
-// no `references()` (implicit FKs, per docs/conventions.md §7 and master-tables.md).
+// no `references()` (implicit FKs, per docs/agents/master-tables.md).
 //
 // Master-backed CRM entities have NO schema file here:
 //   Account → parties (type = "company")

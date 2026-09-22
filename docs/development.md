@@ -4,12 +4,12 @@
 
 Use Bun. The root workspace scripts are:
 
-| Purpose | Command |
-| --- | --- |
-| Type-check workspaces | `bun run typecheck` |
-| Lint workspaces | `bun run lint` |
-| Build workspaces | `bun run build` |
-| Run workspace tests | `bun test` or the package-specific test script |
+| Purpose               | Command                                        |
+| --------------------- | ---------------------------------------------- |
+| Type-check workspaces | `bun run typecheck`                            |
+| Lint workspaces       | `bun run lint`                                 |
+| Build workspaces      | `bun run build`                                |
+| Run workspace tests   | `bun test` or the package-specific test script |
 
 Do not start a root or nested `dev` script: a development server is already running for this repository. Run a package command only when the task calls for it.
 
@@ -17,7 +17,7 @@ Do not start a root or nested `dev` script: a development server is already runn
 
 Use the package's `package.json` for available scripts and the package `src/index.ts` for its public interface. In particular:
 
-- Server database commands are in `apps/server/package.json` (`db:generate`, `db:migrate`, `db:push`, `db:seed`, and related scripts).
+- Server database commands are in `apps/server/package.json` (`db:generate`, `db:migrate`, `db:push`, `db:seed`). Do not use ad-hoc DDL scripts; `db:migrate` / `db:push` are canonical.
 - API artifacts are generated from `apps/server` with `bun run docs:generate` or `bun run docs:export-openapi`.
 - The web host is `apps/web`; compose packages have their own type-check and, where provided, test scripts.
 
@@ -27,4 +27,4 @@ Document only durable operating context here. Code, package manifests, generated
 
 ## Contributor rules
 
-Read `AGENTS.md` before making changes. Plans requested by a user belong in `plans/<task-name>.<agent-name>.plan.md` and are task artifacts, not long-lived architecture documentation.
+Read `CLAUDE.md` (canonical; `AGENTS.md` points there) before making changes. Plans requested by a user belong in `plans/<task-name>.<agent-name>.plan.md` and are task artifacts, not long-lived architecture documentation.

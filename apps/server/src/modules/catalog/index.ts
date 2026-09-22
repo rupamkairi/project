@@ -1,6 +1,6 @@
-// Catalog Module
-
 import type { AppModule, BootRegistry } from '@core'
+import { createBomHandler, activateBomHandler } from './commands'
+import { listBomsHandler, getBomHandler } from './queries'
 
 export const CatalogModule: AppModule = {
   manifest: {
@@ -8,22 +8,21 @@ export const CatalogModule: AppModule = {
     version: '0.1.0',
     dependsOn: [],
     entities: [],
-    idPrefixes: {},
+    idPrefixes: { CatBom: 'bom_' },
     events: [],
-    commands: [],
-    queries: [],
+    commands: ['catalog.createBom', 'catalog.activateBom'],
+    queries: ['catalog.listBoms', 'catalog.getBom'],
     fsms: [],
     migrations: [],
   },
 
-  async boot(_registry: BootRegistry): Promise<void> {
-    // Register command handlers
-    // Register query handlers
-    // Register event listeners
-    // Register FSMs
+  async boot(registry: BootRegistry): Promise<void> {
+    const { mediator } = registry
+    mediator.registerCommand('catalog.createBom', createBomHandler)
+    mediator.registerCommand('catalog.activateBom', activateBomHandler)
+    mediator.registerQuery('catalog.listBoms', listBomsHandler)
+    mediator.registerQuery('catalog.getBom', getBomHandler)
   },
 
-  async shutdown(): Promise<void> {
-    // Cleanup
-  },
+  async shutdown(): Promise<void> {},
 }

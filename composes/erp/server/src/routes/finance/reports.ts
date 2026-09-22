@@ -3,13 +3,11 @@ import type { Mediator } from '@core'
 import { db } from '@db/client'
 import { eq, and, gte, lte, desc } from 'drizzle-orm'
 import {
-  erpGlAccount,
-  erpJournalEntry,
-  erpJournalLine,
   erpFiscalYear,
   erpBankAccount,
   erpBankTransaction,
 } from '../../db/schema/erp'
+import { ldgAccounts, ldgTransactions } from '@db/schema/ledger'
 import { transactions } from '@db/schema/commerce'
 import { parties } from '@db/schema/party'
 import { hasPermission } from '../../permissions/matrix'
@@ -24,17 +22,19 @@ export function createFinanceReportRoutes(mediator: Mediator) {
       }
       const accounts = await db
         .select()
-        .from(erpGlAccount)
-        .where(and(eq(erpGlAccount.organizationId, actor.orgId), eq(erpGlAccount.isGroup, false)))
+        .from(ldgAccounts)
+        .where(eq(ldgAccounts.organizationId, actor.orgId))
+
+      const leaf = accounts.filter((a) => !(a.meta as any)?.isGroup)
 
       return {
-        trialBalance: accounts.map((a) => ({
+        trialBalance: leaf.map((a) => ({
           accountCode: a.code,
           accountName: a.name,
           type: a.type,
-          balance: Number(a.balance ?? 0),
-          debit: Number(a.balance ?? 0) > 0 ? Number(a.balance ?? 0) : 0,
-          credit: Number(a.balance ?? 0) < 0 ? Math.abs(Number(a.balance ?? 0)) : 0,
+          balance: 0,
+          debit: 0,
+          credit: 0,
         })),
       }
     })
@@ -47,14 +47,15 @@ export function createFinanceReportRoutes(mediator: Mediator) {
       }
       const accounts = await db
         .select()
-        .from(erpGlAccount)
-        .where(and(eq(erpGlAccount.organizationId, actor.orgId), eq(erpGlAccount.isGroup, false)))
+        .from(ldgAccounts)
+        .where(eq(ldgAccounts.organizationId, actor.orgId))
 
-      const income = accounts.filter((a) => a.type === 'income' || a.type === 'revenue')
-      const expenses = accounts.filter((a) => a.type === 'expense')
+      const leaf = accounts.filter((a) => !(a.meta as any)?.isGroup)
+      const income = leaf.filter((a) => a.type === 'revenue')
+      const expenses = leaf.filter((a) => a.type === 'expense')
 
-      const totalIncome = income.reduce((s, a) => s + Math.abs(Number(a.balance ?? 0)), 0)
-      const totalExpenses = expenses.reduce((s, a) => s + Math.abs(Number(a.balance ?? 0)), 0)
+      const totalIncome = 0
+      const totalExpenses = 0
 
       return {
         income,
@@ -72,12 +73,14 @@ export function createFinanceReportRoutes(mediator: Mediator) {
       }
       const accounts = await db
         .select()
-        .from(erpGlAccount)
-        .where(and(eq(erpGlAccount.organizationId, actor.orgId), eq(erpGlAccount.isGroup, false)))
+        .from(ldgAccounts)
+        .where(eq(ldgAccounts.organizationId, actor.orgId))
+
+      const leaf = accounts.filter((a) => !(a.meta as any)?.isGroup)
 
       return {
-        assets: accounts.filter((a) => a.type === 'asset'),
-        liabilities: accounts.filter((a) => a.type === 'liability'),
+        assets: leaf.filter((a) => a.type === 'asset'),
+        liabilities: leaf.filter((a) => a.type === 'liability'),
         equity: accounts.filter((a) => a.type === 'equity'),
       }
     })
@@ -332,12 +335,11 @@ export function createFinanceReportRoutes(mediator: Mediator) {
       // Check: no draft journal entries
       const draftJEs = await db
         .select()
-        .from(erpJournalEntry)
+        .from(ldgTransactions)
         .where(
           and(
-            eq(erpJournalEntry.organizationId, actor.orgId),
-            eq(erpJournalEntry.fiscalYearId, fiscalYearId),
-            eq(erpJournalEntry.status, 'draft'),
+            eq(ldgTransactions.organizationId, actor.orgId),
+            eq(ldgTransactions.status, 'pending'),
           ),
         )
       if (draftJEs.length > 0) {

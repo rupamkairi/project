@@ -4,7 +4,6 @@ import { generateId } from '@core'
 import { db } from '@db/client'
 import { transactions } from '@db/schema/commerce'
 import { eq, and, desc } from 'drizzle-orm'
-import { erpJournalEntry, erpJournalLine } from '../../db/schema/erp'
 import { hasPermission } from '../../permissions/matrix'
 
 function validateJournal(lines: Array<{ debit?: number; credit?: number }>) {
@@ -82,6 +81,25 @@ export function createPaymentRoutes(mediator: Mediator) {
           ]
 
       validateJournal(journalLines.map((l) => ({ debit: l.debit, credit: l.credit })))
+
+      await mediator.dispatch({
+        type: 'ledger.createJournal',
+        payload: {
+          reference: refNo,
+          referenceType: txType,
+          description: isVendorPayment ? 'Vendor payment' : 'Customer receipt',
+          currency: body.currency ?? 'INR',
+          lines: journalLines.map((l) => ({
+            accountCode: l.accountCode,
+            debit: l.debit,
+            credit: l.credit,
+            description: l.description,
+          })),
+        },
+        actorId: actor.actorId,
+        orgId,
+        correlationId: generateId(),
+      })
 
       // Update invoice paid amount
       if (body.invoiceId) {

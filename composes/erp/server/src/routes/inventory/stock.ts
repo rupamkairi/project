@@ -1,10 +1,9 @@
 import { Elysia } from 'elysia'
+import { generateId } from '@core'
 import type { Mediator } from '@core'
 import { db } from '@db/client'
-import { catItems } from '@db/schema/catalog'
-import { locations } from '@db/schema/location'
-import { eq, and, desc, inArray } from 'drizzle-orm'
-import { erpStockEntry, erpStockEntryItem, erpStockLedger } from '../../db/schema/erp'
+import { eq, desc } from 'drizzle-orm'
+import { erpStockEntry, erpStockEntryItem } from '../../db/schema/erp'
 import { hasPermission } from '../../permissions/matrix'
 
 export function createStockRoutes(mediator: Mediator) {
@@ -53,7 +52,6 @@ export function createStockRoutes(mediator: Mediator) {
         for (const item of body.items ?? []) {
           const qty = Number(item.qty)
           const valuationRate = Number(item.valuationRate ?? 0)
-
           await tx.insert(erpStockEntryItem).values({
             entryId: entry.id,
             itemId: item.itemId,
@@ -64,59 +62,33 @@ export function createStockRoutes(mediator: Mediator) {
             lineValue: String((qty * valuationRate).toFixed(2)),
             batchNo: item.batchNo,
           })
-
-          // Post ledger entries
-          if (item.locationFrom && body.type === 'transfer') {
-            const prev = await tx
-              .select({ balance: erpStockLedger.balance })
-              .from(erpStockLedger)
-              .where(
-                and(
-                  eq(erpStockLedger.itemId, item.itemId),
-                  eq(erpStockLedger.locationId, item.locationFrom),
-                ),
-              )
-              .orderBy(desc(erpStockLedger.date))
-              .limit(1)
-            const newBalance = Number(prev[0]?.balance ?? 0) - qty
-            if (newBalance < 0)
-              throw new Error(`Insufficient stock for item ${item.itemId} in ${item.locationFrom}`)
-            await tx.insert(erpStockLedger).values({
-              itemId: item.itemId,
-              locationId: item.locationFrom,
-              date: new Date(),
-              qty: String(-qty),
-              valuationRate: String(valuationRate),
-              balance: String(newBalance),
-              entryId: entry.id,
-            })
-          }
-
-          if (item.locationTo) {
-            const prev = await tx
-              .select({ balance: erpStockLedger.balance })
-              .from(erpStockLedger)
-              .where(
-                and(
-                  eq(erpStockLedger.itemId, item.itemId),
-                  eq(erpStockLedger.locationId, item.locationTo),
-                ),
-              )
-              .orderBy(desc(erpStockLedger.date))
-              .limit(1)
-            const newBalance = Number(prev[0]?.balance ?? 0) + qty
-            await tx.insert(erpStockLedger).values({
-              itemId: item.itemId,
-              locationId: item.locationTo,
-              date: new Date(),
-              qty: String(qty),
-              valuationRate: String(valuationRate),
-              balance: String(newBalance),
-              entryId: entry.id,
-            })
-          }
         }
       })
+
+      const [latest] = await db
+        .select()
+        .from(erpStockEntry)
+        .where(eq(erpStockEntry.organizationId, orgId))
+        .orderBy(desc(erpStockEntry.createdAt))
+        .limit(1)
+
+      for (const item of body.items ?? []) {
+        await mediator.dispatch({
+          type: 'inventory.recordMovement',
+          payload: {
+            variantId: item.itemId,
+            fromLocationId: item.locationFrom ?? null,
+            toLocationId: item.locationTo ?? null,
+            quantity: Number(item.qty),
+            reason: body.type,
+            referenceId: latest?.id,
+            referenceType: 'erp_stock_entry',
+          },
+          actorId: actor.actorId,
+          orgId,
+          correlationId: generateId(),
+        })
+      }
 
       return { success: true }
     })
@@ -147,33 +119,24 @@ export function createStockRoutes(mediator: Mediator) {
         return { error: 'Forbidden' }
       }
       const query = (ctx as any).query ?? {}
+      const units = (await mediator.query({
+        type: 'inventory.listStockUnits',
+        params: {
+          variantId: query.itemId,
+          locationId: query.warehouseId,
+        },
+        actorId: actor.actorId,
+        orgId: actor.orgId,
+      })) as Array<{ variantId: string; locationId: string; onHand: number }>
 
-      const ledgerRows = await db.select().from(erpStockLedger).orderBy(desc(erpStockLedger.date))
-
-      // Aggregate to latest balance per (item, location)
-      const summary: Record<string, any> = {}
-      for (const row of ledgerRows) {
-        const key = `${row.itemId}:${row.locationId}`
-        if (!summary[key]) {
-          summary[key] = {
-            itemId: row.itemId,
-            locationId: row.locationId,
-            balance: Number(row.balance ?? 0),
-            valuationRate: Number(row.valuationRate ?? 0),
-            stockValue: Number(row.balance ?? 0) * Number(row.valuationRate ?? 0),
-          }
-        }
-      }
-
-      let result = Object.values(summary)
-
-      if (query.warehouseId) result = result.filter((r: any) => r.locationId === query.warehouseId)
-      if (query.itemId) result = result.filter((r: any) => r.itemId === query.itemId)
-      if (query.belowReorder === 'true') {
-        // Would need to join with item reorderQty
-        result = result.filter((r: any) => r.balance <= 0)
-      }
-
+      let result = units.map((u) => ({
+        itemId: u.variantId,
+        locationId: u.locationId,
+        balance: u.onHand,
+        valuationRate: 0,
+        stockValue: 0,
+      }))
+      if (query.belowReorder === 'true') result = result.filter((r) => r.balance <= 0)
       return { summary: result, total: result.length }
     })
 
@@ -184,18 +147,12 @@ export function createStockRoutes(mediator: Mediator) {
         return { error: 'Forbidden' }
       }
       const query = (ctx as any).query ?? {}
-
-      const conditions = []
-      if (query.itemId) conditions.push(eq(erpStockLedger.itemId, query.itemId))
-      if (query.warehouseId) conditions.push(eq(erpStockLedger.locationId, query.warehouseId))
-
-      const rows = await db
-        .select()
-        .from(erpStockLedger)
-        .where(conditions.length ? and(...conditions) : undefined)
-        .orderBy(desc(erpStockLedger.date))
-        .limit(200)
-
+      const rows = await mediator.query({
+        type: 'inventory.listMovements',
+        params: { variantId: query.itemId, locationId: query.warehouseId },
+        actorId: actor.actorId,
+        orgId: actor.orgId,
+      })
       return { movements: rows }
     })
 }

@@ -1,29 +1,25 @@
 import { Elysia } from 'elysia'
+import { generateId } from '@core'
 import type { Mediator } from '@core'
 import { db } from '@db/client'
-import { eq, and, isNull, desc } from 'drizzle-orm'
-import { erpGlAccount, erpFiscalYear, erpJournalEntry, erpJournalLine } from '../../db/schema/erp'
+import { eq } from 'drizzle-orm'
+import { erpFiscalYear } from '../../db/schema/erp'
 import { hasPermission } from '../../permissions/matrix'
-
-function validateJournal(lines: Array<{ debit?: string | number; credit?: string | number }>) {
-  const totalDebit = lines.reduce((s, l) => s + Number(l.debit ?? 0), 0)
-  const totalCredit = lines.reduce((s, l) => s + Number(l.credit ?? 0), 0)
-  if (Math.abs(totalDebit - totalCredit) > 0.01) {
-    throw new Error(
-      `Journal out of balance: Dr ${totalDebit.toFixed(2)} ≠ Cr ${totalCredit.toFixed(2)}`,
-    )
-  }
-  if (lines.some((l) => !((l as any).glAccountId ?? (l as any).accountId))) {
-    throw new Error('All lines must have accountId')
-  }
-  if (lines.some((l) => Number(l.debit ?? 0) < 0 || Number(l.credit ?? 0) < 0)) {
-    throw new Error('Amounts must be non-negative')
-  }
-}
 
 async function getFiscalYearForDate(date: Date, orgId: string) {
   const rows = await db.select().from(erpFiscalYear).where(eq(erpFiscalYear.organizationId, orgId))
   return rows.find((fy) => new Date(fy.startDate) <= date && new Date(fy.endDate) >= date)
+}
+
+function presentAccount(row: any, balance = 0) {
+  const meta = (row.meta ?? {}) as Record<string, unknown>
+  return {
+    ...row,
+    subType: meta.subType ?? null,
+    isGroup: Boolean(meta.isGroup),
+    isFrozen: Boolean(meta.isFrozen),
+    balance: String(balance),
+  }
 }
 
 export function createAccountRoutes(mediator: Mediator) {
@@ -34,11 +30,13 @@ export function createAccountRoutes(mediator: Mediator) {
         ;(ctx as any).set.status = 403
         return { error: 'Forbidden' }
       }
-      const rows = await db
-        .select()
-        .from(erpGlAccount)
-        .where(eq(erpGlAccount.organizationId, actor.orgId))
-      return { accounts: rows }
+      const rows = (await mediator.query({
+        type: 'ledger.listAccounts',
+        params: {},
+        actorId: actor.actorId,
+        orgId: actor.orgId,
+      })) as any[]
+      return { accounts: rows.map((r) => presentAccount(r)) }
     })
 
     .get('/tree', async (ctx) => {
@@ -47,10 +45,12 @@ export function createAccountRoutes(mediator: Mediator) {
         ;(ctx as any).set.status = 403
         return { error: 'Forbidden' }
       }
-      const accounts = await db
-        .select()
-        .from(erpGlAccount)
-        .where(eq(erpGlAccount.organizationId, actor.orgId))
+      const accounts = ((await mediator.query({
+        type: 'ledger.listAccounts',
+        params: {},
+        actorId: actor.actorId,
+        orgId: actor.orgId,
+      })) as any[]).map((r) => presentAccount(r))
 
       function buildTree(parentId: string | null | undefined): any[] {
         return accounts
@@ -68,21 +68,22 @@ export function createAccountRoutes(mediator: Mediator) {
         return { error: 'Forbidden' }
       }
       const body = (ctx as any).body as any
-      const [account] = await db
-        .insert(erpGlAccount)
-        .values({
-          organizationId: actor.orgId,
+      const account = await mediator.dispatch({
+        type: 'ledger.createAccount',
+        payload: {
           code: body.code,
           name: body.name,
           type: body.type,
-          subType: body.subType,
-          parentId: body.parentId,
           currency: body.currency ?? 'INR',
-          isGroup: body.isGroup ?? false,
-        })
-        .returning()
+          parentId: body.parentId,
+          meta: { subType: body.subType, isGroup: body.isGroup ?? false },
+        },
+        actorId: actor.actorId,
+        orgId: actor.orgId,
+        correlationId: generateId(),
+      })
       ;(ctx as any).set.status = 201
-      return { account }
+      return { account: presentAccount(account) }
     })
 
     .get('/:id', async (ctx) => {
@@ -92,15 +93,23 @@ export function createAccountRoutes(mediator: Mediator) {
         return { error: 'Forbidden' }
       }
       const { id } = (ctx as any).params
-      const [account] = await db
-        .select()
-        .from(erpGlAccount)
-        .where(and(eq(erpGlAccount.id, id), eq(erpGlAccount.organizationId, actor.orgId)))
+      const account = await mediator.query({
+        type: 'ledger.getAccount',
+        params: { id },
+        actorId: actor.actorId,
+        orgId: actor.orgId,
+      })
       if (!account) {
         ;(ctx as any).set.status = 404
         return { error: 'Not found' }
       }
-      return { account }
+      const balance = (await mediator.query({
+        type: 'ledger.getAccountBalance',
+        params: { id },
+        actorId: actor.actorId,
+        orgId: actor.orgId,
+      })) as number
+      return { account: presentAccount(account, balance) }
     })
 
     .patch('/:id', async (ctx) => {
@@ -111,13 +120,17 @@ export function createAccountRoutes(mediator: Mediator) {
       }
       const { id } = (ctx as any).params
       const body = (ctx as any).body as any
-      await db
-        .update(erpGlAccount)
-        .set({
+      await mediator.dispatch({
+        type: 'ledger.updateAccount',
+        payload: {
+          id,
           name: body.name,
-          isFrozen: body.isFrozen,
-        })
-        .where(eq(erpGlAccount.id, id))
+          meta: { isFrozen: body.isFrozen },
+        },
+        actorId: actor.actorId,
+        orgId: actor.orgId,
+        correlationId: generateId(),
+      })
       return { success: true }
     })
 }
@@ -130,12 +143,13 @@ export function createJournalRoutes(mediator: Mediator) {
         ;(ctx as any).set.status = 403
         return { error: 'Forbidden' }
       }
-      const rows = await db
-        .select()
-        .from(erpJournalEntry)
-        .where(eq(erpJournalEntry.organizationId, actor.orgId))
-        .orderBy(desc(erpJournalEntry.createdAt))
-      return { journalEntries: rows }
+      const result = (await mediator.query({
+        type: 'ledger.listJournals',
+        params: {},
+        actorId: actor.actorId,
+        orgId: actor.orgId,
+      })) as { items: any[] }
+      return { journalEntries: result.items }
     })
 
     .post('/', async (ctx) => {
@@ -145,49 +159,32 @@ export function createJournalRoutes(mediator: Mediator) {
         return { error: 'Forbidden' }
       }
       const body = (ctx as any).body as any
-      const orgId = actor.orgId
-      const date = new Date(body.date)
-
-      // Period close check
-      const fy = await getFiscalYearForDate(date, orgId)
+      const date = new Date(body.date ?? Date.now())
+      const fy = await getFiscalYearForDate(date, actor.orgId)
       if (fy?.isClosed) {
         ;(ctx as any).set.status = 403
         return { error: 'Period Closed' }
       }
-
-      validateJournal(body.lines)
-
-      const totalDebit = body.lines.reduce((s: number, l: any) => s + Number(l.debit ?? 0), 0)
-
-      const [je] = await db
-        .insert(erpJournalEntry)
-        .values({
-          organizationId: orgId,
-          date,
-          reference: body.reference,
-          referenceType: body.referenceType,
-          description: body.narration ?? body.description,
-          status: 'draft',
-          totalDebit: String(totalDebit.toFixed(2)),
-          totalCredit: String(totalDebit.toFixed(2)),
-          fiscalYearId: fy?.id,
+      try {
+        const je = await mediator.dispatch({
+          type: 'ledger.createJournal',
+          payload: {
+            reference: body.reference,
+            referenceType: body.referenceType,
+            description: body.narration ?? body.description,
+            currency: body.currency ?? 'INR',
+            lines: body.lines,
+          },
+          actorId: actor.actorId,
+          orgId: actor.orgId,
+          correlationId: generateId(),
         })
-        .returning()
-
-      await db.insert(erpJournalLine).values(
-        body.lines.map((line: any) => ({
-          journalId: je.id,
-          glAccountId: line.accountId,
-          debit: String(Number(line.debit ?? 0).toFixed(2)),
-          credit: String(Number(line.credit ?? 0).toFixed(2)),
-          partyId: line.partyId,
-          personId: line.personId,
-          costCenter: line.costCenter,
-          description: line.description,
-        })),
-      )
-      ;(ctx as any).set.status = 201
-      return { journalEntry: je }
+        ;(ctx as any).set.status = 201
+        return { journalEntry: je }
+      } catch (err) {
+        ;(ctx as any).set.status = 400
+        return { error: err instanceof Error ? err.message : 'Invalid journal' }
+      }
     })
 
     .get('/:id', async (ctx) => {
@@ -197,16 +194,17 @@ export function createJournalRoutes(mediator: Mediator) {
         return { error: 'Forbidden' }
       }
       const { id } = (ctx as any).params
-      const [je] = await db
-        .select()
-        .from(erpJournalEntry)
-        .where(and(eq(erpJournalEntry.id, id), eq(erpJournalEntry.organizationId, actor.orgId)))
+      const je = await mediator.query({
+        type: 'ledger.getJournal',
+        params: { id },
+        actorId: actor.actorId,
+        orgId: actor.orgId,
+      })
       if (!je) {
         ;(ctx as any).set.status = 404
         return { error: 'Not found' }
       }
-      const lines = await db.select().from(erpJournalLine).where(eq(erpJournalLine.journalId, id))
-      return { journalEntry: je, lines }
+      return { journalEntry: je, lines: (je as any).lines }
     })
 
     .post('/:id/post', async (ctx) => {
@@ -216,44 +214,33 @@ export function createJournalRoutes(mediator: Mediator) {
         return { error: 'Forbidden' }
       }
       const { id } = (ctx as any).params
-      const [je] = await db.select().from(erpJournalEntry).where(eq(erpJournalEntry.id, id))
-      if (!je || je.status !== 'draft') {
+      const je = (await mediator.query({
+        type: 'ledger.getJournal',
+        params: { id },
+        actorId: actor.actorId,
+        orgId: actor.orgId,
+      })) as { createdAt?: Date } | null
+      if (!je) {
         ;(ctx as any).set.status = 400
         return { error: 'Journal must be in draft status' }
       }
-
-      const date = new Date(je.date)
-      const fy = await getFiscalYearForDate(date, je.organizationId)
+      const fy = await getFiscalYearForDate(new Date(je.createdAt ?? Date.now()), actor.orgId)
       if (fy?.isClosed) {
         ;(ctx as any).set.status = 403
         return { error: 'Period Closed' }
       }
-
-      // Update account balances
-      const lines = await db.select().from(erpJournalLine).where(eq(erpJournalLine.journalId, id))
-      for (const line of lines) {
-        const [account] = await db
-          .select()
-          .from(erpGlAccount)
-          .where(eq(erpGlAccount.id, line.glAccountId))
-        if (!account) continue
-        const net = Number(line.debit ?? 0) - Number(line.credit ?? 0)
-        const newBalance = Number(account.balance ?? 0) + net
-        await db
-          .update(erpGlAccount)
-          .set({ balance: String(newBalance.toFixed(2)) })
-          .where(eq(erpGlAccount.id, account.id))
-      }
-
-      await db
-        .update(erpJournalEntry)
-        .set({
-          status: 'posted',
-          postedBy: actor.actorId,
-          postedAt: new Date(),
+      try {
+        await mediator.dispatch({
+          type: 'ledger.postJournal',
+          payload: { id },
+          actorId: actor.actorId,
+          orgId: actor.orgId,
+          correlationId: generateId(),
         })
-        .where(eq(erpJournalEntry.id, id))
-
+      } catch (err) {
+        ;(ctx as any).set.status = 400
+        return { error: err instanceof Error ? err.message : 'Cannot post' }
+      }
       return { success: true, status: 'posted' }
     })
 
@@ -264,10 +251,13 @@ export function createJournalRoutes(mediator: Mediator) {
         return { error: 'Forbidden' }
       }
       const { id } = (ctx as any).params
-      await db
-        .update(erpJournalEntry)
-        .set({ status: 'cancelled' })
-        .where(eq(erpJournalEntry.id, id))
+      await mediator.dispatch({
+        type: 'ledger.voidJournal',
+        payload: { id },
+        actorId: actor.actorId,
+        orgId: actor.orgId,
+        correlationId: generateId(),
+      })
       return { success: true, status: 'cancelled' }
     })
 }

@@ -128,5 +128,39 @@ export const catPriceRules = pgTable(
 export type CatCategory = typeof catCategories.$inferSelect
 export type CatItem = typeof catItems.$inferSelect
 export type CatVariant = typeof catVariants.$inferSelect
+export const catBomHeaders = pgTable(
+  'cat_bom_headers',
+  {
+    ...baseColumns,
+    parentItemId: text('parent_item_id').notNull(),
+    name: text('name'),
+    yieldQty: integer('yield_qty').notNull().default(1),
+    uom: text('uom').notNull().default('ea'),
+    isActive: boolean('is_active').notNull().default(false),
+  },
+  (table) => [
+    index('cat_bom_headers_org_parent_idx').on(table.organizationId, table.parentItemId),
+    index('cat_bom_headers_org_active_idx').on(table.organizationId, table.isActive),
+  ],
+)
+
+export const catBomLines = pgTable(
+  'cat_bom_lines',
+  {
+    ...baseColumns,
+    bomId: text('bom_id').notNull(),
+    componentItemId: text('component_item_id').notNull(),
+    qty: integer('qty').notNull().default(1),
+    uom: text('uom').notNull().default('ea'),
+    scrapPercent: integer('scrap_percent').notNull().default(0),
+  },
+  (table) => [
+    index('cat_bom_lines_org_bom_idx').on(table.organizationId, table.bomId),
+    index('cat_bom_lines_org_component_idx').on(table.organizationId, table.componentItemId),
+  ],
+)
+
 export type CatPriceList = typeof catPriceLists.$inferSelect
 export type CatPriceRule = typeof catPriceRules.$inferSelect
+export type CatBomHeader = typeof catBomHeaders.$inferSelect
+export type CatBomLine = typeof catBomLines.$inferSelect

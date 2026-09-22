@@ -1,6 +1,6 @@
-// Inventory Module
-
 import type { AppModule, BootRegistry } from '@core'
+import { recordMovementHandler } from './commands'
+import { listStockUnitsHandler, listMovementsHandler } from './queries'
 
 export const InventoryModule: AppModule = {
   manifest: {
@@ -8,22 +8,20 @@ export const InventoryModule: AppModule = {
     version: '0.1.0',
     dependsOn: ['catalog'],
     entities: [],
-    idPrefixes: {},
-    events: [],
-    commands: [],
-    queries: [],
+    idPrefixes: { InvMovement: 'mvt_' },
+    events: ['inventory.moved'],
+    commands: ['inventory.recordMovement'],
+    queries: ['inventory.listStockUnits', 'inventory.listMovements'],
     fsms: [],
     migrations: [],
   },
 
-  async boot(_registry: BootRegistry): Promise<void> {
-    // Register command handlers
-    // Register query handlers
-    // Register event listeners
-    // Register FSMs
+  async boot(registry: BootRegistry): Promise<void> {
+    const { mediator } = registry
+    mediator.registerCommand('inventory.recordMovement', recordMovementHandler)
+    mediator.registerQuery('inventory.listStockUnits', listStockUnitsHandler)
+    mediator.registerQuery('inventory.listMovements', listMovementsHandler)
   },
 
-  async shutdown(): Promise<void> {
-    // Cleanup
-  },
+  async shutdown(): Promise<void> {},
 }

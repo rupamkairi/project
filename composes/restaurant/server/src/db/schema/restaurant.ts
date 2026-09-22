@@ -6,7 +6,7 @@
 // modifiers, KOT, shifts, staff, reservations, recipes, stock movements,
 // partners, discounts, bill payments/splits, equipment logs). Each detail row
 // links to a master via a plain `text(...)` id column — no `references()`
-// (implicit FKs, per docs/conventions.md §7 and master-tables.md).
+// (implicit FKs, per docs/agents/master-tables.md).
 //
 // Master-backed restaurant entities have NO schema file here:
 //   Outlet / Table      → locations
@@ -32,7 +32,6 @@ import {
   jsonb,
   date,
   time,
-  index,
 } from 'drizzle-orm/pg-core'
 import { baseColumns } from '@db/schema/helpers'
 import { relations } from 'drizzle-orm'
@@ -140,11 +139,12 @@ export const rstShiftAssignments = pgTable('rst_shift_assignments', {
   clockOut: timestamp('clock_out'),
   totalHours: numeric('total_hours', { precision: 4, scale: 2 }),
   notes: text('notes'),
+  bookingId: text('booking_id'),
 })
 
 // ─── Staff ────────────────────────────────────────────────────────────────────
 
-export const rstStaff = pgTable('rst_staff', {
+export const rstStaff = pgTable('rst_outlet_assignments', {
   ...baseColumns,
   personId: text('person_id').notNull(),
   employeeCode: text('employee_code'),
@@ -161,6 +161,8 @@ export const rstStaff = pgTable('rst_staff', {
     relation: string
   }>(),
 })
+
+export const rstOutletAssignments = rstStaff
 
 // ─── Reservations ─────────────────────────────────────────────────────────────
 
@@ -187,6 +189,7 @@ export const rstReservations = pgTable('rst_reservations', {
   cancelledAt: timestamp('cancelled_at'),
   cancelReason: text('cancel_reason'),
   noShowAt: timestamp('no_show_at'),
+  bookingId: text('booking_id'),
 })
 
 export const rstWaitlist = pgTable('rst_waitlist', {

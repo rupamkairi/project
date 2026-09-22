@@ -54,6 +54,7 @@ export {
   rstEquipmentLogs,
   rstPartners,
   rstStaff,
+  rstOutletAssignments,
   rstBillPayments,
   rstBillSplits,
   rstDiscounts,

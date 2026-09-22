@@ -1,15 +1,10 @@
 import { Elysia } from 'elysia'
+import { generateId } from '@core'
 import type { Mediator } from '@core'
 import { db } from '@db/client'
 import { eq, and, desc } from 'drizzle-orm'
-import {
-  erpWorkOrder,
-  erpBom,
-  erpBomItem,
-  erpStockEntry,
-  erpStockEntryItem,
-  erpStockLedger,
-} from '../../db/schema/erp'
+import { erpWorkOrder, erpStockEntry, erpStockEntryItem } from '../../db/schema/erp'
+import { catBomHeaders, catBomLines } from '@db/schema/catalog'
 import { hasPermission } from '../../permissions/matrix'
 import { nextRefNo } from '../../lib/ref-numbers'
 
@@ -38,7 +33,7 @@ export function createWorkOrderRoutes(mediator: Mediator) {
       const body = (ctx as any).body as any
       const orgId = actor.orgId
 
-      const [bom] = await db.select().from(erpBom).where(eq(erpBom.id, body.bomId))
+      const [bom] = await db.select().from(catBomHeaders).where(eq(catBomHeaders.id, body.bomId))
       if (!bom) {
         ;(ctx as any).set.status = 404
         return { error: 'BOM not found' }
@@ -95,10 +90,10 @@ export function createWorkOrderRoutes(mediator: Mediator) {
         return { error: 'Work order must be submitted before starting' }
       }
 
-      const [bom] = await db.select().from(erpBom).where(eq(erpBom.id, wo.bomId))
-      const bomItems = await db.select().from(erpBomItem).where(eq(erpBomItem.bomId, wo.bomId))
+      const [bom] = await db.select().from(catBomHeaders).where(eq(catBomHeaders.id, wo.bomId))
+      const bomItems = await db.select().from(catBomLines).where(eq(catBomLines.bomId, wo.bomId))
       const qty = Number(wo.qty)
-      const bomQty = Number(bom.quantity ?? 1)
+      const bomQty = Number(bom?.yieldQty ?? 1)
 
       await db.transaction(async (tx) => {
         const [entry] = await tx
@@ -117,34 +112,10 @@ export function createWorkOrderRoutes(mediator: Mediator) {
           const required =
             Number(item.qty) * (qty / bomQty) * (1 + Number(item.scrapPercent ?? 0) / 100)
 
-          // Check stock in source location
-          const prev = await tx
-            .select({ balance: erpStockLedger.balance })
-            .from(erpStockLedger)
-            .where(eq(erpStockLedger.itemId, item.componentItemId))
-            .orderBy(desc(erpStockLedger.date))
-            .limit(1)
-
-          const available = Number(prev[0]?.balance ?? 0)
-          if (available < required) {
-            throw new Error(
-              `Insufficient stock for item ${item.componentItemId}. Required: ${required}, Available: ${available}`,
-            )
-          }
-
           await tx.insert(erpStockEntryItem).values({
             entryId: entry.id,
             itemId: item.componentItemId,
             qty: String(-required),
-          })
-
-          await tx.insert(erpStockLedger).values({
-            itemId: item.componentItemId,
-            locationId: wo.targetLocationId,
-            date: new Date(),
-            qty: String(-required),
-            balance: String(available - required),
-            entryId: entry.id,
           })
         }
 
@@ -153,6 +124,25 @@ export function createWorkOrderRoutes(mediator: Mediator) {
           .set({ status: 'in-process', actualStart: new Date() })
           .where(eq(erpWorkOrder.id, id))
       })
+
+      for (const item of bomItems) {
+        const required =
+          Number(item.qty) * (qty / bomQty) * (1 + Number(item.scrapPercent ?? 0) / 100)
+        await mediator.dispatch({
+          type: 'inventory.recordMovement',
+          payload: {
+            variantId: item.componentItemId,
+            fromLocationId: wo.targetLocationId,
+            quantity: required,
+            reason: 'manufacture',
+            referenceId: id,
+            referenceType: 'work_order_issue',
+          },
+          actorId: actor.actorId,
+          orgId: actor.orgId,
+          correlationId: generateId(),
+        })
+      }
 
       return { success: true, status: 'in-process' }
     })
@@ -177,7 +167,8 @@ export function createWorkOrderRoutes(mediator: Mediator) {
         return { error: 'Produced qty cannot exceed planned qty' }
       }
 
-      const [bom] = await db.select().from(erpBom).where(eq(erpBom.id, wo.bomId))
+      const [bom] = await db.select().from(catBomHeaders).where(eq(catBomHeaders.id, wo.bomId))
+      const operatingCost = Number((bom?.meta as any)?.operatingCost ?? 0)
 
       await db.transaction(async (tx) => {
         const [entry] = await tx
@@ -188,39 +179,17 @@ export function createWorkOrderRoutes(mediator: Mediator) {
             date: new Date(),
             reference: id,
             referenceType: 'work_order_receipt',
-            totalValue: String((producedQty * Number(bom.operatingCost ?? 0)).toFixed(2)),
+            totalValue: String((producedQty * operatingCost).toFixed(2)),
           })
           .returning()
 
         await tx.insert(erpStockEntryItem).values({
           entryId: entry.id,
-          itemId: bom.itemId,
+          itemId: bom?.parentItemId,
           locationTo: wo.targetLocationId,
           qty: String(producedQty),
-          valuationRate: String(Number(bom.operatingCost ?? 0)),
-          lineValue: String((producedQty * Number(bom.operatingCost ?? 0)).toFixed(2)),
-        })
-
-        const prev = await tx
-          .select({ balance: erpStockLedger.balance })
-          .from(erpStockLedger)
-          .where(
-            and(
-              eq(erpStockLedger.itemId, bom.itemId),
-              eq(erpStockLedger.locationId, wo.targetLocationId),
-            ),
-          )
-          .orderBy(desc(erpStockLedger.date))
-          .limit(1)
-
-        await tx.insert(erpStockLedger).values({
-          itemId: bom.itemId,
-          locationId: wo.targetLocationId,
-          date: new Date(),
-          qty: String(producedQty),
-          valuationRate: String(Number(bom.operatingCost ?? 0)),
-          balance: String(Number(prev[0]?.balance ?? 0) + producedQty),
-          entryId: entry.id,
+          valuationRate: String(operatingCost),
+          lineValue: String((producedQty * operatingCost).toFixed(2)),
         })
 
         await tx
@@ -232,6 +201,23 @@ export function createWorkOrderRoutes(mediator: Mediator) {
           })
           .where(eq(erpWorkOrder.id, id))
       })
+
+      if (bom) {
+        await mediator.dispatch({
+          type: 'inventory.recordMovement',
+          payload: {
+            variantId: bom.parentItemId,
+            toLocationId: wo.targetLocationId,
+            quantity: producedQty,
+            reason: 'manufacture',
+            referenceId: id,
+            referenceType: 'work_order_receipt',
+          },
+          actorId: actor.actorId,
+          orgId: actor.orgId,
+          correlationId: generateId(),
+        })
+      }
 
       return { success: true, status: 'completed', producedQty }
     })

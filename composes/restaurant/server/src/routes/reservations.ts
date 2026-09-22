@@ -98,7 +98,33 @@ export function createReservationRoutes(mediator: Mediator, bus: EventBus) {
           status: 'pending',
         })
         .returning()
-      return { data: reservation }
+      const booking = await mediator
+        .dispatch({
+          type: 'scheduling.bookWindow',
+          payload: {
+            ownerId: input.outletId,
+            ownerType: 'location',
+            resourceId: input.tableId ?? input.outletId,
+            resourceType: input.tableId ? 'table' : 'outlet',
+            startAt: new Date(input.reservedAt),
+            endAt: new Date(
+              new Date(input.reservedAt).getTime() + (input.durationMinutes ?? 90) * 60000,
+            ),
+            notes: input.guestName,
+            actorId: session.actorId,
+          },
+          actorId: session.actorId,
+          orgId: session.orgId,
+          correlationId: generateId(),
+        })
+        .catch(() => null)
+      if (booking && (booking as any).id) {
+        await db
+          .update(rstReservations)
+          .set({ bookingId: (booking as any).id })
+          .where(eq(rstReservations.id, reservation.id))
+      }
+      return { data: { ...reservation, bookingId: (booking as any)?.id } }
     })
 
     .post('/:id/confirm', async ({ params, request }) => {

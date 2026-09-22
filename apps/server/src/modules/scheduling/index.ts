@@ -1,6 +1,5 @@
-// Scheduling Module
-
 import type { AppModule, BootRegistry } from '@core'
+import { bookWindowHandler } from './commands'
 
 export const SchedulingModule: AppModule = {
   manifest: {
@@ -8,22 +7,17 @@ export const SchedulingModule: AppModule = {
     version: '0.1.0',
     dependsOn: ['identity', 'catalog'],
     entities: [],
-    idPrefixes: {},
+    idPrefixes: { SchBooking: 'bkg_' },
     events: [],
-    commands: [],
+    commands: ['scheduling.bookWindow'],
     queries: [],
     fsms: [],
     migrations: [],
   },
 
-  async boot(_registry: BootRegistry): Promise<void> {
-    // Register command handlers
-    // Register query handlers
-    // Register event listeners
-    // Register FSMs
+  async boot(registry: BootRegistry): Promise<void> {
+    registry.mediator.registerCommand('scheduling.bookWindow', bookWindowHandler)
   },
 
-  async shutdown(): Promise<void> {
-    // Cleanup
-  },
+  async shutdown(): Promise<void> {},
 }

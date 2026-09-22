@@ -143,7 +143,31 @@ export function createStaffRoutes(mediator: Mediator, bus: EventBus) {
           clockIn: new Date(),
         })
         .returning()
-      return { data: assignment }
+      const booking = await mediator
+        .dispatch({
+          type: 'scheduling.bookWindow',
+          payload: {
+            ownerId: input.outletId ?? params.id,
+            ownerType: 'staff',
+            resourceId: params.id,
+            resourceType: 'person',
+            startAt: new Date(),
+            endAt: new Date(Date.now() + 8 * 3600000),
+            notes: `shift ${input.shiftId}`,
+            actorId: session.actorId,
+          },
+          actorId: session.actorId,
+          orgId: session.orgId,
+          correlationId: generateId(),
+        })
+        .catch(() => null)
+      if (booking && (booking as any).id) {
+        await db
+          .update(rstShiftAssignments)
+          .set({ bookingId: (booking as any).id })
+          .where(eq(rstShiftAssignments.id, assignment.id))
+      }
+      return { data: { ...assignment, bookingId: (booking as any)?.id } }
     })
 
     .post('/:id/clock-out', async ({ params, request }) => {

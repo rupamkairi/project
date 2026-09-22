@@ -24,12 +24,27 @@ export function createPartnerRoutes(mediator: Mediator, bus: EventBus) {
     .post('/', async ({ body, request }) => {
       const session = (request as any).session
       const input = body as any
+      let partyId = input.partyId
+      if (!partyId) {
+        const party = await mediator.dispatch({
+          type: 'party.createParty',
+          payload: {
+            type: 'vendor',
+            name: input.name,
+            industry: input.partnerType,
+          },
+          actorId: session.actorId,
+          orgId: session.orgId,
+          correlationId: generateId(),
+        })
+        partyId = (party as any)?.id
+      }
       const [partner] = await db
         .insert(rstPartners)
         .values({
           id: generateId(),
           organizationId: session.orgId,
-          partyId: input.partyId,
+          partyId,
           partnerType: input.partnerType,
           name: input.name,
           contactName: input.contactName,

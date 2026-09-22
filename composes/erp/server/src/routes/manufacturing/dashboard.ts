@@ -1,8 +1,10 @@
 import { Elysia } from 'elysia'
 import type { Mediator } from '@core'
 import { db } from '@db/client'
-import { eq, and, desc, inArray } from 'drizzle-orm'
-import { erpWorkOrder, erpBom, erpBomItem, erpStockLedger } from '../../db/schema/erp'
+import { eq } from 'drizzle-orm'
+import { erpWorkOrder } from '../../db/schema/erp'
+import { catBomHeaders, catBomLines } from '@db/schema/catalog'
+import { invStockUnits } from '@db/schema/inventory'
 import { hasPermission } from '../../permissions/matrix'
 
 export function createManufacturingDashboardRoutes(mediator: Mediator) {
@@ -16,10 +18,7 @@ export function createManufacturingDashboardRoutes(mediator: Mediator) {
     const now = new Date()
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
 
-    const allWOs = await db
-      .select()
-      .from(erpWorkOrder)
-      .where(eq(erpWorkOrder.organizationId, orgId))
+    const allWOs = await db.select().from(erpWorkOrder).where(eq(erpWorkOrder.organizationId, orgId))
 
     const openWorkOrders = allWOs.filter((w) => w.status === 'submitted').length
     const inProcessWorkOrders = allWOs.filter((w) => w.status === 'in-process').length
@@ -33,23 +32,21 @@ export function createManufacturingDashboardRoutes(mediator: Mediator) {
         new Date(w.scheduledStart) < now,
     ).length
 
-    // Material shortages for in-process WOs
     const inProcessWOs = allWOs.filter((w) => w.status === 'in-process')
     const shortages: any[] = []
 
     for (const wo of inProcessWOs) {
-      const [bom] = await db.select().from(erpBom).where(eq(erpBom.id, wo.bomId))
-      const bomItems = await db.select().from(erpBomItem).where(eq(erpBomItem.bomId, wo.bomId))
+      const [bom] = await db.select().from(catBomHeaders).where(eq(catBomHeaders.id, wo.bomId))
+      const bomItems = await db.select().from(catBomLines).where(eq(catBomLines.bomId, wo.bomId))
 
       for (const item of bomItems) {
-        const required = (Number(item.qty) * Number(wo.qty)) / Number(bom.quantity ?? 1)
-        const stock = await db
-          .select({ balance: erpStockLedger.balance })
-          .from(erpStockLedger)
-          .where(eq(erpStockLedger.itemId, item.componentItemId))
-          .orderBy(desc(erpStockLedger.date))
+        const required = (Number(item.qty) * Number(wo.qty)) / Number(bom?.yieldQty ?? 1)
+        const [stock] = await db
+          .select()
+          .from(invStockUnits)
+          .where(eq(invStockUnits.variantId, item.componentItemId))
           .limit(1)
-        const available = Number(stock[0]?.balance ?? 0)
+        const available = Number(stock?.onHand ?? 0)
         if (available < required) {
           shortages.push({
             itemId: item.componentItemId,

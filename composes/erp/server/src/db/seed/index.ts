@@ -1,5 +1,6 @@
 import { db } from '@db/client'
-import { erpFiscalYear, erpGlAccount, erpGstTemplate } from '../schema/erp'
+import { erpFiscalYear, erpGstTemplate } from '../schema/erp'
+import { ldgAccounts } from '@db/schema/ledger'
 import { locations } from '@db/schema/location'
 
 const ORG_ID = process.env.SEED_ORG_ID ?? 'org_default'
@@ -58,14 +59,15 @@ async function seedChartOfAccounts() {
 
   for (const acc of accounts) {
     await db
-      .insert(erpGlAccount)
+      .insert(ldgAccounts)
       .values({
+        id: `acc_${acc.code}`,
         organizationId: ORG_ID,
         code: acc.code,
         name: acc.name,
         type: acc.type,
-        isGroup: acc.isGroup ?? false,
-        balance: '0',
+        currency: 'INR',
+        meta: { isGroup: acc.isGroup ?? false },
       })
       .onConflictDoNothing()
   }

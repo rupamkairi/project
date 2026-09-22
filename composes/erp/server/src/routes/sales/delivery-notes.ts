@@ -9,7 +9,6 @@ import {
   erpDnItem,
   erpStockEntry,
   erpStockEntryItem,
-  erpStockLedger,
 } from '../../db/schema/erp'
 import { hasPermission } from '../../permissions/matrix'
 import { nextRefNo } from '../../lib/ref-numbers'
@@ -142,35 +141,6 @@ export function createDeliveryNoteRoutes(mediator: Mediator) {
             qty: String(qty),
             batchNo: item.batchNo,
           })
-
-          // Deduct from stock ledger
-          const prev = await tx
-            .select({ balance: erpStockLedger.balance })
-            .from(erpStockLedger)
-            .where(
-              and(
-                eq(erpStockLedger.itemId, item.itemId),
-                eq(erpStockLedger.locationId, dn.locationId),
-              ),
-            )
-            .orderBy(desc(erpStockLedger.date))
-            .limit(1)
-
-          const prevBalance = Number(prev[0]?.balance ?? 0)
-          const newBalance = prevBalance - qty
-
-          if (newBalance < 0) {
-            throw new Error(`Insufficient stock for item ${item.itemId}`)
-          }
-
-          await tx.insert(erpStockLedger).values({
-            itemId: item.itemId,
-            locationId: dn.locationId,
-            date: new Date(),
-            qty: String(-qty),
-            balance: String(newBalance),
-            entryId: stockEntry.id,
-          })
         }
 
         await tx
@@ -178,6 +148,23 @@ export function createDeliveryNoteRoutes(mediator: Mediator) {
           .set({ status: 'submitted' })
           .where(eq(erpDeliveryNote.id, id))
       })
+
+      for (const item of dnItems) {
+        await mediator.dispatch({
+          type: 'inventory.recordMovement',
+          payload: {
+            variantId: item.itemId,
+            fromLocationId: dn.locationId,
+            quantity: Number(item.qty),
+            reason: 'issue',
+            referenceId: id,
+            referenceType: 'delivery_note',
+          },
+          actorId: actor.actorId,
+          orgId: actor.orgId,
+          correlationId: generateId(),
+        })
+      }
 
       return { success: true, status: 'submitted' }
     })

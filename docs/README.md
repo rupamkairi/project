@@ -8,19 +8,21 @@ The source tree is authoritative. This directory records stable orientation only
 
 - [Architecture](./architecture.md) — packages, active composes, and runtime wiring.
 - [Development](./development.md) — commands, generated API references, and working rules.
-- `AGENTS.md` — repository instructions for automated contributors.
+- [Master tables](./agents/master-tables.md) — which shared tables composes reuse.
+- [Database design](./agents/database-design.md) — one Postgres schema; compose table families.
+- `CLAUDE.md` — canonical instructions for automated contributors (`AGENTS.md` points there).
 
 ## Source map
 
-| Area | Source of truth |
-| --- | --- |
-| Server boot and mounted APIs | `apps/server/src/index.ts` |
-| Web route assembly | `apps/web/src/router.tsx` |
-| Compose API entry points | `composes/*/server/src/index.ts` |
-| Compose UI entry points and manifests | `composes/*/web*/src/index.ts`, `src/manifest.ts` |
-| Core and domain modules | `apps/server/src/core/`, `apps/server/src/modules/` |
-| Database schemas and migrations | `apps/server/src/infra/db/` and compose `src/db/` directories |
-| Shared routing and UI | `packages/router/`, `packages/ui/` |
-| Optional integrations | `plugins/*/server/`, `plugins/*/web/` |
+| Area                                  | Source of truth                                               |
+| ------------------------------------- | ------------------------------------------------------------- |
+| Server boot and mounted APIs          | `apps/server/src/index.ts`                                    |
+| Web route assembly                    | `apps/web/src/router.tsx`                                     |
+| Compose API entry points              | `composes/*/server/src/index.ts`                              |
+| Compose UI entry points and manifests | `composes/*/web*/src/index.ts`, `src/manifest.ts`             |
+| Core and domain modules               | `apps/server/src/core/`, `apps/server/src/modules/`           |
+| Database schemas and migrations       | `apps/server/src/infra/db/` and compose `src/db/` directories |
+| Shared routing and UI                 | `packages/router/`, `packages/ui/`                            |
+| Optional integrations                 | `plugins/*/server/`, `plugins/*/web/`                         |
 
 Do not add implementation plans, API inventories, or package mirrors here. Keep enduring context brief and link to code instead.

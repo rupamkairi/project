@@ -9,44 +9,9 @@ import {
   erpGrnItem,
   erpStockEntry,
   erpStockEntryItem,
-  erpStockLedger,
 } from '../../db/schema/erp'
 import { hasPermission } from '../../permissions/matrix'
 import { nextRefNo } from '../../lib/ref-numbers'
-
-async function postStockLedger(
-  tx: any,
-  itemId: string,
-  locationId: string,
-  qty: number,
-  valuationRate: number,
-  entryId: string,
-) {
-  const prev = await tx
-    .select({ balance: erpStockLedger.balance })
-    .from(erpStockLedger)
-    .where(and(eq(erpStockLedger.itemId, itemId), eq(erpStockLedger.locationId, locationId)))
-    .orderBy(desc(erpStockLedger.date))
-    .limit(1)
-
-  const prevBalance = Number(prev[0]?.balance ?? 0)
-  const newBalance = prevBalance + qty
-
-  if (newBalance < 0) {
-    throw new Error(`Insufficient stock for item ${itemId} in warehouse ${locationId}`)
-  }
-
-  await tx.insert(erpStockLedger).values({
-    itemId,
-    locationId,
-    date: new Date(),
-    qty: String(qty),
-    valuationRate: String(valuationRate),
-    stockValue: String((qty * valuationRate).toFixed(2)),
-    balance: String(newBalance),
-    entryId,
-  })
-}
 
 export function createGrnRoutes(mediator: Mediator) {
   return new Elysia({ prefix: '/goods-receipts' })
@@ -211,13 +176,29 @@ export function createGrnRoutes(mediator: Mediator) {
             lineValue: String((qty * valuationRate).toFixed(2)),
             batchNo: item.batchNo,
           })
-
-          // Post stock ledger (atomic, inside transaction)
-          await postStockLedger(tx, item.itemId, grn.locationId, qty, valuationRate, stockEntry.id)
         }
 
         await tx.update(erpGrn).set({ status: 'confirmed' }).where(eq(erpGrn.id, id))
       })
+
+      for (const item of grnItems) {
+        const qty = Number(item.qtyAccepted)
+        if (qty <= 0) continue
+        await mediator.dispatch({
+          type: 'inventory.recordMovement',
+          payload: {
+            variantId: item.itemId,
+            toLocationId: grn.locationId,
+            quantity: qty,
+            reason: 'receipt',
+            referenceId: id,
+            referenceType: 'grn',
+          },
+          actorId: actor.actorId,
+          orgId: actor.orgId,
+          correlationId: generateId(),
+        })
+      }
 
       return { success: true, status: 'confirmed' }
     })

@@ -1,6 +1,7 @@
-import { eq, and } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { db } from '@db/client'
-import { ecoTaxProfiles, ecoTaxRates, ecoRegions } from '@projectx/ecommerce-server/db/schema/index'
+import { ecoRegions } from '@projectx/ecommerce-server/db/schema/index'
+import { taxTemplates, taxRates } from '@db/schema/tax'
 
 export interface TaxLine {
   itemId: string
@@ -22,29 +23,27 @@ export async function calculateTax(
 
   const profile = await db
     .select()
-    .from(ecoTaxProfiles)
-    .where(eq(ecoTaxProfiles.id, region[0].taxProfileId))
+    .from(taxTemplates)
+    .where(eq(taxTemplates.id, region[0].taxProfileId))
     .limit(1)
 
   if (!profile.length) {
     return { total: { amount: 0, currency: 'USD' }, lines: [] }
   }
 
-  const rates = await db
-    .select()
-    .from(ecoTaxRates)
-    .where(eq(ecoTaxRates.taxProfileId, region[0].taxProfileId!))
+  const rates = await db.select().from(taxRates).where(eq(taxRates.templateId, region[0].taxProfileId!))
 
   const lines: TaxLine[] = []
   let totalAmount = 0
 
   for (const rate of rates) {
-    const taxAmount = Math.round((0 * parseFloat(rate.rate)) / 100)
+    const percent = rate.rateBps / 100
+    const taxAmount = Math.round((0 * percent) / 100)
     totalAmount += taxAmount
     lines.push({
       itemId: rate.id,
       name: rate.name,
-      rate: parseFloat(rate.rate),
+      rate: percent,
       amount: { amount: taxAmount, currency: region[0].currency },
     })
   }

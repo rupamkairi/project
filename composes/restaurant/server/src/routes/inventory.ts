@@ -109,6 +109,19 @@ export function createInventoryRoutes(mediator: Mediator, bus: EventBus) {
           costPerUnit: itemData.meta?.costPerUnit,
           performedBy: session.actorId,
         })
+        await mediator.dispatch({
+          type: 'inventory.recordMovement',
+          payload: {
+            variantId: params.id,
+            fromLocationId: input.delta < 0 ? (input.outletId ?? itemData.meta?.outletId) : null,
+            toLocationId: input.delta > 0 ? (input.outletId ?? itemData.meta?.outletId) : null,
+            quantity: Math.abs(input.delta),
+            reason: movementType,
+          },
+          actorId: session.actorId,
+          orgId: session.orgId,
+          correlationId: generateId(),
+        })
         return { data: { itemId: params.id, newStock, delta: input.delta } }
       })
 
@@ -234,10 +247,35 @@ export function createInventoryRoutes(mediator: Mediator, bus: EventBus) {
           orderBy: (t, { desc }) => [desc(t.version)],
         })
         const version = (latest?.version ?? 0) + 1
-        const [recipe] = await db
+        const recipe = await mediator.dispatch({
+          type: 'catalog.createBom',
+          payload: {
+            parentItemId: input.itemId,
+            name: input.name,
+            yieldQty: Number(input.yieldQty ?? 1),
+            uom: input.yieldUnit ?? 'portions',
+            isActive: true,
+            meta: {
+              instructions: input.instructions,
+              prepTimeMinutes: input.prepTimeMinutes,
+              cookTimeMinutes: input.cookTimeMinutes,
+              version,
+            },
+            lines: (input.ingredients ?? []).map((ing: any) => ({
+              componentItemId: ing.itemId,
+              qty: Number(ing.qty),
+              uom: ing.unit,
+              scrapPercent: Number(ing.wastagePct ?? 0),
+            })),
+          },
+          actorId: session.actorId,
+          orgId: session.orgId,
+          correlationId: generateId(),
+        })
+        const [legacy] = await db
           .insert(rstRecipes)
           .values({
-            id: generateId(),
+            id: (recipe as any).id,
             organizationId: session.orgId,
             itemId: input.itemId,
             name: input.name,
@@ -251,12 +289,12 @@ export function createInventoryRoutes(mediator: Mediator, bus: EventBus) {
           })
           .returning()
 
-        if (recipe && input.ingredients?.length) {
+        if (legacy && input.ingredients?.length) {
           for (const ing of input.ingredients) {
             await db.insert(rstRecipeIngredients).values({
               id: generateId(),
               organizationId: session.orgId,
-              recipeId: recipe.id,
+              recipeId: (recipe as any).id,
               itemId: ing.itemId,
               qty: String(ing.qty),
               unit: ing.unit,
@@ -319,6 +357,20 @@ export function createInventoryRoutes(mediator: Mediator, bus: EventBus) {
             referenceId: recipe.id,
             reason: `Recipe consumption: ${recipe.name} x${multiplier}`,
             performedBy: session.actorId,
+          })
+          await mediator.dispatch({
+            type: 'inventory.recordMovement',
+            payload: {
+              variantId: ing.itemId,
+              fromLocationId: input.outletId ?? 'unknown',
+              quantity: qty,
+              reason: 'consumption',
+              referenceId: recipe.id,
+              referenceType: 'recipe',
+            },
+            actorId: session.actorId,
+            orgId: session.orgId,
+            correlationId: generateId(),
           })
         }
         return { data: { recipeId: recipe.id, portions: multiplier } }

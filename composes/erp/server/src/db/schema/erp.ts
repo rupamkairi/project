@@ -6,7 +6,6 @@ import {
   boolean,
   timestamp,
   jsonb,
-  index,
 } from 'drizzle-orm/pg-core'
 import { generatePrefixedId } from '@core'
 
@@ -145,51 +144,10 @@ export const erpStockEntryItem = pgTable('erp_stock_entry_items', {
   batchNo: text('batch_no'),
 })
 
-export const erpStockLedger = pgTable(
-  'erp_stock_ledger',
-  {
-    id: text('id')
-      .primaryKey()
-      .$defaultFn(() => generatePrefixedId('slg')),
-    itemId: text('item_id').notNull(),
-    locationId: text('location_id').notNull(),
-    date: timestamp('date').notNull(),
-    qty: numeric('qty', { precision: 12, scale: 3 }).notNull(),
-    valuationRate: numeric('valuation_rate', { precision: 15, scale: 2 }),
-    stockValue: numeric('stock_value', { precision: 15, scale: 2 }),
-    balance: numeric('balance', { precision: 12, scale: 3 }),
-    entryId: text('entry_id').notNull(),
-  },
-  (t) => [index('slg_item_loc_date_idx').on(t.itemId, t.locationId, t.date)],
-)
+// Quantities post to inv_stock_units / inv_movements. erp_stock_entries remain document headers.
 
 // ─── Manufacturing ───────────────────────────────────────────────────────────
-
-export const erpBom = pgTable('erp_bom', {
-  id: text('id')
-    .primaryKey()
-    .$defaultFn(() => generatePrefixedId('bom')),
-  organizationId: text('organization_id').notNull(),
-  itemId: text('item_id').notNull(),
-  version: integer('version').default(1),
-  isActive: boolean('is_active').default(true),
-  quantity: numeric('quantity', { precision: 12, scale: 3 }).default('1'),
-  uom: text('uom').notNull(),
-  operatingCost: numeric('operating_cost', { precision: 15, scale: 2 }).default('0'),
-})
-
-export const erpBomItem = pgTable('erp_bom_items', {
-  id: text('id')
-    .primaryKey()
-    .$defaultFn(() => generatePrefixedId('bmi')),
-  bomId: text('bom_id')
-    .notNull()
-    .references(() => erpBom.id),
-  componentItemId: text('component_item_id').notNull(),
-  qty: numeric('qty', { precision: 12, scale: 3 }).notNull(),
-  uom: text('uom').notNull(),
-  scrapPercent: numeric('scrap_percent', { precision: 5, scale: 2 }).default('0'),
-})
+// BOM headers/lines live on cat_bom_headers / cat_bom_lines.
 
 export const erpWorkOrder = pgTable('erp_work_orders', {
   id: text('id')
@@ -197,9 +155,7 @@ export const erpWorkOrder = pgTable('erp_work_orders', {
     .$defaultFn(() => generatePrefixedId('wo')),
   organizationId: text('organization_id').notNull(),
   woNumber: text('wo_number').notNull(),
-  bomId: text('bom_id')
-    .notNull()
-    .references(() => erpBom.id),
+  bomId: text('bom_id').notNull(),
   qty: numeric('qty', { precision: 12, scale: 3 }).notNull(),
   producedQty: numeric('produced_qty', { precision: 12, scale: 3 }).default('0'),
   targetLocationId: text('target_location_id').notNull(),
@@ -225,59 +181,6 @@ export const erpFiscalYear = pgTable('erp_fiscal_years', {
   isClosed: boolean('is_closed').default(false),
 })
 
-export const erpGlAccount = pgTable('erp_gl_accounts', {
-  id: text('id')
-    .primaryKey()
-    .$defaultFn(() => generatePrefixedId('acc')),
-  organizationId: text('organization_id').notNull(),
-  code: text('code').notNull(),
-  name: text('name').notNull(),
-  type: text('type').notNull(),
-  subType: text('sub_type'),
-  parentId: text('parent_id'),
-  currency: text('currency').default('INR'),
-  isGroup: boolean('is_group').default(false),
-  isFrozen: boolean('is_frozen').default(false),
-  balance: numeric('balance', { precision: 15, scale: 2 }).default('0'),
-})
-
-export const erpJournalEntry = pgTable('erp_journal_entries', {
-  id: text('id')
-    .primaryKey()
-    .$defaultFn(() => generatePrefixedId('je')),
-  organizationId: text('organization_id').notNull(),
-  transactionId: text('transaction_id'),
-  date: timestamp('date').notNull(),
-  reference: text('reference'),
-  referenceType: text('reference_type'),
-  description: text('description'),
-  status: text('status').notNull().default('draft'),
-  totalDebit: numeric('total_debit', { precision: 15, scale: 2 }).default('0'),
-  totalCredit: numeric('total_credit', { precision: 15, scale: 2 }).default('0'),
-  fiscalYearId: text('fiscal_year_id').references(() => erpFiscalYear.id),
-  postedBy: text('posted_by'),
-  postedAt: timestamp('posted_at'),
-  createdAt: timestamp('created_at').defaultNow(),
-})
-
-export const erpJournalLine = pgTable('erp_journal_lines', {
-  id: text('id')
-    .primaryKey()
-    .$defaultFn(() => generatePrefixedId('jln')),
-  journalId: text('journal_id')
-    .notNull()
-    .references(() => erpJournalEntry.id),
-  glAccountId: text('gl_account_id')
-    .notNull()
-    .references(() => erpGlAccount.id),
-  debit: numeric('debit', { precision: 15, scale: 2 }).default('0'),
-  credit: numeric('credit', { precision: 15, scale: 2 }).default('0'),
-  partyId: text('party_id'),
-  personId: text('person_id'),
-  costCenter: text('cost_center'),
-  description: text('description'),
-})
-
 export const erpBankAccount = pgTable('erp_bank_accounts', {
   id: text('id')
     .primaryKey()
@@ -288,7 +191,7 @@ export const erpBankAccount = pgTable('erp_bank_accounts', {
   bankName: text('bank_name').notNull(),
   ifsc: text('ifsc'),
   currency: text('currency').default('INR'),
-  glAccountId: text('gl_account_id').references(() => erpGlAccount.id),
+  glAccountId: text('gl_account_id'),
   isActive: boolean('is_active').default(true),
 })
 
@@ -383,14 +286,8 @@ export type ErpDeliveryNote = typeof erpDeliveryNote.$inferSelect
 export type ErpDnItem = typeof erpDnItem.$inferSelect
 export type ErpStockEntry = typeof erpStockEntry.$inferSelect
 export type ErpStockEntryItem = typeof erpStockEntryItem.$inferSelect
-export type ErpStockLedger = typeof erpStockLedger.$inferSelect
-export type ErpBom = typeof erpBom.$inferSelect
-export type ErpBomItem = typeof erpBomItem.$inferSelect
 export type ErpWorkOrder = typeof erpWorkOrder.$inferSelect
 export type ErpFiscalYear = typeof erpFiscalYear.$inferSelect
-export type ErpGlAccount = typeof erpGlAccount.$inferSelect
-export type ErpJournalEntry = typeof erpJournalEntry.$inferSelect
-export type ErpJournalLine = typeof erpJournalLine.$inferSelect
 export type ErpBankAccount = typeof erpBankAccount.$inferSelect
 export type ErpBankTransaction = typeof erpBankTransaction.$inferSelect
 export type ErpAsset = typeof erpAsset.$inferSelect

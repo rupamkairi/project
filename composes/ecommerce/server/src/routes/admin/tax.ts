@@ -1,35 +1,37 @@
 import { Elysia } from 'elysia'
 import { eq } from 'drizzle-orm'
 import { db } from '@db/client'
-import { ecoTaxProfiles, ecoTaxRates } from '@projectx/ecommerce-server/db/schema/index'
+import { taxTemplates, taxRates } from '@db/schema/tax'
 import type { Mediator } from '@core'
 
 export function createTaxRoutes(mediator: Mediator) {
   return new Elysia({ prefix: '/tax' })
     .get('/profiles', async () => {
-      const results = await db.select().from(ecoTaxProfiles)
+      const results = await db.select().from(taxTemplates)
       return { data: results }
     })
     .post('/profiles', async ({ body }) => {
       const result = await db
-        .insert(ecoTaxProfiles)
+        .insert(taxTemplates)
         .values({ ...body, id: crypto.randomUUID(), organizationId: '', meta: {}, version: 1 })
         .returning()
       return result[0]
     })
     .get('/profiles/:id/rates', async ({ params }) => {
-      const results = await db
-        .select()
-        .from(ecoTaxRates)
-        .where(eq(ecoTaxRates.taxProfileId, params.id))
+      const results = await db.select().from(taxRates).where(eq(taxRates.templateId, params.id))
       return { data: results }
     })
     .post('/profiles/:id/rates', async ({ params, body }) => {
+      const input = body as any
       const result = await db
-        .insert(ecoTaxRates)
+        .insert(taxRates)
         .values({
-          ...body,
-          taxProfileId: params.id,
+          name: input.name,
+          jurisdiction: input.jurisdiction,
+          productType: input.productType,
+          isDefault: input.isDefault ?? false,
+          rateBps: input.rateBps ?? Math.round(Number(input.rate ?? 0) * 100),
+          templateId: params.id,
           id: crypto.randomUUID(),
           organizationId: '',
           meta: {},
@@ -40,14 +42,14 @@ export function createTaxRoutes(mediator: Mediator) {
     })
     .patch('/rates/:rateId', async ({ params, body }) => {
       const result = await db
-        .update(ecoTaxRates)
-        .set(body)
-        .where(eq(ecoTaxRates.id, params.rateId))
+        .update(taxRates)
+        .set(body as any)
+        .where(eq(taxRates.id, params.rateId))
         .returning()
       return result[0]
     })
     .delete('/rates/:rateId', async ({ params }) => {
-      await db.delete(ecoTaxRates).where(eq(ecoTaxRates.id, params.rateId))
+      await db.delete(taxRates).where(eq(taxRates.id, params.rateId))
       return { success: true }
     })
 }

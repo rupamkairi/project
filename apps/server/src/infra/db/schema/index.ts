@@ -4,7 +4,7 @@ export * from './outbox'
 export * from './identity'
 export * from './catalog'
 export * from './inventory'
-// Foundation master tables (unprefixed, cross-compose — see docs/master-tables.md)
+// Foundation master tables (unprefixed / family-prefixed, cross-compose — see docs/agents/master-tables.md)
 export * from './party'
 export * from './location'
 export * from './pipeline'
@@ -18,6 +18,7 @@ export * from './notification'
 export * from './geo'
 export * from './analytics'
 export * from './storage'
+export * from './tax'
 // Compose detail tables
 export * from './search'
 

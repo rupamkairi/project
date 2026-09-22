@@ -1,12 +1,8 @@
 // CRM Compose — /crm/contacts routes.
 //
-// Contacts are backed by the `persons` master table (type = "contact"). Per
-// docs/master-tables.md §Compose extension contract, composes read/write master
-// tables directly via @db/client (filtered by organization_id + type) and stash
-// sparse CRM fields in the master row's `meta` jsonb. The party module mediator
-// handlers don't carry CRM-specific fields, so direct access is the documented,
-// authoritative path. See also architectural-rules.md (composes consume master
-// tables via @db/client).
+// Contacts are backed by the `persons` master table (type = "contact").
+// Composes read/write masters via @db/client (org + type) and stash sparse
+// CRM fields in `meta`. See docs/agents/master-tables.md.
 
 import Elysia from 'elysia'
 import { generateId } from '@core'

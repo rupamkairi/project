@@ -22,7 +22,7 @@ import { parsePagination, listResponse, getActor } from './helpers'
 
 const VALID_TYPES = ['epic', 'story', 'task', 'subtask', 'bug']
 
-export function createWorkItemsRoutes(_mediator: Mediator) {
+export function createWorkItemsRoutes(mediator: Mediator) {
   return (
     new Elysia({ prefix: '/work-items' })
       .get('/', async (ctx) => {
@@ -213,6 +213,21 @@ export function createWorkItemsRoutes(_mediator: Mediator) {
           })
           .returning()
 
+        await mediator
+          .dispatch({
+            type: 'activity.log',
+            payload: {
+              type: 'log',
+              subject: `Created ${ref}`,
+              entityId: item!.id,
+              entityType: 'pjm_work_item',
+            },
+            actorId: actor.id,
+            orgId: actor.orgId,
+            correlationId: generateId(),
+          })
+          .catch(() => null)
+
         ;(ctx as any).set.status = 201
         return item
       })
@@ -265,6 +280,20 @@ export function createWorkItemsRoutes(_mediator: Mediator) {
           .set(updateData)
           .where(eq(pjmWorkItem.id, id))
           .returning()
+        await mediator
+          .dispatch({
+            type: 'activity.log',
+            payload: {
+              type: 'log',
+              subject: `Updated ${updated?.ref ?? id}`,
+              entityId: id,
+              entityType: 'pjm_work_item',
+            },
+            actorId: actor.id,
+            orgId: actor.orgId,
+            correlationId: generateId(),
+          })
+          .catch(() => null)
         return updated
       })
       .delete('/:id', async (ctx) => {
