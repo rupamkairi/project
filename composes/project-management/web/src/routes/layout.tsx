@@ -24,9 +24,7 @@ import {
 export const Route = createRoute({
   getParentRoute: () => sharedRootRoute,
   path: '/projects',
-  beforeLoad: () => {
-    requireAuth()
-  },
+  beforeLoad: () => requireAuth(),
   component: ProjectManagementLayout,
 })
 

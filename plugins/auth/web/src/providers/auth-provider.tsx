@@ -1,5 +1,5 @@
-import { useEffect, useRef, type ReactNode } from 'react'
-import { useAuthStore } from '../lib/store'
+import { useEffect, useState, type ReactNode } from 'react'
+import { ensureAuthInitialized } from '../lib/store'
 
 function resolveApiBase(explicit?: string): string {
   if (explicit) return explicit
@@ -13,17 +13,14 @@ interface AuthProviderProps {
 }
 
 // Mounted once above the router. Configures the API root, migrates any legacy
-// `platform_token` into the shared session, and initializes authentication a
-// single time.
+// `platform_token` into the shared session, and holds the tree until auth is ready.
 export function AuthProvider({ children, apiBase }: AuthProviderProps) {
-  const initialize = useAuthStore((s) => s.initialize)
-  const initialized = useRef(false)
+  const [ready, setReady] = useState(false)
 
   useEffect(() => {
-    if (initialized.current) return
-    initialized.current = true
-    void initialize(resolveApiBase(apiBase))
-  }, [initialize, apiBase])
+    void ensureAuthInitialized(resolveApiBase(apiBase)).finally(() => setReady(true))
+  }, [apiBase])
 
+  if (!ready) return null
   return <>{children}</>
 }

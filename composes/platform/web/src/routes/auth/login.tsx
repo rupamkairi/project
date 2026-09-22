@@ -2,7 +2,7 @@ import { createRoute } from '@tanstack/react-router'
 import { sharedRootRoute } from '@projectx/shared-router'
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { useAuthStore } from '@projectx/plugin-auth-web'
+import { useAuthStore, redirectIfAuthenticated } from '@projectx/plugin-auth-web'
 import {
   Button,
   Input,
@@ -19,6 +19,7 @@ import {
 export const Route = createRoute({
   getParentRoute: () => sharedRootRoute,
   path: '/login',
+  beforeLoad: () => redirectIfAuthenticated(),
   component: LoginPage,
 })
 
@@ -35,8 +36,8 @@ function LoginPage() {
       password: 'admin123',
     },
     {
-      label: 'Dev Login',
-      email: 'dev@platform.local',
+      label: 'Developer Login',
+      email: 'developer@platform.local',
       password: 'dev123',
     },
   ] as const

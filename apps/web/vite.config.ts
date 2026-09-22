@@ -26,7 +26,7 @@ export default defineConfig({
     port: Number(process.env.VITE_PORT) || 10060,
   },
   resolve: {
-    dedupe: ['react', 'react-dom'],
+    dedupe: ['react', 'react-dom', 'zustand'],
     alias: {
       '@': path.resolve(__dirname, './src'),
       '@projectx/crm-web': path.resolve(__dirname, composes.crm),

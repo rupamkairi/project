@@ -1,10 +1,12 @@
 import { createRoute } from '@tanstack/react-router'
 import { ComposeDashboard } from '@projectx/ui'
 import { dashboardSections, sharedRootRoute } from '@projectx/shared-router'
+import { redirectIfAuthenticated } from '@projectx/plugin-auth-web'
 
 export const Route = createRoute({
   getParentRoute: () => sharedRootRoute,
   path: '/',
+  beforeLoad: () => redirectIfAuthenticated(),
   component: HomePage,
 })
 

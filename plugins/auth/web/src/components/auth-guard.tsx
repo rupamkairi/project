@@ -17,10 +17,10 @@ export function AuthGuard({ children, fallback = null, redirectTo = '/login' }: 
   const isLoading = useAuthStore((s) => s.isLoading)
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (!isLoading && !isAuthenticated && status !== 'unavailable') {
       void navigate({ to: redirectTo, replace: true })
     }
-  }, [isLoading, isAuthenticated, navigate, redirectTo])
+  }, [isLoading, isAuthenticated, status, navigate, redirectTo])
 
   if (isLoading || status === 'unavailable') return <>{fallback}</>
   if (!isAuthenticated) return <>{fallback}</>

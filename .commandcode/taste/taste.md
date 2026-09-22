@@ -28,3 +28,5 @@
 
 # Workflow
 - After creating a new Compose, run these next steps: (1) generate DB migrations via `drizzle-kit generate`, (2) install packages with `bun install`, (3) run type-check with `tsc --noEmit`, (4) verify completeness against the compose plan file. Confidence: 0.70
+- Implements plan tasks in order and does not skip verification steps. Confidence: 0.85
+- After a plan-based implementation, asks the user to review against the plan's checklist so the user can compare and score correctness. Confidence: 0.85

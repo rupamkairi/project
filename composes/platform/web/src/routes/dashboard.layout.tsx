@@ -33,9 +33,7 @@ import { platformNavItems } from '@projectx/shared-router'
 export const Route = createRoute({
   getParentRoute: () => sharedRootRoute,
   path: '/dashboard',
-  beforeLoad: () => {
-    requireAuth()
-  },
+  beforeLoad: () => requireAuth(),
   component: DashboardLayout,
 })
 

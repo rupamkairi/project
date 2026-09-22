@@ -4,7 +4,7 @@ import { eq, and, isNull } from 'drizzle-orm'
 
 const ORG_ID = 'org_platform_default'
 const ACTOR_ID = 'actor_dev_admin'
-const EMAIL = 'dev@platform.local'
+const EMAIL = 'developer@platform.local'
 const PASSWORD = 'dev123'
 
 async function seedDevAdmin() {
@@ -31,7 +31,7 @@ async function seedDevAdmin() {
     })
     .onConflictDoUpdate({
       target: actors.id,
-      set: { passwordHash, updatedAt: new Date() },
+      set: { email: EMAIL, passwordHash, updatedAt: new Date() },
     })
 
   console.log('✓ Dev admin actor upserted')

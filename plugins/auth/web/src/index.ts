@@ -1,4 +1,4 @@
-export { useAuthStore } from './lib/store'
+export { useAuthStore, ensureAuthInitialized } from './lib/store'
 export type { AuthUser, AuthState, AuthStatus } from './lib/store'
 
 export { createAuthClient, createAuthenticatedClient } from './lib/api'
@@ -22,4 +22,4 @@ export { AuthGuard } from './components/auth-guard'
 
 export { AuthProvider } from './providers/auth-provider'
 
-export { requireAuth } from './lib/redirect'
+export { requireAuth, redirectIfAuthenticated } from './lib/redirect'

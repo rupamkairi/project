@@ -28,9 +28,7 @@ import {
 export const Route = createRoute({
   getParentRoute: () => sharedRootRoute,
   path: '/crm',
-  beforeLoad: () => {
-    requireAuth()
-  },
+  beforeLoad: () => requireAuth(),
   component: CrmLayout,
 })
 

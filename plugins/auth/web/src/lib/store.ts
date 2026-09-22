@@ -68,6 +68,25 @@ function mirrorLegacyToken(token: string | null): void {
   }
 }
 
+type PersistedAuthSlice = {
+  token?: string | null
+  refreshToken?: string | null
+  user?: AuthUser | null
+  actor?: AuthUser | null
+}
+
+function readPersistedSession(): PersistedAuthSlice | null {
+  try {
+    if (typeof window === 'undefined') return null
+    const raw = window.localStorage.getItem('auth')
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as { state?: PersistedAuthSlice }
+    return parsed.state ?? null
+  } catch {
+    return null
+  }
+}
+
 let initializePromise: Promise<void> | null = null
 let refreshPromise: Promise<string | null> | null = null
 
@@ -121,19 +140,31 @@ export const useAuthStore = create<AuthState>()(
         apiBase: defaultApiBase(),
         configure: (apiBase) => set({ apiBase }),
         initialize: async (apiBase) => {
-          if (initializePromise) return initializePromise
+          if (initializePromise) {
+            if (apiBase) set({ apiBase })
+            return initializePromise
+          }
           if (apiBase) set({ apiBase })
           initializePromise = (async () => {
             try {
               await useAuthStore.persist.rehydrate()
-              const legacy =
-                typeof window === 'undefined' ? null : window.localStorage.getItem(LEGACY_TOKEN_KEY)
-              if (legacy && !get().token) set({ token: legacy })
-              await get().restore()
-              if (legacy && get().token) mirrorLegacyToken(get().token)
-            } finally {
-              initializePromise = null
+            } catch {
+              // Storage can be unavailable; restore still recovers from localStorage.
             }
+            const persisted = !get().token ? readPersistedSession() : null
+            if (persisted?.token && !get().token) {
+              set({
+                token: persisted.token,
+                refreshToken: persisted.refreshToken ?? null,
+                user: persisted.user ?? null,
+                actor: persisted.actor ?? persisted.user ?? null,
+              })
+            }
+            const legacy =
+              typeof window === 'undefined' ? null : window.localStorage.getItem(LEGACY_TOKEN_KEY)
+            if (legacy && !get().token) set({ token: legacy })
+            await get().restore()
+            if (legacy && get().token) mirrorLegacyToken(get().token)
           })()
           return initializePromise
         },
@@ -171,6 +202,17 @@ export const useAuthStore = create<AuthState>()(
           applyClear()
         },
         restore: async () => {
+          if (!get().token) {
+            const persisted = readPersistedSession()
+            if (persisted?.token) {
+              set({
+                token: persisted.token,
+                refreshToken: persisted.refreshToken ?? get().refreshToken,
+                user: persisted.user ?? get().user,
+                actor: persisted.actor ?? persisted.user ?? get().actor,
+              })
+            }
+          }
           const token = get().token
           if (!token) {
             applyClear()
@@ -243,3 +285,11 @@ export const useAuthStore = create<AuthState>()(
     },
   ),
 )
+
+export function ensureAuthInitialized(apiBase?: string): Promise<void> {
+  return useAuthStore.getState().initialize(apiBase)
+}
+
+if (typeof window !== 'undefined') {
+  void useAuthStore.persist.rehydrate()
+}

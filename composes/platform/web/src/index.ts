@@ -12,6 +12,8 @@ export {
   useAuth,
   AuthGuard,
   requireAuth,
+  redirectIfAuthenticated,
+  ensureAuthInitialized,
   AuthProvider,
 } from '@projectx/plugin-auth-web'
 export type { AuthUser, AuthStatus } from '@projectx/plugin-auth-web'

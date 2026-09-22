@@ -29,9 +29,7 @@ import {
 export const hospitalityLayoutRoute = createRoute({
   getParentRoute: () => sharedRootRoute,
   path: '/hospitality',
-  beforeLoad: () => {
-    requireAuth()
-  },
+  beforeLoad: () => requireAuth(),
   component: HospitalityLayout,
 })
 
