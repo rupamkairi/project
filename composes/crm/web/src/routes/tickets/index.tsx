@@ -28,7 +28,7 @@ import {
   ConfirmDialog,
   Skeleton,
 } from '@projectx/ui'
-import { Plus, CheckCircle } from 'lucide-react'
+import { Plus, CheckCircle, Pencil, Trash2 } from 'lucide-react'
 
 export const Route = createRoute({
   getParentRoute: () => crmLayoutRoute,
@@ -69,9 +69,12 @@ function TicketsPage() {
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState('')
   const [showCreate, setShowCreate] = useState(false)
+  const [showEdit, setShowEdit] = useState(false)
+  const [selected, setSelected] = useState<any>(null)
   const [formData, setFormData] = useState(EMPTY_FORM)
   const [submitting, setSubmitting] = useState(false)
   const [resolveId, setResolveId] = useState<string | null>(null)
+  const [deleteId, setDeleteId] = useState<string | null>(null)
 
   async function load(page = 1) {
     setLoading(true)
@@ -105,6 +108,26 @@ function TicketsPage() {
     if (!resolveId) return
     await crmApi.resolveTicket(resolveId)
     setResolveId(null)
+    load(pagination.page)
+  }
+
+  async function handleEdit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!selected) return
+    setSubmitting(true)
+    const { error } = await crmApi.updateTicket(selected.id, formData)
+    if (!error) {
+      setShowEdit(false)
+      setSelected(null)
+      load(pagination.page)
+    }
+    setSubmitting(false)
+  }
+
+  async function handleDelete() {
+    if (!deleteId) return
+    await crmApi.deleteTicket(deleteId)
+    setDeleteId(null)
     load(pagination.page)
   }
 
@@ -198,17 +221,44 @@ function TicketsPage() {
                     {t.createdAt ? new Date(t.createdAt).toLocaleDateString() : '—'}
                   </TableCell>
                   <TableCell>
-                    {t.status !== 'resolved' && t.status !== 'closed' && (
+                    <div className="flex justify-end gap-1">
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-green-600 hover:text-green-700"
-                        title="Resolve"
-                        onClick={() => setResolveId(t.id)}
+                        className="h-7 w-7"
+                        onClick={() => {
+                          setSelected(t)
+                          setFormData({
+                            subject: t.subject ?? '',
+                            description: t.description ?? '',
+                            priority: t.priority ?? 'medium',
+                            contactId: t.contactId ?? '',
+                          })
+                          setShowEdit(true)
+                        }}
                       >
-                        <CheckCircle className="h-3.5 w-3.5" />
+                        <Pencil className="h-3.5 w-3.5" />
                       </Button>
-                    )}
+                      {t.status !== 'resolved' && t.status !== 'closed' && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-green-600 hover:text-green-700"
+                          title="Resolve"
+                          onClick={() => setResolveId(t.id)}
+                        >
+                          <CheckCircle className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive hover:text-destructive"
+                        onClick={() => setDeleteId(t.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
@@ -298,6 +348,58 @@ function TicketsPage() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={showEdit} onOpenChange={setShowEdit}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Ticket</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEdit} className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>Subject *</Label>
+              <Input
+                required
+                value={formData.subject}
+                onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Description</Label>
+              <Textarea
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                rows={3}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Priority</Label>
+              <Select
+                value={formData.priority}
+                onValueChange={(v) => setFormData({ ...formData, priority: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TICKET_PRIORITIES.map((p) => (
+                    <SelectItem key={p} value={p}>
+                      {p.charAt(0).toUpperCase() + p.slice(1)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <DialogFooter className="pt-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => setShowEdit(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" size="sm" disabled={submitting}>
+                {submitting ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       <ConfirmDialog
         open={!!resolveId}
         onOpenChange={(open) => {
@@ -307,6 +409,17 @@ function TicketsPage() {
         description="Mark this ticket as resolved."
         confirmLabel="Resolve"
         onConfirm={handleResolve}
+      />
+
+      <ConfirmDialog
+        open={!!deleteId}
+        onOpenChange={(open) => {
+          if (!open) setDeleteId(null)
+        }}
+        title="Delete Ticket"
+        description="This action cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={handleDelete}
       />
     </div>
   )

@@ -23,6 +23,8 @@ export interface MeResponse {
   actorId: string
   orgId: string
   roles: string[]
+  roleKeys?: string[]
+  permissions?: string[]
   sessionId: string
   email?: string | null
   firstName?: string | null

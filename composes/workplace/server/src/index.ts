@@ -75,6 +75,8 @@ export function createWorkplaceCompose(mediator: Mediator, bus: EventBus, schedu
 }
 
 export { seedWorkplace } from './db/seed/index'
+export { seedWorkplaceRoles } from './db/seed/roles'
+export { workplaceAccessManifest } from './access/manifest'
 export * from './db/schema/workplace'
 
 export type WorkplaceApp = ReturnType<typeof createWorkplaceCompose>

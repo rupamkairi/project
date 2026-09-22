@@ -7,6 +7,7 @@ import {
   Button,
   Input,
   Label,
+  Badge,
   Table,
   TableBody,
   TableCell,
@@ -24,7 +25,7 @@ import {
   ConfirmDialog,
   Skeleton,
 } from '@projectx/ui'
-import { Plus, Search, Pencil, UserX, UserCheck, Trash2 } from 'lucide-react'
+import { Plus, Search, Pencil, UserX, UserCheck, Trash2, Shield } from 'lucide-react'
 
 export const Route = createRoute({
   getParentRoute: () => dashboardLayoutRoute,
@@ -56,6 +57,13 @@ function UsersPage() {
   const [selectedUser, setSelectedUser] = useState<any>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  const [showRolesDrawer, setShowRolesDrawer] = useState(false)
+  const [rolesUser, setRolesUser] = useState<any>(null)
+  const [assignedRoles, setAssignedRoles] = useState<any[]>([])
+  const [allRoles, setAllRoles] = useState<any[]>([])
+  const [effectivePermissions, setEffectivePermissions] = useState<string[]>([])
+  const [isRolesLoading, setIsRolesLoading] = useState(false)
+
   const [formData, setFormData] = useState({
     email: '',
     firstName: '',
@@ -69,13 +77,15 @@ function UsersPage() {
     userId: string
   } | null>(null)
 
-  const loadUsers = async (page = 1) => {
+  const loadUsers = async (page = 1, overrides?: { search?: string; status?: string }) => {
     setIsLoading(true)
+    const nextSearch = overrides?.search ?? search
+    const nextStatus = overrides?.status ?? statusFilter
     const { data } = await platformApi.getUsers({
       page,
       limit: 20,
-      search,
-      ...(statusFilter ? { status: statusFilter } : {}),
+      search: nextSearch,
+      ...(nextStatus ? { status: nextStatus } : {}),
     })
     if (data) {
       setUsers(data.data)
@@ -90,12 +100,12 @@ function UsersPage() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
-    loadUsers(1)
+    loadUsers(1, { search })
   }
 
   const handleStatusFilter = (status: string) => {
     setStatusFilter(status)
-    loadUsers(1)
+    loadUsers(1, { status })
   }
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -163,6 +173,48 @@ function UsersPage() {
 
   const initials = (user: any) =>
     [user.firstName?.[0], user.lastName?.[0]].filter(Boolean).join('').toUpperCase() || '?'
+
+  const openRolesDrawer = async (user: any) => {
+    setRolesUser(user)
+    setShowRolesDrawer(true)
+    setIsRolesLoading(true)
+    const [{ data: detail }, { data: rolesData }, { data: effective }] = await Promise.all([
+      platformApi.getUser(user.id),
+      platformApi.getRoles({ limit: 100 }),
+      platformApi.getAccessEffective(user.id),
+    ])
+    if (detail) setAssignedRoles(detail.roles || [])
+    if (rolesData) setAllRoles(rolesData.data || [])
+    if (effective) setEffectivePermissions(effective.permissions || [])
+    setIsRolesLoading(false)
+  }
+
+  const refreshRolesDrawer = async (userId: string) => {
+    const [{ data: detail }, { data: effective }] = await Promise.all([
+      platformApi.getUser(userId),
+      platformApi.getAccessEffective(userId),
+    ])
+    if (detail) setAssignedRoles(detail.roles || [])
+    if (effective) setEffectivePermissions(effective.permissions || [])
+  }
+
+  const handleAssignRole = async (roleId: string) => {
+    if (!rolesUser) return
+    setIsSubmitting(true)
+    const { error } = await platformApi.assignRole(roleId, [rolesUser.id])
+    if (!error) await refreshRolesDrawer(rolesUser.id)
+    setIsSubmitting(false)
+  }
+
+  const handleRevokeRole = async (roleId: string) => {
+    if (!rolesUser) return
+    setIsSubmitting(true)
+    const { error } = await platformApi.revokeRole(roleId, [rolesUser.id])
+    if (!error) await refreshRolesDrawer(rolesUser.id)
+    setIsSubmitting(false)
+  }
+
+  const unassignedRoles = allRoles.filter((r) => !assignedRoles.some((a) => a.id === r.id))
 
   return (
     <div className="p-6 space-y-4">
@@ -284,6 +336,15 @@ function UsersPage() {
                   </TableCell>
                   <TableCell>
                     <div className="flex justify-end items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        title="Manage roles"
+                        onClick={() => openRolesDrawer(user)}
+                      >
+                        <Shield className="h-3.5 w-3.5" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -464,6 +525,111 @@ function UsersPage() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Roles Drawer */}
+      <Dialog open={showRolesDrawer} onOpenChange={setShowRolesDrawer}>
+        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              Roles — {rolesUser?.firstName} {rolesUser?.lastName} ({rolesUser?.email})
+            </DialogTitle>
+          </DialogHeader>
+          {isRolesLoading ? (
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-4 w-1/2" />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm font-medium mb-2">Assigned roles ({assignedRoles.length})</p>
+                {assignedRoles.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No roles assigned</p>
+                ) : (
+                  <ul className="space-y-1.5">
+                    {assignedRoles.map((role) => (
+                      <li
+                        key={role.id}
+                        className="flex justify-between items-center p-2 rounded-md border"
+                      >
+                        <div>
+                          <p className="text-sm font-medium">{role.name}</p>
+                          {role.description && (
+                            <p className="text-xs text-muted-foreground">{role.description}</p>
+                          )}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          disabled={isSubmitting}
+                          onClick={() => handleRevokeRole(role.id)}
+                        >
+                          Revoke
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div>
+                <p className="text-sm font-medium mb-2">Assign role</p>
+                {unassignedRoles.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">All roles assigned</p>
+                ) : (
+                  <ul className="space-y-1.5 max-h-52 overflow-y-auto">
+                    {unassignedRoles.map((role) => (
+                      <li
+                        key={role.id}
+                        className="flex justify-between items-center p-2 rounded-md border"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">{role.name}</span>
+                          {role.isSystem && (
+                            <Badge variant="secondary" className="text-[10px]">
+                              System
+                            </Badge>
+                          )}
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={isSubmitting}
+                          onClick={() => handleAssignRole(role.id)}
+                        >
+                          Assign
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div>
+                <p className="text-sm font-medium mb-2">
+                  Effective permissions ({effectivePermissions.length})
+                </p>
+                {effectivePermissions.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No permissions</p>
+                ) : (
+                  <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto">
+                    {effectivePermissions.map((perm) => (
+                      <Badge key={perm} variant="outline" className="font-mono text-[10px]">
+                        {perm}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          <DialogFooter className="pt-2">
+            <Button variant="outline" size="sm" onClick={() => setShowRolesDrawer(false)}>
+              Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

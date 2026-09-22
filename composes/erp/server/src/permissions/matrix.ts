@@ -1,3 +1,7 @@
+import { canAccess, COMPOSE_ADMIN_ROLES, permissionsForRole } from '@projectx/access'
+import type { AccessActorLike } from '@projectx/access'
+import { AuthorizationError } from '@core'
+
 export const ERP_ROLES = {
   ADMIN: 'erp:admin',
   PROCUREMENT: 'erp:procurement-officer',
@@ -11,21 +15,29 @@ export const ERP_ROLES = {
 export type ErpRole = (typeof ERP_ROLES)[keyof typeof ERP_ROLES]
 
 export function hasPermission(
-  actor: { roles: string[]; permissions: string[] },
+  actor: AccessActorLike | null | undefined,
   permission: string,
 ): boolean {
-  const { roles, permissions } = actor
-  if (roles.includes(ERP_ROLES.ADMIN)) return true
-  if (permissions.includes('erp:*')) return true
-  return permissions.includes(permission)
+  if (!actor) return false
+  if (canAccess(actor, permission, { composeAdminRoles: COMPOSE_ADMIN_ROLES.erp })) return true
+  const allowed = PERMISSION_MAP[permission]
+  if (!allowed) return canAccess(actor, permission)
+  const roleKeys = actor.roleKeys ?? actor.roles ?? []
+  return allowed.some((role) => roleKeys.includes(role))
 }
 
 export function requirePermission(
-  actor: { roles: string[]; permissions: string[] },
+  actor: AccessActorLike | null | undefined,
   permission: string,
 ): void {
+  if (!actor) {
+    throw new AuthorizationError('Authentication required', { reason: 'AUTH_REQUIRED' })
+  }
   if (!hasPermission(actor, permission)) {
-    throw new Error(`Insufficient permission: ${permission}`)
+    throw new AuthorizationError(`Missing permission: ${permission}`, {
+      reason: 'FORBIDDEN',
+      permission,
+    })
   }
 }
 
@@ -68,4 +80,9 @@ export const PERMISSION_MAP: Record<string, ErpRole[]> = {
   'erp:ledger:close-period': ['erp:admin', 'erp:finance-controller'],
   'erp:sales-order:create': ['erp:admin', 'erp:operations-manager'],
   'erp:sales-order:approve': ['erp:admin', 'erp:finance-controller'],
+}
+
+export function grantsForErpRole(role: ErpRole): string[] {
+  if (role === ERP_ROLES.ADMIN) return ['erp:*']
+  return permissionsForRole(PERMISSION_MAP, role)
 }

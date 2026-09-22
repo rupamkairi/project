@@ -6,6 +6,12 @@ import { Route as dashboardLayoutRoute } from './dashboard.layout'
 import { Route as dashboardIndexRoute } from './dashboard.index'
 import { Route as dashboardOverviewRoute } from './dashboard.overview'
 import { masterRoutes } from './dashboard.masters'
+import {
+  transactionsRoute,
+  transactionNewRoute,
+  transactionEditRoute,
+} from './dashboard.transactions'
+import { pipelinesRoute, pipelineNewRoute, pipelineEditRoute } from './dashboard.pipelines'
 import { Route as dashboardUsersRoute } from './dashboard.users'
 import { Route as dashboardRolesRoute } from './dashboard.roles'
 import { Route as dashboardInvitesRoute } from './dashboard.invites'
@@ -20,6 +26,12 @@ export const platformRoutes = [
     dashboardIndexRoute,
     dashboardOverviewRoute,
     ...masterRoutes,
+    transactionsRoute,
+    transactionNewRoute,
+    transactionEditRoute,
+    pipelinesRoute,
+    pipelineNewRoute,
+    pipelineEditRoute,
     dashboardUsersRoute,
     dashboardRolesRoute,
     dashboardInvitesRoute,

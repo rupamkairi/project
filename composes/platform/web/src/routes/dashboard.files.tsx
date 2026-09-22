@@ -4,7 +4,7 @@ import { Route as dashboardLayoutRoute } from './dashboard.layout'
 import { FileUpload } from '@projectx/plugin-storage-web/components/file-upload'
 import { platformApi } from '../lib/api/platform'
 import { FileIcon, Trash2, Download, Loader2 } from 'lucide-react'
-import { Button, PageHeader } from '@projectx/ui'
+import { Button, PageHeader, ConfirmDialog } from '@projectx/ui'
 
 export const Route = createRoute({
   getParentRoute: () => dashboardLayoutRoute,
@@ -15,6 +15,7 @@ export const Route = createRoute({
 function FilesPage() {
   const [files, setFiles] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [deleteId, setDeleteId] = useState<string | null>(null)
 
   const loadFiles = useCallback(async () => {
     setLoading(true)
@@ -129,7 +130,7 @@ function FilesPage() {
                     variant="ghost"
                     size="icon"
                     className="h-7 w-7 text-destructive hover:text-destructive"
-                    onClick={() => handleDelete(file.id)}
+                    onClick={() => setDeleteId(file.id)}
                     title="Delete"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -140,6 +141,20 @@ function FilesPage() {
           </div>
         )}
       </div>
+      <ConfirmDialog
+        open={!!deleteId}
+        onOpenChange={(open) => {
+          if (!open) setDeleteId(null)
+        }}
+        title="Delete File"
+        description="This file will be removed."
+        confirmLabel="Delete"
+        onConfirm={async () => {
+          if (!deleteId) return
+          await handleDelete(deleteId)
+          setDeleteId(null)
+        }}
+      />
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import { db } from './client'
 import { pipelines, pipelineStages } from './schema/pipeline'
 import { seedPlatform } from '@projectx/platform-server'
+import { seedAccess } from './seed-access'
 import { ulid } from 'ulid'
 
 function generateId(): string {
@@ -59,6 +60,8 @@ async function seed() {
   console.log('Starting seed...')
   console.log('Step 1: Seeding platform demo data...')
   await seedPlatform()
+  console.log('Step 2: Seeding cross-compose access roles...')
+  await seedAccess()
   console.log('✓ Demo seed complete')
 }
 

@@ -91,14 +91,32 @@ function AdjustDialog({ id, name, onClose }: { id: string; name: string; onClose
 
 export function AdminInventoryPage() {
   const { outletId } = useOutletStore()
+  const qc = useQueryClient()
   const [adjustId, setAdjustId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  const [showReceive, setShowReceive] = useState(false)
+  const [receiveForm, setReceiveForm] = useState({ ingredientId: '', qty: '', notes: '' })
 
   const { data, isLoading } = useQuery({
     queryKey: ['rst-inventory', outletId],
     queryFn: () => rstApi.getIngredients({ outletId: outletId! }),
     enabled: !!outletId,
     refetchInterval: 60_000,
+  })
+
+  const receive = useMutation({
+    mutationFn: () =>
+      rstApi.receiveStock({
+        outletId,
+        ingredientId: receiveForm.ingredientId,
+        qty: parseFloat(receiveForm.qty),
+        notes: receiveForm.notes,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['rst-inventory'] })
+      setShowReceive(false)
+      setReceiveForm({ ingredientId: '', qty: '', notes: '' })
+    },
   })
 
   const ingredients: Ingredient[] = data?.data ?? []
@@ -120,6 +138,9 @@ export function AdminInventoryPage() {
             </p>
           )}
         </div>
+        <Button size="sm" onClick={() => setShowReceive(true)}>
+          Receive stock
+        </Button>
       </div>
 
       <Input
@@ -142,6 +163,42 @@ export function AdminInventoryPage() {
       {adjustId && adjustItem && (
         <AdjustDialog id={adjustId} name={adjustItem.name} onClose={() => setAdjustId(null)} />
       )}
+      <Dialog open={showReceive} onOpenChange={setShowReceive}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Receive stock</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              placeholder="Ingredient ID"
+              value={receiveForm.ingredientId}
+              onChange={(e) => setReceiveForm({ ...receiveForm, ingredientId: e.target.value })}
+            />
+            <Input
+              type="number"
+              placeholder="Qty"
+              value={receiveForm.qty}
+              onChange={(e) => setReceiveForm({ ...receiveForm, qty: e.target.value })}
+            />
+            <Input
+              placeholder="Notes"
+              value={receiveForm.notes}
+              onChange={(e) => setReceiveForm({ ...receiveForm, notes: e.target.value })}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowReceive(false)}>
+              Cancel
+            </Button>
+            <Button
+              disabled={!receiveForm.ingredientId || !receiveForm.qty || receive.isPending}
+              onClick={() => receive.mutate()}
+            >
+              {receive.isPending ? 'Saving…' : 'Receive'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

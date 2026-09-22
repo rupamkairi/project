@@ -5,11 +5,12 @@ import { db } from '@db/client'
 import { and, eq, isNull, desc, asc } from 'drizzle-orm'
 import { lmsDiscussion, lmsDiscussionReply, lmsLesson } from '../db/schema/lms'
 import { persons } from '@db/schema/party'
+import { hasPermission } from '../permissions'
 
 function getActor(ctx: any) {
   const actor = (ctx as any).actor
   if (!actor) throw new Error('AUTH_REQUIRED')
-  return { id: actor.id, orgId: actor.orgId, roles: actor.roles ?? [] }
+  return actor
 }
 
 async function getPersonIdFromActor(actorId: string, orgId: string): Promise<string | null> {
@@ -19,12 +20,6 @@ async function getPersonIdFromActor(actorId: string, orgId: string): Promise<str
     .where(and(eq(persons.actorId, actorId), eq(persons.organizationId, orgId)))
     .limit(1)
   return person[0]?.id ?? null
-}
-
-function hasPermission(actor: { roles: string[] }, perm: string): boolean {
-  return (
-    actor.roles.includes('lms-admin') || actor.roles.includes(perm) || actor.roles.includes('*:*')
-  )
 }
 
 export function createDiscussionRoutes(_mediator: Mediator) {

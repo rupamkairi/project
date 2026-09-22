@@ -124,6 +124,8 @@ export function createAuthRoutes(config: AuthConfig, provider: JwtProvider) {
         actorId: session.actorId,
         orgId: session.orgId,
         roles: session.roles,
+        roleKeys: session.roles,
+        permissions: session.permissions ?? [],
         sessionId: session.sessionId,
         ...(profile
           ? {

@@ -1,8 +1,9 @@
+import { useState } from 'react'
 import { createRoute } from '@tanstack/react-router'
-import { useEffect } from 'react'
 import { Route as WorkplaceLayoutRoute } from './layout'
-import { useWorkplaceStore } from '../stores/index'
-import { Card, CardHeader, CardTitle, CardContent } from '@projectx/ui'
+import { workplaceApi } from '../lib/api'
+import { CrudTablePage, normalizeList, mutateOk } from '@projectx/ui/admin'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@projectx/ui'
 
 export const Route = createRoute({
   getParentRoute: () => WorkplaceLayoutRoute,
@@ -11,59 +12,81 @@ export const Route = createRoute({
 })
 
 function OfficePage() {
-  const { assets, announcements, loading, fetchAssets, fetchAnnouncements } = useWorkplaceStore()
-
-  useEffect(() => {
-    fetchAssets()
-    fetchAnnouncements()
-  }, [])
-
+  const [tab, setTab] = useState('assets')
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Office</h1>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Assets</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {assets.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No assets.</p>
-            ) : (
-              <div className="divide-y">
-                {assets.slice(0, 5).map((a: any) => (
-                  <div key={a.id} className="py-2 flex justify-between">
-                    <p className="text-sm">
-                      {a.name} ({a.code})
-                    </p>
-                    <p className="text-xs text-muted-foreground">{a.status}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Announcements</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {announcements.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No announcements.</p>
-            ) : (
-              <div className="divide-y">
-                {announcements.slice(0, 5).map((a: any) => (
-                  <div key={a.id} className="py-2">
-                    <p className="text-sm font-medium">{a.title}</p>
-                    <p className="text-xs text-muted-foreground">{a.priority}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+    <Tabs value={tab} onValueChange={setTab}>
+      <TabsList variant="line">
+        <TabsTrigger value="assets">Assets</TabsTrigger>
+        <TabsTrigger value="policies">Policies</TabsTrigger>
+        <TabsTrigger value="visitors">Visitors</TabsTrigger>
+      </TabsList>
+      <TabsContent value="assets">
+        <CrudTablePage
+          title="Assets"
+          description="Office equipment."
+          createLabel="Add Asset"
+          columns={[
+            { header: 'Name', accessor: (r) => r.name },
+            { header: 'Tag', accessor: (r) => r.tag ?? r.serial ?? '—' },
+            { header: 'Status', accessor: (r) => r.status ?? '—' },
+          ]}
+          fields={[
+            { key: 'name', label: 'Name', required: true },
+            { key: 'tag', label: 'Tag' },
+          ]}
+          list={async () => {
+            const res = await workplaceApi.assets.list()
+            if (res.error) throw new Error(res.error)
+            return normalizeList(res.data)
+          }}
+          create={(body) => mutateOk(workplaceApi.assets.create(body))}
+        />
+      </TabsContent>
+      <TabsContent value="policies">
+        <CrudTablePage
+          title="Policies"
+          description="Company policies."
+          createLabel="Add Policy"
+          columns={[
+            { header: 'Name', accessor: (r) => r.name ?? r.title },
+            { header: 'Status', accessor: (r) => r.status ?? '—' },
+          ]}
+          fields={[
+            { key: 'name', label: 'Name', required: true },
+            { key: 'title', label: 'Title' },
+            { key: 'body', label: 'Body', type: 'textarea' },
+          ]}
+          list={async () => {
+            const res = await workplaceApi.policies.list()
+            if (res.error) throw new Error(res.error)
+            return normalizeList(res.data)
+          }}
+          create={(body) => mutateOk(workplaceApi.policies.create(body))}
+        />
+      </TabsContent>
+      <TabsContent value="visitors">
+        <CrudTablePage
+          title="Visitors"
+          description="Visitor log."
+          createLabel="Add Visitor"
+          columns={[
+            { header: 'Name', accessor: (r) => r.name },
+            { header: 'Host', accessor: (r) => r.hostId ?? '—' },
+            { header: 'Status', accessor: (r) => r.status ?? '—' },
+          ]}
+          fields={[
+            { key: 'name', label: 'Name', required: true },
+            { key: 'hostId', label: 'Host employee ID' },
+            { key: 'purpose', label: 'Purpose' },
+          ]}
+          list={async () => {
+            const res = await workplaceApi.visitors.list()
+            if (res.error) throw new Error(res.error)
+            return normalizeList(res.data)
+          }}
+          create={(body) => mutateOk(workplaceApi.visitors.create(body))}
+        />
+      </TabsContent>
+    </Tabs>
   )
 }

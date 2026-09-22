@@ -15,12 +15,19 @@ import { createPartnerRoutes } from './routes/partners.js'
 import { createStaffRoutes } from './routes/staff.js'
 import { createReservationRoutes } from './routes/reservations.js'
 import { createEquipmentRoutes } from './routes/equipment.js'
+import { restaurantPermissionForPath, requireRestaurantPermission } from './permissions/index.js'
 
 export function createRestaurantCompose(mediator: Mediator, bus: EventBus, scheduler?: Scheduler) {
   registerRestaurantHooks(bus, mediator)
   if (scheduler) registerRestaurantJobs(scheduler, mediator, bus)
 
   return new Elysia({ prefix: '/restaurants' })
+    .onBeforeHandle({ as: 'scoped' }, (ctx) => {
+      const actor = (ctx as any).actor
+      const path = new URL(ctx.request.url).pathname
+      const permission = restaurantPermissionForPath(path, ctx.request.method)
+      requireRestaurantPermission(actor, permission)
+    })
     .use(createMenuRoutes(mediator, bus))
     .use(createOutletRoutes(mediator, bus))
     .use(createOrderRoutes(mediator, bus))
@@ -61,3 +68,5 @@ export {
 } from './db/schema/restaurant.js'
 
 export { seedRestaurant } from './db/seed/restaurant.js'
+export { seedRestaurantRoles } from './db/seed/roles.js'
+export { restaurantAccessManifest } from './access/manifest.js'

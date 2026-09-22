@@ -1,8 +1,9 @@
+import { useState } from 'react'
 import { createRoute } from '@tanstack/react-router'
-import { useEffect } from 'react'
 import { Route as ErpLayoutRoute } from './layout'
-import { useErpStore } from '../stores/index'
-import { Card, CardHeader, CardTitle, CardContent, Badge } from '@projectx/ui'
+import { erpApi } from '../lib/api'
+import { CrudTablePage, normalizeList, mutateOk } from '@projectx/ui/admin'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@projectx/ui'
 
 export const Route = createRoute({
   getParentRoute: () => ErpLayoutRoute,
@@ -11,107 +12,88 @@ export const Route = createRoute({
 })
 
 function SalesPage() {
-  const { customers, salesOrders, loading, fetchCustomers, fetchSalesOrders } = useErpStore()
-
-  useEffect(() => {
-    fetchCustomers()
-    fetchSalesOrders()
-  }, [])
-
-  const totalRevenue = salesOrders.reduce((s: number, o: any) => s + Number(o.total ?? 0), 0)
-
+  const [tab, setTab] = useState('customers')
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Sales</h1>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Customers</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{customers.length}</p>
-            <p className="text-xs text-muted-foreground mt-1">Total customers</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Sales Orders</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{salesOrders.length}</p>
-            <p className="text-xs text-muted-foreground mt-1">Total orders</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Revenue</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">₹{totalRevenue.toLocaleString()}</p>
-            <p className="text-xs text-muted-foreground mt-1">Confirmed orders</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Sales Orders</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <p className="text-sm text-muted-foreground">Loading...</p>
-          ) : salesOrders.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No sales orders.</p>
-          ) : (
-            <div className="divide-y">
-              {salesOrders.map((so: any) => (
-                <div key={so.id} className="py-2 flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium">{so.refNo}</p>
-                    <p className="text-xs text-muted-foreground">{so.customerId}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">
-                      ₹{Number(so.total ?? 0).toLocaleString()}
-                    </span>
-                    <Badge variant={so.status === 'confirmed' ? 'default' : 'secondary'}>
-                      {so.status}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Customers</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <p className="text-sm text-muted-foreground">Loading...</p>
-          ) : customers.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No customers.</p>
-          ) : (
-            <div className="divide-y">
-              {customers.map((c: any) => (
-                <div key={c.id} className="py-2 flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium">{c.name}</p>
-                    <p className="text-xs text-muted-foreground">{c.meta?.gstin ?? 'No GSTIN'}</p>
-                  </div>
-                  <span className="text-xs text-muted-foreground">
-                    Credit: ₹{Number(c.meta?.creditLimit ?? 0).toLocaleString()}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+    <Tabs value={tab} onValueChange={setTab}>
+      <TabsList variant="line">
+        <TabsTrigger value="customers">Customers</TabsTrigger>
+        <TabsTrigger value="orders">Sales Orders</TabsTrigger>
+        <TabsTrigger value="delivery">Delivery Notes</TabsTrigger>
+      </TabsList>
+      <TabsContent value="customers">
+        <CrudTablePage
+          title="Customers"
+          description="Sales customers."
+          createLabel="Add Customer"
+          columns={[
+            { header: 'Name', accessor: (r) => r.name ?? name(r) },
+            { header: 'Email', accessor: (r) => r.email ?? '—' },
+            { header: 'Type', accessor: (r) => r.type ?? '—' },
+          ]}
+          fields={[
+            { key: 'name', label: 'Name', required: true },
+            { key: 'email', label: 'Email', type: 'email' },
+            { key: 'phone', label: 'Phone' },
+          ]}
+          list={async () => {
+            const res = await erpApi.customers.list()
+            if (res.error) throw new Error(res.error)
+            return normalizeList(res.data)
+          }}
+          create={(body) => mutateOk(erpApi.customers.create(body))}
+          update={(id, body) => mutateOk(erpApi.customers.update(id, body))}
+        />
+      </TabsContent>
+      <TabsContent value="orders">
+        <CrudTablePage
+          title="Sales Orders"
+          description="Customer sales orders."
+          createLabel="Add Sales Order"
+          columns={[
+            { header: 'Reference', accessor: (r) => r.referenceNo ?? r.id },
+            { header: 'Type', accessor: (r) => r.type },
+            { header: 'Total', accessor: (r) => String(r.totalAmount ?? '—') },
+          ]}
+          fields={[
+            { key: 'customerId', label: 'Customer ID' },
+            { key: 'partyId', label: 'Party ID' },
+            { key: 'currency', label: 'Currency' },
+          ]}
+          defaults={{ currency: 'INR' }}
+          list={async () => {
+            const res = await erpApi.salesOrders.list()
+            if (res.error) throw new Error(res.error)
+            return normalizeList(res.data)
+          }}
+          create={(body) => mutateOk(erpApi.salesOrders.create(body))}
+        />
+      </TabsContent>
+      <TabsContent value="delivery">
+        <CrudTablePage
+          title="Delivery Notes"
+          description="Outbound shipments."
+          createLabel="Add Delivery Note"
+          columns={[
+            { header: 'ID', accessor: (r) => r.id },
+            { header: 'Order', accessor: (r) => r.salesOrderId ?? r.soId ?? '—' },
+            { header: 'Status', accessor: (r) => r.status ?? '—' },
+          ]}
+          fields={[
+            { key: 'salesOrderId', label: 'Sales order ID', required: true },
+            { key: 'notes', label: 'Notes', type: 'textarea' },
+          ]}
+          list={async () => {
+            const res = await erpApi.deliveryNotes.list()
+            if (res.error) throw new Error(res.error)
+            return normalizeList(res.data)
+          }}
+          create={(body) => mutateOk(erpApi.deliveryNotes.create(body))}
+        />
+      </TabsContent>
+    </Tabs>
   )
+}
+
+function name(r: any) {
+  return [r.firstName, r.lastName].filter(Boolean).join(' ') || '—'
 }

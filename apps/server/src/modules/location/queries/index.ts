@@ -22,6 +22,7 @@ export const getLocationHandler: QueryHandler<{ id: string }, Location | null> =
 interface ListParams {
   type?: string
   parentId?: string
+  status?: string
   limit?: number
   offset?: number
 }
@@ -30,10 +31,11 @@ export const listLocationsHandler: QueryHandler<
   ListParams,
   { items: Location[]; total: number }
 > = async (query) => {
-  const { type, parentId, limit = 50, offset = 0 } = query.params
+  const { type, parentId, status, limit = 50, offset = 0 } = query.params
   const conditions = [eq(locations.organizationId, query.orgId), isNull(locations.deletedAt)]
   if (type) conditions.push(eq(locations.type, type as Location['type']))
   if (parentId) conditions.push(eq(locations.parentId, parentId))
+  if (status) conditions.push(eq(locations.status, status))
 
   const [items, [c]] = await Promise.all([
     db

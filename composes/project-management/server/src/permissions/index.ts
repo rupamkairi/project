@@ -6,6 +6,7 @@
 
 import type { AuthActor } from '@projectx/plugin-auth-server'
 import { AuthorizationError } from '@core'
+import { canAccess, COMPOSE_ADMIN_ROLES } from '@projectx/access'
 
 // --- Roles ------------------------------------------------------------------
 
@@ -196,12 +197,18 @@ export function requirePermission(
     throw new AuthorizationError('Authentication required', { reason: 'AUTH_REQUIRED' })
   }
   const allowed = PJM_PERMISSIONS[permission]
-  if (!allowed.some((r) => actor.roles.includes(r))) {
-    throw new AuthorizationError(`Missing permission: ${permission}`, {
-      reason: 'FORBIDDEN',
-      permission,
-    })
+  if (
+    canAccess(actor, permission, {
+      composeAdminRoles: COMPOSE_ADMIN_ROLES['project-management'],
+    }) ||
+    allowed.some((r) => actor.roles.includes(r))
+  ) {
+    return
   }
+  throw new AuthorizationError(`Missing permission: ${permission}`, {
+    reason: 'FORBIDDEN',
+    permission,
+  })
 }
 
 export function isManager(actor: AuthActor): boolean {

@@ -3,7 +3,7 @@ import { lmsApi } from '../../../../api/lms-client'
 import { Button, StatusBadge } from '@projectx/ui'
 import { AmountDisplay } from '../../../../components/shared/PriceDisplay'
 import { useNavigate } from '@tanstack/react-router'
-import { CheckCircle, XCircle } from 'lucide-react'
+import { CheckCircle, XCircle, Archive } from 'lucide-react'
 
 export function AdminCoursesPage() {
   const navigate = useNavigate()
@@ -20,6 +20,11 @@ export function AdminCoursesPage() {
 
   const reject = useMutation({
     mutationFn: (id: string) => lmsApi.post(`/admin/courses/${id}/reject`),
+    onSuccess: () => refetch(),
+  })
+
+  const archive = useMutation({
+    mutationFn: (id: string) => lmsApi.post(`/admin/courses/${id}/archive`),
     onSuccess: () => refetch(),
   })
 
@@ -86,6 +91,15 @@ export function AdminCoursesPage() {
                       onClick={() => navigate({ to: `/lms/admin/enrollments?courseId=${c.id}` })}
                     >
                       Enrollments
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive"
+                      onClick={() => archive.mutate(c.id)}
+                      disabled={archive.isPending}
+                    >
+                      <Archive className="h-4 w-4" />
                     </Button>
                   </div>
                 </td>

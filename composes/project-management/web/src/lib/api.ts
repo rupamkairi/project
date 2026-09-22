@@ -105,6 +105,12 @@ class ProjectManagementApiClient {
   async getBoard(id: string) {
     return this.request<any>(`/boards/${id}`)
   }
+  async createBoard(data: any) {
+    return this.request<any>('/boards', { method: 'POST', body: JSON.stringify(data) })
+  }
+  async deleteBoard(id: string) {
+    return this.request<any>(`/boards/${id}`, { method: 'DELETE' })
+  }
 
   // Comments
   async getComments(params?: Record<string, any>) {

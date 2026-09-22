@@ -6,19 +6,14 @@ import { and, eq, isNull, asc, desc, count, inArray } from 'drizzle-orm'
 import { lmsAssignment, lmsSubmission, lmsModule, lmsCourseDetail } from '../db/schema/lms'
 import { persons } from '@db/schema/party'
 import { transactions, transactionLines } from '@db/schema/commerce'
+import { hasPermission } from '../permissions'
 
 // ── Helpers ─────────────────────────────────────────────
 
 function getActor(ctx: any) {
   const actor = (ctx as any).actor
   if (!actor) throw new Error('AUTH_REQUIRED')
-  return { id: actor.id, orgId: actor.orgId, roles: actor.roles ?? [] }
-}
-
-function hasPermission(actor: { roles: string[] }, perm: string): boolean {
-  return (
-    actor.roles.includes('lms-admin') || actor.roles.includes(perm) || actor.roles.includes('*:*')
-  )
+  return actor
 }
 
 async function getPersonIdFromActor(actorId: string, orgId: string): Promise<string | null> {

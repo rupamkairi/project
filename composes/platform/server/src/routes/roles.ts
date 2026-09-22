@@ -5,11 +5,13 @@ import { db } from '@db/client'
 import { roles, actorRoles, actors } from '@db/schema/identity'
 import { eq, and, isNull, desc } from 'drizzle-orm'
 import type { AuthActor } from '@projectx/plugin-auth-server'
+import { requirePlatformPermission } from '../permissions'
 
 export function createRoleRoutes(mediator: Mediator) {
   return new Elysia({ prefix: '/roles' })
     .get('/', async (ctx) => {
       const actor = (ctx as any).actor as AuthActor
+      requirePlatformPermission(actor, 'role:read')
       const q = (ctx as any).query ?? {}
       const page = parseInt(q.page as string) || 1
       const limit = parseInt(q.limit as string) || 20
@@ -44,6 +46,7 @@ export function createRoleRoutes(mediator: Mediator) {
     })
     .get('/:id', async (ctx) => {
       const actor = (ctx as any).actor as AuthActor
+      requirePlatformPermission(actor, 'role:read')
       const { params, set } = ctx as any
 
       const [role] = await db
@@ -101,6 +104,7 @@ export function createRoleRoutes(mediator: Mediator) {
       '/',
       async (ctx) => {
         const actor = (ctx as any).actor as AuthActor
+        requirePlatformPermission(actor, 'role:write')
         const { body, set } = ctx as any
         const { name, description, permissions, isDefault } = body as {
           name: string
@@ -166,6 +170,7 @@ export function createRoleRoutes(mediator: Mediator) {
     )
     .patch('/:id', async (ctx) => {
       const actor = (ctx as any).actor as AuthActor
+      requirePlatformPermission(actor, 'role:write')
       const { params, body, set } = ctx as any
       const { name, description, permissions } = body as {
         name?: string
@@ -235,6 +240,7 @@ export function createRoleRoutes(mediator: Mediator) {
     })
     .delete('/:id', async (ctx) => {
       const actor = (ctx as any).actor as AuthActor
+      requirePlatformPermission(actor, 'role:write')
       const { params, set } = ctx as any
 
       const [existing] = await db
@@ -285,6 +291,7 @@ export function createRoleRoutes(mediator: Mediator) {
       '/:id/assign',
       async (ctx) => {
         const actor = (ctx as any).actor as AuthActor
+        requirePlatformPermission(actor, 'role:assign')
         const { params, body, set } = ctx as any
         const { actorIds } = body as { actorIds: string[] }
 
@@ -327,6 +334,7 @@ export function createRoleRoutes(mediator: Mediator) {
       '/:id/revoke',
       async (ctx) => {
         const actor = (ctx as any).actor as AuthActor
+        requirePlatformPermission(actor, 'role:assign')
         const { params, body, set } = ctx as any
         const { actorIds } = body as { actorIds: string[] }
 

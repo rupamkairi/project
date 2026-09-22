@@ -12,6 +12,7 @@
       "@db/*": ["./src/infra/db/*"],
       "drizzle-orm": ["./node_modules/drizzle-orm"],
       "drizzle-orm/*": ["./node_modules/drizzle-orm/*"],
+      "@projectx/access": ["../../packages/access/src/index.ts"],
       "@projectx/plugin-auth-server": ["../../plugins/auth/server/src/index.ts"],
       "@projectx/plugin-auth-server/*": ["../../plugins/auth/server/src/*"],
       "@projectx/plugin-notification-server": ["../../plugins/notification/server/src/index.ts"],

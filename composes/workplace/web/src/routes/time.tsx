@@ -1,8 +1,9 @@
+import { useState } from 'react'
 import { createRoute } from '@tanstack/react-router'
-import { useEffect } from 'react'
 import { Route as WorkplaceLayoutRoute } from './layout'
-import { useWorkplaceStore } from '../stores/index'
-import { Card, CardHeader, CardTitle, CardContent, Badge } from '@projectx/ui'
+import { workplaceApi } from '../lib/api'
+import { CrudTablePage, normalizeList, mutateOk } from '@projectx/ui/admin'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@projectx/ui'
 
 export const Route = createRoute({
   getParentRoute: () => WorkplaceLayoutRoute,
@@ -11,84 +12,83 @@ export const Route = createRoute({
 })
 
 function TimePage() {
-  const { leaveRequests, leaveTypes, loading, fetchLeaveRequests, fetchLeaveTypes } =
-    useWorkplaceStore()
-
-  useEffect(() => {
-    fetchLeaveRequests()
-    fetchLeaveTypes()
-  }, [])
-
+  const [tab, setTab] = useState('leave')
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Time & Leave</h1>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Leave Types</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{leaveTypes.length}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Pending Requests</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">
-              {leaveRequests.filter((r: any) => r.status === 'submitted').length}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Today&apos;s Absentees</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">—</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Leave Requests</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <p className="text-sm text-muted-foreground">Loading...</p>
-          ) : leaveRequests.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No leave requests.</p>
-          ) : (
-            <div className="divide-y">
-              {leaveRequests.map((lr: any) => (
-                <div key={lr.id} className="py-2 flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium">{lr.days} days</p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(lr.fromDate).toLocaleDateString()} →{' '}
-                      {new Date(lr.toDate).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <Badge
-                    variant={
-                      lr.status === 'approved'
-                        ? 'default'
-                        : lr.status === 'rejected'
-                          ? 'destructive'
-                          : 'secondary'
-                    }
-                  >
-                    {lr.status}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+    <Tabs value={tab} onValueChange={setTab}>
+      <TabsList variant="line">
+        <TabsTrigger value="leave">Leave</TabsTrigger>
+        <TabsTrigger value="timesheets">Timesheets</TabsTrigger>
+        <TabsTrigger value="shifts">Shifts</TabsTrigger>
+      </TabsList>
+      <TabsContent value="leave">
+        <CrudTablePage
+          title="Leave Requests"
+          description="Time-off requests."
+          createLabel="Add Request"
+          columns={[
+            { header: 'Employee', accessor: (r) => r.employeeId ?? '—' },
+            { header: 'Type', accessor: (r) => r.leaveTypeId ?? r.type ?? '—' },
+            { header: 'Status', accessor: (r) => r.status ?? '—' },
+          ]}
+          fields={[
+            { key: 'employeeId', label: 'Employee ID', required: true },
+            { key: 'leaveTypeId', label: 'Leave type ID' },
+            { key: 'startDate', label: 'Start', type: 'datetime' },
+            { key: 'endDate', label: 'End', type: 'datetime' },
+          ]}
+          list={async () => {
+            const res = await workplaceApi.leaveRequests.list()
+            if (res.error) throw new Error(res.error)
+            return normalizeList(res.data)
+          }}
+          create={(body) => mutateOk(workplaceApi.leaveRequests.create(body))}
+        />
+      </TabsContent>
+      <TabsContent value="timesheets">
+        <CrudTablePage
+          title="Timesheets"
+          description="Logged work time."
+          createLabel="Add Timesheet"
+          columns={[
+            { header: 'Employee', accessor: (r) => r.employeeId ?? '—' },
+            { header: 'Period', accessor: (r) => r.period ?? r.weekStart ?? '—' },
+            { header: 'Status', accessor: (r) => r.status ?? '—' },
+          ]}
+          fields={[
+            { key: 'employeeId', label: 'Employee ID', required: true },
+            { key: 'weekStart', label: 'Week start' },
+          ]}
+          list={async () => {
+            const res = await workplaceApi.timesheets.list()
+            if (res.error) throw new Error(res.error)
+            return normalizeList(res.data)
+          }}
+          create={(body) => mutateOk(workplaceApi.timesheets.create(body))}
+        />
+      </TabsContent>
+      <TabsContent value="shifts">
+        <CrudTablePage
+          title="Shifts"
+          description="Shift templates."
+          createLabel="Add Shift"
+          columns={[
+            { header: 'Name', accessor: (r) => r.name },
+            { header: 'Start', accessor: (r) => r.startTime ?? '—' },
+            { header: 'End', accessor: (r) => r.endTime ?? '—' },
+          ]}
+          fields={[
+            { key: 'name', label: 'Name', required: true },
+            { key: 'startTime', label: 'Start time' },
+            { key: 'endTime', label: 'End time' },
+          ]}
+          list={async () => {
+            const res = await workplaceApi.shifts.list()
+            if (res.error) throw new Error(res.error)
+            return normalizeList(res.data)
+          }}
+          create={(body) => mutateOk(workplaceApi.shifts.create(body))}
+        />
+      </TabsContent>
+    </Tabs>
   )
 }

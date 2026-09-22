@@ -66,4 +66,6 @@ export function createErpCompose(mediator: Mediator, bus: EventBus, scheduler: S
 }
 
 export { seedErp } from './db/seed/index'
+export { seedErpRoles } from './db/seed/roles'
+export { erpAccessManifest } from './access/manifest'
 export * from './db/schema/erp'

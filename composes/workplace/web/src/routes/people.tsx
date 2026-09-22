@@ -1,8 +1,9 @@
+import { useState } from 'react'
 import { createRoute } from '@tanstack/react-router'
-import { useEffect } from 'react'
 import { Route as WorkplaceLayoutRoute } from './layout'
-import { useWorkplaceStore } from '../stores/index'
-import { Card, CardHeader, CardTitle, CardContent, Badge } from '@projectx/ui'
+import { workplaceApi } from '../lib/api'
+import { CrudTablePage, normalizeList, mutateOk } from '@projectx/ui/admin'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@projectx/ui'
 
 export const Route = createRoute({
   getParentRoute: () => WorkplaceLayoutRoute,
@@ -11,100 +12,86 @@ export const Route = createRoute({
 })
 
 function PeoplePage() {
-  const { employees, departments, loading, fetchEmployees, fetchDepartments } = useWorkplaceStore()
-
-  useEffect(() => {
-    fetchEmployees()
-    fetchDepartments()
-  }, [])
-
-  const deptMap = Object.fromEntries(departments.map((d: any) => [d.id, d.name]))
-
+  const [tab, setTab] = useState('employees')
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">People</h1>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Employees</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{employees.length}</p>
-            <p className="text-xs text-muted-foreground mt-1">Active headcount</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Departments</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{departments.length}</p>
-            <p className="text-xs text-muted-foreground mt-1">Departments</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">On Leave Today</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">—</p>
-            <p className="text-xs text-muted-foreground mt-1">Fetch from attendance</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Employees</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <p className="text-sm text-muted-foreground">Loading...</p>
-          ) : employees.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No employees.</p>
-          ) : (
-            <div className="divide-y">
-              {employees.map((emp: any) => (
-                <div key={emp.id} className="py-2 flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium">{emp.employeeCode ?? emp.id}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {deptMap[emp.departmentId] ?? '—'}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">{emp.employmentType}</span>
-                    <Badge variant="outline">{emp.employmentStatus}</Badge>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Departments</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {departments.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No departments. Run seed.</p>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              {departments.map((d: any) => (
-                <div key={d.id} className="rounded-md border px-3 py-2">
-                  <p className="text-sm font-medium">{d.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {employees.filter((e: any) => e.departmentId === d.id).length} employees
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+    <Tabs value={tab} onValueChange={setTab}>
+      <TabsList variant="line">
+        <TabsTrigger value="employees">Employees</TabsTrigger>
+        <TabsTrigger value="departments">Departments</TabsTrigger>
+        <TabsTrigger value="positions">Positions</TabsTrigger>
+      </TabsList>
+      <TabsContent value="employees">
+        <CrudTablePage
+          title="Employees"
+          description="Workforce records."
+          createLabel="Add Employee"
+          columns={[
+            { header: 'Code', accessor: (r) => r.employeeCode ?? '—' },
+            { header: 'Name', accessor: (r) => [r.firstName, r.lastName].filter(Boolean).join(' ') || r.personId },
+            { header: 'Status', accessor: (r) => r.employmentStatus ?? '—' },
+          ]}
+          fields={[
+            { key: 'firstName', label: 'First name', required: true },
+            { key: 'lastName', label: 'Last name' },
+            { key: 'email', label: 'Email', type: 'email' },
+            { key: 'employeeCode', label: 'Employee code', required: true },
+            { key: 'employmentType', label: 'Employment type' },
+          ]}
+          defaults={{ employmentType: 'permanent' }}
+          list={async () => {
+            const res = await workplaceApi.employees.list()
+            if (res.error) throw new Error(res.error)
+            return normalizeList(res.data)
+          }}
+          create={(body) => mutateOk(workplaceApi.employees.create(body))}
+          update={(id, body) => mutateOk(workplaceApi.employees.update(id, body))}
+        />
+      </TabsContent>
+      <TabsContent value="departments">
+        <CrudTablePage
+          title="Departments"
+          description="Org units."
+          createLabel="Add Department"
+          columns={[
+            { header: 'Name', accessor: (r) => r.name },
+            { header: 'Code', accessor: (r) => r.code ?? '—' },
+          ]}
+          fields={[
+            { key: 'name', label: 'Name', required: true },
+            { key: 'code', label: 'Code' },
+          ]}
+          list={async () => {
+            const res = await workplaceApi.departments.list()
+            if (res.error) throw new Error(res.error)
+            return normalizeList(res.data)
+          }}
+          create={(body) => mutateOk(workplaceApi.departments.create(body))}
+          update={(id, body) => mutateOk(workplaceApi.departments.update(id, body))}
+        />
+      </TabsContent>
+      <TabsContent value="positions">
+        <CrudTablePage
+          title="Positions"
+          description="Job positions."
+          createLabel="Add Position"
+          columns={[
+            { header: 'Name', accessor: (r) => r.name ?? r.title },
+            { header: 'Department', accessor: (r) => r.departmentId ?? '—' },
+          ]}
+          fields={[
+            { key: 'name', label: 'Name', required: true },
+            { key: 'title', label: 'Title' },
+            { key: 'departmentId', label: 'Department ID' },
+          ]}
+          list={async () => {
+            const res = await workplaceApi.positions.list()
+            if (res.error) throw new Error(res.error)
+            return normalizeList(res.data)
+          }}
+          create={(body) => mutateOk(workplaceApi.positions.create(body))}
+          update={(id, body) => mutateOk(workplaceApi.positions.update(id, body))}
+        />
+      </TabsContent>
+    </Tabs>
   )
 }

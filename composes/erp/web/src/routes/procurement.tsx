@@ -1,8 +1,9 @@
+import { useState } from 'react'
 import { createRoute } from '@tanstack/react-router'
-import { useEffect } from 'react'
 import { Route as ErpLayoutRoute } from './layout'
-import { useErpStore } from '../stores/index'
-import { Card, CardHeader, CardTitle, CardContent, Badge, Button } from '@projectx/ui'
+import { erpApi } from '../lib/api'
+import { CrudTablePage, normalizeList, mutateOk } from '@projectx/ui/admin'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@projectx/ui'
 
 export const Route = createRoute({
   getParentRoute: () => ErpLayoutRoute,
@@ -11,109 +12,108 @@ export const Route = createRoute({
 })
 
 function ProcurementPage() {
-  const { vendors, purchaseOrders, loading, fetchVendors, fetchPurchaseOrders } = useErpStore()
-
-  useEffect(() => {
-    fetchVendors()
-    fetchPurchaseOrders()
-  }, [])
-
+  const [tab, setTab] = useState('vendors')
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Procurement</h1>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Vendors</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{vendors.length}</p>
-            <p className="text-xs text-muted-foreground mt-1">Active vendors</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Purchase Orders</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{purchaseOrders.length}</p>
-            <p className="text-xs text-muted-foreground mt-1">Total POs</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Pending Approval</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">
-              {purchaseOrders.filter((o: any) => o.status === 'submitted').length}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">Awaiting approval</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Purchase Orders</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <p className="text-sm text-muted-foreground">Loading...</p>
-          ) : purchaseOrders.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No purchase orders.</p>
-          ) : (
-            <div className="divide-y">
-              {purchaseOrders.map((po: any) => (
-                <div key={po.id} className="py-2 flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium">{po.refNo}</p>
-                    <p className="text-xs text-muted-foreground">{po.vendorId}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">
-                      ₹{Number(po.total ?? 0).toLocaleString()}
-                    </span>
-                    <Badge variant={po.status === 'approved' ? 'default' : 'secondary'}>
-                      {po.status}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Vendors</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <p className="text-sm text-muted-foreground">Loading...</p>
-          ) : vendors.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No vendors registered.</p>
-          ) : (
-            <div className="divide-y">
-              {vendors.map((v: any) => (
-                <div key={v.id} className="py-2 flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium">{v.name}</p>
-                    <p className="text-xs text-muted-foreground">{v.meta?.gstin ?? 'No GSTIN'}</p>
-                  </div>
-                  <Badge variant={v.meta?.status === 'blacklisted' ? 'destructive' : 'outline'}>
-                    {v.meta?.status ?? 'active'}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+    <Tabs value={tab} onValueChange={setTab}>
+      <TabsList variant="line">
+        <TabsTrigger value="vendors">Vendors</TabsTrigger>
+        <TabsTrigger value="pos">Purchase Orders</TabsTrigger>
+        <TabsTrigger value="grn">Goods Receipts</TabsTrigger>
+        <TabsTrigger value="payments">Payments</TabsTrigger>
+      </TabsList>
+      <TabsContent value="vendors">
+        <CrudTablePage
+          title="Vendors"
+          description="Supplier organizations."
+          createLabel="Add Vendor"
+          columns={[
+            { header: 'Name', accessor: (r) => r.name },
+            { header: 'Type', accessor: (r) => r.type },
+            { header: 'Domain', accessor: (r) => r.domain ?? '—' },
+          ]}
+          fields={[
+            { key: 'name', label: 'Name', required: true },
+            { key: 'gstin', label: 'GSTIN' },
+            { key: 'type', label: 'Sub-type' },
+          ]}
+          list={async () => {
+            const res = await erpApi.vendors.list()
+            if (res.error) throw new Error(res.error)
+            return normalizeList(res.data)
+          }}
+          create={(body) => mutateOk(erpApi.vendors.create(body))}
+          update={(id, body) => mutateOk(erpApi.vendors.update(id, body))}
+        />
+      </TabsContent>
+      <TabsContent value="pos">
+        <CrudTablePage
+          title="Purchase Orders"
+          description="Procurement documents."
+          createLabel="Add PO"
+          columns={[
+            { header: 'Reference', accessor: (r) => r.referenceNo ?? r.id },
+            { header: 'Type', accessor: (r) => r.type },
+            { header: 'Total', accessor: (r) => String(r.totalAmount ?? r.total ?? '—') },
+          ]}
+          fields={[
+            { key: 'vendorId', label: 'Vendor ID', required: true },
+            { key: 'currency', label: 'Currency' },
+          ]}
+          defaults={{ currency: 'INR' }}
+          list={async () => {
+            const res = await erpApi.purchaseOrders.list()
+            if (res.error) throw new Error(res.error)
+            return normalizeList(res.data)
+          }}
+          create={(body) => mutateOk(erpApi.purchaseOrders.create({ ...body, items: [] }))}
+        />
+      </TabsContent>
+      <TabsContent value="grn">
+        <CrudTablePage
+          title="Goods Receipts"
+          description="Inbound receipts against purchase orders."
+          createLabel="Add GRN"
+          columns={[
+            { header: 'ID', accessor: (r) => r.id },
+            { header: 'PO', accessor: (r) => r.poId ?? r.purchaseOrderId ?? '—' },
+            { header: 'Status', accessor: (r) => r.status ?? '—' },
+          ]}
+          fields={[
+            { key: 'poId', label: 'PO ID', required: true },
+            { key: 'notes', label: 'Notes', type: 'textarea' },
+          ]}
+          list={async () => {
+            const res = await erpApi.goodsReceipts.list()
+            if (res.error) throw new Error(res.error)
+            return normalizeList(res.data)
+          }}
+          create={(body) => mutateOk(erpApi.goodsReceipts.create(body))}
+        />
+      </TabsContent>
+      <TabsContent value="payments">
+        <CrudTablePage
+          title="Payments"
+          description="Vendor payments and receipts."
+          createLabel="Add Payment"
+          columns={[
+            { header: 'Reference', accessor: (r) => r.referenceNo ?? r.id },
+            { header: 'Type', accessor: (r) => r.type },
+            { header: 'Amount', accessor: (r) => String(r.totalAmount ?? r.amount ?? '—') },
+          ]}
+          fields={[
+            { key: 'partyId', label: 'Party ID' },
+            { key: 'amount', label: 'Amount', type: 'number', required: true },
+            { key: 'currency', label: 'Currency' },
+          ]}
+          defaults={{ currency: 'INR' }}
+          list={async () => {
+            const res = await erpApi.payments.list()
+            if (res.error) throw new Error(res.error)
+            return normalizeList(res.data)
+          }}
+          create={(body) => mutateOk(erpApi.payments.create(body))}
+        />
+      </TabsContent>
+    </Tabs>
   )
 }

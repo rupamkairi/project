@@ -1,8 +1,7 @@
 import { createRoute } from '@tanstack/react-router'
-import { useEffect } from 'react'
 import { Route as WorkplaceLayoutRoute } from './layout'
-import { useWorkplaceStore } from '../stores/index'
-import { Card, CardHeader, CardTitle, CardContent, Badge } from '@projectx/ui'
+import { workplaceApi } from '../lib/api'
+import { CrudTablePage, normalizeList, mutateOk } from '@projectx/ui/admin'
 
 export const Route = createRoute({
   getParentRoute: () => WorkplaceLayoutRoute,
@@ -11,47 +10,27 @@ export const Route = createRoute({
 })
 
 function ExpensesPage() {
-  const { expenseClaims, loading, fetchExpenseClaims } = useWorkplaceStore()
-
-  useEffect(() => {
-    fetchExpenseClaims()
-  }, [])
-
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Expenses</h1>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Expense Claims</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <p className="text-sm text-muted-foreground">Loading...</p>
-          ) : expenseClaims.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No expense claims.</p>
-          ) : (
-            <div className="divide-y">
-              {expenseClaims.map((claim: any) => (
-                <div key={claim.id} className="py-2 flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium">{claim.title}</p>
-                    <p className="text-xs text-muted-foreground">{claim.category}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <p className="text-sm font-medium">
-                      ₹{Number(claim.totalAmount).toLocaleString()}
-                    </p>
-                    <Badge variant={claim.status === 'approved' ? 'default' : 'secondary'}>
-                      {claim.status}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+    <CrudTablePage
+      title="Expenses"
+      description="Employee expense claims."
+      createLabel="Add Expense"
+      columns={[
+        { header: 'Employee', accessor: (r) => r.employeeId ?? '—' },
+        { header: 'Amount', accessor: (r) => String(r.amount ?? '—') },
+        { header: 'Status', accessor: (r) => r.status ?? '—' },
+      ]}
+      fields={[
+        { key: 'employeeId', label: 'Employee ID' },
+        { key: 'amount', label: 'Amount', type: 'number', required: true },
+        { key: 'description', label: 'Description', type: 'textarea' },
+      ]}
+      list={async () => {
+        const res = await workplaceApi.expenses.list()
+        if (res.error) throw new Error(res.error)
+        return normalizeList(res.data)
+      }}
+      create={(body) => mutateOk(workplaceApi.expenses.create(body))}
+    />
   )
 }

@@ -60,8 +60,8 @@ export function createPlatformAuthConfig(mediator: Mediator): AuthConfig {
       })
       if (!session) return null
 
-      const roles = await mediator.query<string[]>({
-        type: 'identity.getPermissions',
+      const access = await mediator.query<{ roleKeys: string[]; permissions: string[] }>({
+        type: 'identity.getActorAccess',
         params: { actorId: session.actorId },
         actorId: session.actorId,
         orgId: session.organizationId,
@@ -70,7 +70,8 @@ export function createPlatformAuthConfig(mediator: Mediator): AuthConfig {
         sessionId: session.id,
         actorId: session.actorId,
         orgId: session.organizationId,
-        roles,
+        roles: access?.roleKeys ?? [],
+        permissions: access?.permissions ?? [],
         expiresAt: session.expiresAt,
         revokedAt: session.revokedAt,
       }

@@ -50,6 +50,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@projectx/access": "workspace:*",
     "@projectx/crm-server": "workspace:*",
     "@projectx/ecommerce-server": "workspace:*",
     "@projectx/erp-server": "workspace:*",

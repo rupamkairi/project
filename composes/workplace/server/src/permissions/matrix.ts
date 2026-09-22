@@ -1,3 +1,7 @@
+import { canAccess, COMPOSE_ADMIN_ROLES, permissionsForRole } from '@projectx/access'
+import type { AccessActorLike } from '@projectx/access'
+import { AuthorizationError } from '@core'
+
 export const WORKPLACE_ROLES = {
   ADMIN: 'workplace:admin',
   HR_MANAGER: 'workplace:hr-manager',
@@ -35,13 +39,31 @@ const ALL_EMPLOYEE_ROLES = [
 ]
 
 export function hasPermission(
-  actor: { roles: string[]; permissions: string[] },
+  actor: AccessActorLike | null | undefined,
   permission: string,
 ): boolean {
-  const { roles, permissions } = actor
-  if (roles.includes(WORKPLACE_ROLES.ADMIN)) return true
-  if (permissions.includes('workplace:*')) return true
-  return permissions.includes(permission)
+  if (!actor) return false
+  if (canAccess(actor, permission, { composeAdminRoles: COMPOSE_ADMIN_ROLES.workplace }))
+    return true
+  const allowed = PERMISSION_MAP[permission]
+  if (!allowed) return canAccess(actor, permission)
+  const roleKeys = actor.roleKeys ?? actor.roles ?? []
+  return allowed.some((role) => roleKeys.includes(role))
+}
+
+export function requirePermission(
+  actor: AccessActorLike | null | undefined,
+  permission: string,
+): void {
+  if (!actor) {
+    throw new AuthorizationError('Authentication required', { reason: 'AUTH_REQUIRED' })
+  }
+  if (!hasPermission(actor, permission)) {
+    throw new AuthorizationError(`Missing permission: ${permission}`, {
+      reason: 'FORBIDDEN',
+      permission,
+    })
+  }
 }
 
 export const PERMISSION_MAP: Record<string, WorkplaceRole[]> = {
@@ -131,4 +153,9 @@ export const PERMISSION_MAP: Record<string, WorkplaceRole[]> = {
 
   // Employee self-service
   'workplace:my:read': [...ALL_EMPLOYEE_ROLES],
+}
+
+export function grantsForWorkplaceRole(role: WorkplaceRole): string[] {
+  if (role === WORKPLACE_ROLES.ADMIN) return ['workplace:*']
+  return permissionsForRole(PERMISSION_MAP, role)
 }

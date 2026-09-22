@@ -4,7 +4,10 @@ export interface AuthSession {
   sessionId: string
   actorId: string
   orgId: string
+  /** Identity role keys (`platform-admin`, `hsp:admin`, …). */
   roles: string[]
+  /** Flattened permission grants from assigned roles (`housekeeping:read`, `*:*`). */
+  permissions: string[]
   expiresAt: Date
   revokedAt?: Date | null
 }
@@ -12,7 +15,10 @@ export interface AuthSession {
 export interface AuthActor {
   id: string
   orgId: string
+  /** Identity role keys. Kept as `roles` for existing compose helpers. */
   roles: string[]
+  roleKeys: string[]
+  permissions: string[]
   sessionId: string
 }
 

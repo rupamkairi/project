@@ -8,19 +8,14 @@ import { persons } from '@db/schema/party'
 import { catItems, catCategories } from '@db/schema/catalog'
 import { pipelines, pipelineStages } from '@db/schema/pipeline'
 import { transactions, transactionLines } from '@db/schema/commerce'
+import { hasPermission } from '../permissions'
 
 // ── Auth helper ────────────────────────────────────────
 
-function getActor(ctx: any): { id: string; orgId: string; roles: string[] } {
+function getActor(ctx: any): { id: string; orgId: string; roles: string[]; permissions?: string[] } {
   const actor = (ctx as any).actor
   if (!actor) throw new Error('AUTH_REQUIRED')
-  return { id: actor.id, orgId: actor.orgId, roles: actor.roles ?? [] }
-}
-
-function hasPermission(actor: { roles: string[] }, perm: string): boolean {
-  return (
-    actor.roles.includes('lms-admin') || actor.roles.includes(perm) || actor.roles.includes('*:*')
-  )
+  return actor
 }
 
 // ── Pipeline helper ────────────────────────────────────

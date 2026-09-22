@@ -36,31 +36,28 @@ async function seedDevAdmin() {
 
   console.log('✓ Dev admin actor upserted')
 
-  const [adminRole] = await db
+  const existingRoles = await db
     .select()
     .from(roles)
-    .where(
-      and(
-        eq(roles.name, 'platform-admin'),
-        eq(roles.organizationId, ORG_ID),
-        isNull(roles.deletedAt),
-      ),
-    )
-    .limit(1)
+    .where(and(eq(roles.organizationId, ORG_ID), isNull(roles.deletedAt)))
+    .limit(1000)
 
-  if (adminRole) {
-    await db
-      .insert(actorRoles)
-      .values({
-        actorId: ACTOR_ID,
-        roleId: adminRole.id,
-        assignedAt: new Date(),
-        assignedBy: ACTOR_ID,
-      })
-      .onConflictDoNothing()
-    console.log('✓ platform-admin role assigned')
-  } else {
-    console.warn('platform-admin role not found — run db:seed first')
+  for (const roleName of ['platform-admin', 'platform-developer']) {
+    const role = existingRoles.find((r) => r.name === roleName)
+    if (role) {
+      await db
+        .insert(actorRoles)
+        .values({
+          actorId: ACTOR_ID,
+          roleId: role.id,
+          assignedAt: new Date(),
+          assignedBy: ACTOR_ID,
+        })
+        .onConflictDoNothing()
+      console.log(`✓ ${roleName} role assigned`)
+    } else {
+      console.warn(`${roleName} role not found — run db:seed first`)
+    }
   }
 
   console.log(`\nDev admin ready:\n  Email:    ${EMAIL}\n  Password: ${PASSWORD}\n`)

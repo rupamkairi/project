@@ -25,6 +25,7 @@ import {
   resolveSessionHandler,
   resolveAPIKeyHandler,
   getPermissionsHandler,
+  getActorAccessHandler,
   hasPermissionHandler,
   listRolesHandler,
 } from './queries'
@@ -73,6 +74,7 @@ export const IdentityModule: AppModule = {
       'identity.resolveSession',
       'identity.resolveAPIKey',
       'identity.getPermissions',
+      'identity.getActorAccess',
       'identity.hasPermission',
       'identity.listRoles',
     ],
@@ -112,6 +114,7 @@ export const IdentityModule: AppModule = {
     mediator.registerQuery('identity.resolveSession', resolveSessionHandler)
     mediator.registerQuery('identity.resolveAPIKey', resolveAPIKeyHandler)
     mediator.registerQuery('identity.getPermissions', getPermissionsHandler)
+    mediator.registerQuery('identity.getActorAccess', getActorAccessHandler)
     mediator.registerQuery('identity.hasPermission', hasPermissionHandler)
     mediator.registerQuery('identity.listRoles', listRolesHandler)
 

@@ -25,18 +25,21 @@ export function createAuthMiddleware(config: AuthConfig, provider: JwtProvider) 
       if (session.expiresAt < now) return { actor: null as AuthActor | null }
       if (session.revokedAt) return { actor: null as AuthActor | null }
 
-      const roles =
+      const roleKeys =
         session.roles.length > 0
           ? session.roles
           : config.onGetRoles
             ? await config.onGetRoles(claims.actorId)
             : []
+      const permissions = session.permissions ?? []
 
       const actor: AuthActor = {
         id: claims.actorId,
         orgId: claims.orgId,
         sessionId: claims.sessionId,
-        roles,
+        roles: roleKeys,
+        roleKeys,
+        permissions,
       }
 
       return { actor }

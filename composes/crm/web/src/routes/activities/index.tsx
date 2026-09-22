@@ -28,7 +28,7 @@ import {
   ConfirmDialog,
   Skeleton,
 } from '@projectx/ui'
-import { Plus, Phone, Mail, Calendar, FileText, Activity, Trash2 } from 'lucide-react'
+import { Plus, Phone, Mail, Calendar, FileText, Activity, Trash2, Pencil } from 'lucide-react'
 
 export const Route = createRoute({
   getParentRoute: () => crmLayoutRoute,
@@ -82,6 +82,8 @@ function ActivitiesPage() {
   const [loading, setLoading] = useState(true)
   const [typeFilter, setTypeFilter] = useState('')
   const [showCreate, setShowCreate] = useState(false)
+  const [showEdit, setShowEdit] = useState(false)
+  const [selected, setSelected] = useState<any>(null)
   const [formData, setFormData] = useState(EMPTY_FORM)
   const [submitting, setSubmitting] = useState(false)
   const [deleteId, setDeleteId] = useState<string | null>(null)
@@ -109,6 +111,23 @@ function ActivitiesPage() {
     if (!error) {
       setShowCreate(false)
       setFormData(EMPTY_FORM)
+      load(pagination.page)
+    }
+    setSubmitting(false)
+  }
+
+  async function handleEdit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!selected) return
+    setSubmitting(true)
+    const { error } = await crmApi.updateActivity(selected.id, {
+      subject: formData.subject,
+      notes: formData.notes,
+      scheduledAt: formData.scheduledAt,
+    })
+    if (!error) {
+      setShowEdit(false)
+      setSelected(null)
       load(pagination.page)
     }
     setSubmitting(false)
@@ -207,14 +226,35 @@ function ActivitiesPage() {
                       {a.createdAt ? timeAgo(a.createdAt) : '—'}
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-destructive hover:text-destructive"
-                        onClick={() => setDeleteId(a.id)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => {
+                            setSelected(a)
+                            setFormData({
+                              type: a.type ?? 'call',
+                              subject: a.subject ?? '',
+                              notes: a.notes ?? a.body ?? '',
+                              contactId: a.contactId ?? '',
+                              dealId: a.dealId ?? '',
+                              scheduledAt: a.scheduledAt ?? '',
+                            })
+                            setShowEdit(true)
+                          }}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive hover:text-destructive"
+                          onClick={() => setDeleteId(a.id)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 )
@@ -306,6 +346,39 @@ function ActivitiesPage() {
               </Button>
               <Button type="submit" size="sm" disabled={submitting}>
                 {submitting ? 'Saving...' : 'Log Activity'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showEdit} onOpenChange={setShowEdit}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Activity</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEdit} className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>Subject</Label>
+              <Input
+                value={formData.subject}
+                onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Notes</Label>
+              <Textarea
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                rows={3}
+              />
+            </div>
+            <DialogFooter className="pt-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => setShowEdit(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" size="sm" disabled={submitting}>
+                {submitting ? 'Saving...' : 'Save Changes'}
               </Button>
             </DialogFooter>
           </form>

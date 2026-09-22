@@ -39,6 +39,7 @@ export function createCrmCompose(mediator: Mediator) {
 }
 
 export { seedCrm } from './db/seed/crm'
+export { crmAccessManifest } from './access/manifest'
 export * from './db/schema/crm'
 export { registerCrmHooks } from './hooks/index'
 export { registerCrmJobs } from './jobs/index'

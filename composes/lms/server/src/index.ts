@@ -93,6 +93,7 @@ export {
 
 // Re-export seed
 export { seedLms } from './db/seed/lms'
+export { lmsAccessManifest } from './access/manifest'
 
 // Re-export backend
 export {

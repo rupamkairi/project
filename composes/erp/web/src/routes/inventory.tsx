@@ -1,8 +1,9 @@
+import { useState } from 'react'
 import { createRoute } from '@tanstack/react-router'
-import { useEffect } from 'react'
 import { Route as ErpLayoutRoute } from './layout'
-import { useErpStore } from '../stores/index'
-import { Card, CardHeader, CardTitle, CardContent, Badge } from '@projectx/ui'
+import { erpApi } from '../lib/api'
+import { CrudTablePage, normalizeList, mutateOk } from '@projectx/ui/admin'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@projectx/ui'
 
 export const Route = createRoute({
   getParentRoute: () => ErpLayoutRoute,
@@ -11,114 +12,79 @@ export const Route = createRoute({
 })
 
 function InventoryPage() {
-  const { items, warehouses, loading, fetchItems, fetchWarehouses } = useErpStore()
-
-  useEffect(() => {
-    fetchItems()
-    fetchWarehouses()
-  }, [])
-
+  const [tab, setTab] = useState('items')
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Inventory</h1>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Items</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{items.length}</p>
-            <p className="text-xs text-muted-foreground mt-1">Catalog items</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Warehouses</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{warehouses.length}</p>
-            <p className="text-xs text-muted-foreground mt-1">Storage locations</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Low Stock</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold text-destructive">
-              {
-                items.filter(
-                  (i: any) =>
-                    i.meta?.reorderLevel &&
-                    Number(i.meta.currentStock ?? 0) <= Number(i.meta.reorderLevel),
-                ).length
-              }
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">Below reorder level</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Items</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <p className="text-sm text-muted-foreground">Loading...</p>
-          ) : items.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No items in catalog.</p>
-          ) : (
-            <div className="divide-y">
-              {items.map((item: any) => (
-                <div key={item.id} className="py-2 flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium">{item.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {item.meta?.sku ?? item.id.slice(0, 8)}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">
-                      Stock: {item.meta?.currentStock ?? '—'}
-                    </span>
-                    {item.meta?.reorderLevel &&
-                      Number(item.meta?.currentStock ?? 0) <= Number(item.meta.reorderLevel) && (
-                        <Badge variant="destructive">Low</Badge>
-                      )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Warehouses</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <p className="text-sm text-muted-foreground">Loading...</p>
-          ) : warehouses.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No warehouses.</p>
-          ) : (
-            <div className="divide-y">
-              {warehouses.map((w: any) => (
-                <div key={w.id} className="py-2 flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium">{w.name}</p>
-                    <p className="text-xs text-muted-foreground">{w.meta?.code}</p>
-                  </div>
-                  <Badge variant="outline">{w.meta?.city ?? '—'}</Badge>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+    <Tabs value={tab} onValueChange={setTab}>
+      <TabsList variant="line">
+        <TabsTrigger value="items">Items</TabsTrigger>
+        <TabsTrigger value="warehouses">Warehouses</TabsTrigger>
+        <TabsTrigger value="stock">Stock</TabsTrigger>
+      </TabsList>
+      <TabsContent value="items">
+        <CrudTablePage
+          title="Items"
+          description="Catalog items."
+          columns={[
+            { header: 'Name', accessor: (r) => r.name },
+            { header: 'SKU', accessor: (r) => r.sku ?? r.meta?.sku ?? '—' },
+            { header: 'Type', accessor: (r) => r.type ?? '—' },
+          ]}
+          fields={[{ key: 'name', label: 'Name', required: true }]}
+          list={async () => {
+            const res = await erpApi.items.list()
+            if (res.error) throw new Error(res.error)
+            return normalizeList(res.data)
+          }}
+        />
+      </TabsContent>
+      <TabsContent value="warehouses">
+        <CrudTablePage
+          title="Warehouses"
+          description="Storage locations."
+          createLabel="Add Warehouse"
+          columns={[
+            { header: 'Name', accessor: (r) => r.name },
+            { header: 'Code', accessor: (r) => r.code ?? '—' },
+            { header: 'Type', accessor: (r) => r.type ?? '—' },
+          ]}
+          fields={[
+            { key: 'name', label: 'Name', required: true },
+            { key: 'code', label: 'Code' },
+            { key: 'type', label: 'Type' },
+          ]}
+          defaults={{ type: 'warehouse' }}
+          list={async () => {
+            const res = await erpApi.warehouses.list()
+            if (res.error) throw new Error(res.error)
+            return normalizeList(res.data)
+          }}
+          create={(body) => mutateOk(erpApi.warehouses.create(body))}
+        />
+      </TabsContent>
+      <TabsContent value="stock">
+        <CrudTablePage
+          title="Stock movements"
+          description="Inventory quantity changes."
+          createLabel="Add Movement"
+          columns={[
+            { header: 'Item', accessor: (r) => r.itemId ?? r.itemName ?? '—' },
+            { header: 'Qty', accessor: (r) => String(r.qty ?? r.quantity ?? '—') },
+            { header: 'Type', accessor: (r) => r.type ?? r.reason ?? '—' },
+          ]}
+          fields={[
+            { key: 'itemId', label: 'Item ID', required: true },
+            { key: 'warehouseId', label: 'Warehouse ID' },
+            { key: 'qty', label: 'Qty', type: 'number', required: true },
+            { key: 'reason', label: 'Reason' },
+          ]}
+          list={async () => {
+            const res = await erpApi.stock.movements()
+            if (res.error) throw new Error(res.error)
+            return normalizeList(res.data)
+          }}
+          create={(body) => mutateOk(erpApi.stock.create(body))}
+        />
+      </TabsContent>
+    </Tabs>
   )
 }

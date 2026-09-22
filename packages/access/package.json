@@ -1,0 +1,22 @@
+{
+  "name": "@projectx/access",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "Shared role and permission matching used by auth, identity, and composes",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format:check": "prettier --check .",
+    "format:write": "prettier --write ."
+  },
+  "devDependencies": {
+    "@projectx/config": "workspace:*",
+    "@types/bun": "^1.3.9",
+    "typescript": "^5.9.3"
+  }
+}

@@ -1,5 +1,7 @@
 import { createRoute } from '@tanstack/react-router'
 import { hospitalityLayoutRoute } from './layout'
+import { hospitalityApi } from '../lib/api'
+import { CrudTablePage, normalizeList, mutateOk } from '@projectx/ui/admin'
 
 export const Route = createRoute({
   getParentRoute: () => hospitalityLayoutRoute,
@@ -9,11 +11,26 @@ export const Route = createRoute({
 
 function RoomsPage() {
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Rooms</h1>
-      <p className="text-muted-foreground">
-        View room inventory, status, and assignments across properties.
-      </p>
-    </div>
+    <CrudTablePage
+      title="Rooms"
+      description="Room inventory and status."
+      createLabel="Add Room"
+      columns={[
+        { header: 'Number', accessor: (r) => r.number ?? r.name ?? r.id },
+        { header: 'Type', accessor: (r) => r.type ?? r.roomType ?? '—' },
+        { header: 'Status', accessor: (r) => r.status ?? '—' },
+      ]}
+      fields={[
+        { key: 'number', label: 'Number', required: true },
+        { key: 'name', label: 'Name' },
+        { key: 'type', label: 'Type' },
+        { key: 'status', label: 'Status' },
+      ]}
+      defaults={{ status: 'available' }}
+      list={async () => normalizeList(await hospitalityApi.getRooms())}
+      create={(body) => mutateOk(hospitalityApi.createRoom(body))}
+      update={(id, body) => mutateOk(hospitalityApi.updateRoom(id, body))}
+      remove={(id) => mutateOk(hospitalityApi.deleteRoom(id))}
+    />
   )
 }

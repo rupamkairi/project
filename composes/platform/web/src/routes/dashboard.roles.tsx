@@ -34,31 +34,151 @@ export const Route = createRoute({
   component: RolesPage,
 })
 
-const AVAILABLE_PERMISSIONS = [
-  { id: 'users:read', name: 'View Users', description: 'Can view user list and details' },
-  { id: 'users:write', name: 'Manage Users', description: 'Can create, update, and delete users' },
-  { id: 'roles:read', name: 'View Roles', description: 'Can view role list and details' },
-  { id: 'roles:write', name: 'Manage Roles', description: 'Can create, update, and delete roles' },
-  { id: 'invites:read', name: 'View Invites', description: 'Can view invite list' },
-  { id: 'invites:write', name: 'Manage Invites', description: 'Can create and manage invites' },
-  {
-    id: 'notifications:read',
-    name: 'View Notifications',
-    description: 'Can view notification settings',
-  },
-  {
-    id: 'notifications:write',
-    name: 'Manage Notifications',
-    description: 'Can manage notification templates',
-  },
-  { id: 'settings:read', name: 'View Settings', description: 'Can view platform settings' },
-  { id: 'settings:write', name: 'Manage Settings', description: 'Can update platform settings' },
-]
+interface CatalogPermissionNode {
+  id: string
+  label: string
+  description?: string
+  children?: CatalogPermissionNode[]
+}
+
+interface CatalogCompose {
+  id: string
+  label: string
+  adminRoles: readonly string[]
+  permissions: CatalogPermissionNode[]
+}
+
+function leafIds(nodes: CatalogPermissionNode[]): string[] {
+  const ids: string[] = []
+  for (const node of nodes) {
+    if (!node.children || node.children.length === 0) {
+      if (!node.id.startsWith('group:')) ids.push(node.id)
+    } else {
+      ids.push(...leafIds(node.children))
+    }
+  }
+  return ids
+}
+
+const COMPOSE_LABELS: Record<string, string> = {
+  platform: 'Platform',
+  hsp: 'Hospitality',
+  crm: 'CRM',
+  pjm: 'Project Mgmt',
+  erp: 'ERP',
+  workplace: 'Workplace',
+  lms: 'LMS',
+  eco: 'Ecommerce',
+  rest: 'Restaurant',
+}
+
+function composeOfRole(name: string): string {
+  const prefix = name.split(/[:-]/)[0] ?? ''
+  return COMPOSE_LABELS[prefix] ?? prefix
+}
+
+function PermissionTree({
+  catalog,
+  selected,
+  disabled,
+  onToggle,
+  idPrefix,
+}: {
+  catalog: CatalogCompose[]
+  selected: string[]
+  disabled?: boolean
+  onToggle: (id: string, checked: boolean) => void
+  idPrefix: string
+}) {
+  const [expanded, setExpanded] = useState<string[]>([])
+  const toggleExpanded = (id: string) =>
+    setExpanded((prev) => (prev.includes(id) ? prev.filter((e) => e !== id) : [...prev, id]))
+
+  if (catalog.length === 0) {
+    return <p className="text-sm text-muted-foreground">Loading permission catalog…</p>
+  }
+
+  return (
+    <div className="space-y-1 max-h-64 overflow-y-auto rounded-md border p-2">
+      {catalog.map((compose) => {
+        const leaves = leafIds(compose.permissions)
+        const selectedCount = leaves.filter((id) => selected.includes(id)).length
+        const allSelected = leaves.length > 0 && selectedCount === leaves.length
+        const isOpen = expanded.includes(compose.id)
+        return (
+          <div key={compose.id} className="rounded-md border">
+            <div className="flex items-center gap-2 px-2 py-1.5">
+              <button
+                type="button"
+                onClick={() => toggleExpanded(compose.id)}
+                className="text-xs font-semibold text-muted-foreground w-4"
+                aria-label={isOpen ? 'Collapse' : 'Expand'}
+              >
+                {isOpen ? '▾' : '▸'}
+              </button>
+              <Checkbox
+                id={`${idPrefix}-compose-${compose.id}`}
+                disabled={disabled}
+                checked={allSelected}
+                onCheckedChange={(checked) => {
+                  const next = checked
+                    ? [...new Set([...selected, ...leaves])]
+                    : selected.filter((p) => !leaves.includes(p))
+                  next.filter((p) => !selected.includes(p)).forEach((p) => onToggle(p, true))
+                  selected
+                    .filter((p) => leaves.includes(p) && !next.includes(p))
+                    .forEach((p) => onToggle(p, false))
+                }}
+                className="mt-0"
+              />
+              <Label
+                htmlFor={`${idPrefix}-compose-${compose.id}`}
+                className="cursor-pointer text-sm font-semibold flex-1"
+              >
+                {compose.label}
+              </Label>
+              <Badge variant="outline" className="text-[10px]">
+                {selectedCount}/{leaves.length}
+              </Badge>
+            </div>
+            {isOpen && (
+              <div className="px-3 pb-2 space-y-2">
+                {compose.permissions.map((group) => (
+                  <div key={group.id} className="pl-6 space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground">{group.label}</p>
+                    {(group.children ?? []).map((perm) => (
+                      <div key={perm.id} className="flex items-start gap-2">
+                        <Checkbox
+                          id={`${idPrefix}-${perm.id}`}
+                          disabled={disabled}
+                          checked={selected.includes(perm.id)}
+                          onCheckedChange={(checked) => onToggle(perm.id, !!checked)}
+                          className="mt-0.5"
+                        />
+                        <Label
+                          htmlFor={`${idPrefix}-${perm.id}`}
+                          className="cursor-pointer font-normal leading-none"
+                        >
+                          <span className="font-mono text-xs">{perm.id}</span>
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
 
 function RolesPage() {
   const [roles, setRoles] = useState<any[]>([])
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 1 })
   const [isLoading, setIsLoading] = useState(true)
+  const [catalog, setCatalog] = useState<CatalogCompose[]>([])
 
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
@@ -97,6 +217,9 @@ function RolesPage() {
 
   useEffect(() => {
     loadRoles()
+    platformApi.getAccessCatalog().then(({ data }) => {
+      if (data) setCatalog(data.composes)
+    })
   }, [])
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -119,11 +242,14 @@ function RolesPage() {
     e.preventDefault()
     if (!selectedRole) return
     setIsSubmitting(true)
-    const { data, error } = await platformApi.updateRole(selectedRole.id, {
-      name: formData.name,
-      description: formData.description,
-      permissions: formData.permissions,
-    })
+    const payload = selectedRole.isSystem
+      ? { description: formData.description }
+      : {
+          name: formData.name,
+          description: formData.description,
+          permissions: formData.permissions,
+        }
+    const { data, error } = await platformApi.updateRole(selectedRole.id, payload)
     if (!error && data) {
       setShowEditModal(false)
       setSelectedRole(null)
@@ -289,6 +415,9 @@ function RolesPage() {
                     <div className="flex items-center gap-2">
                       <Shield className="h-4 w-4 text-muted-foreground" strokeWidth={1.75} />
                       <span className="font-medium text-sm">{role.name}</span>
+                      <Badge variant="outline" className="text-[10px]">
+                        {composeOfRole(role.name)}
+                      </Badge>
                     </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">
@@ -321,16 +450,16 @@ function RolesPage() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    {!role.isSystem && (
-                      <div className="flex justify-end items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => openEditModal(role)}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
+                    <div className="flex justify-end items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => openEditModal(role)}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      {!role.isSystem && (
                         <Button
                           variant="ghost"
                           size="icon"
@@ -339,8 +468,8 @@ function RolesPage() {
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
@@ -402,27 +531,20 @@ function RolesPage() {
             </div>
             <div className="space-y-2">
               <Label>Permissions</Label>
-              <div className="space-y-2 max-h-52 overflow-y-auto rounded-md border p-3">
-                {AVAILABLE_PERMISSIONS.map((perm) => (
-                  <div key={perm.id} className="flex items-start gap-2">
-                    <Checkbox
-                      id={`create-${perm.id}`}
-                      checked={formData.permissions.includes(perm.id)}
-                      onCheckedChange={(checked) => togglePermission(perm.id, !!checked)}
-                      className="mt-0.5"
-                    />
-                    <Label
-                      htmlFor={`create-${perm.id}`}
-                      className="cursor-pointer font-normal leading-none"
-                    >
-                      <span className="font-medium text-sm">{perm.name}</span>
-                      <span className="text-xs text-muted-foreground block mt-0.5">
-                        {perm.description}
-                      </span>
-                    </Label>
-                  </div>
-                ))}
-              </div>
+              <PermissionTree
+                catalog={catalog}
+                selected={formData.permissions}
+                onToggle={togglePermission}
+                idPrefix="create"
+              />
+              {(formData.permissions.includes('*:*') || formData.permissions.includes('*')) && (
+                <Alert variant="destructive">
+                  <AlertDescription>
+                    This role grants full system access via wildcard. Only assign to trusted
+                    administrators.
+                  </AlertDescription>
+                </Alert>
+              )}
             </div>
             <DialogFooter className="pt-2">
               <Button
@@ -454,8 +576,14 @@ function RolesPage() {
                 id="edit-name"
                 required
                 value={formData.name}
+                disabled={selectedRole?.isSystem}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               />
+              {selectedRole?.isSystem && (
+                <p className="text-xs text-muted-foreground">
+                  System role names are locked. Edit the description or clone via a custom role.
+                </p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="edit-desc">Description</Label>
@@ -468,27 +596,18 @@ function RolesPage() {
             </div>
             <div className="space-y-2">
               <Label>Permissions</Label>
-              <div className="space-y-2 max-h-52 overflow-y-auto rounded-md border p-3">
-                {AVAILABLE_PERMISSIONS.map((perm) => (
-                  <div key={perm.id} className="flex items-start gap-2">
-                    <Checkbox
-                      id={`edit-${perm.id}`}
-                      checked={formData.permissions.includes(perm.id)}
-                      onCheckedChange={(checked) => togglePermission(perm.id, !!checked)}
-                      className="mt-0.5"
-                    />
-                    <Label
-                      htmlFor={`edit-${perm.id}`}
-                      className="cursor-pointer font-normal leading-none"
-                    >
-                      <span className="font-medium text-sm">{perm.name}</span>
-                      <span className="text-xs text-muted-foreground block mt-0.5">
-                        {perm.description}
-                      </span>
-                    </Label>
-                  </div>
-                ))}
-              </div>
+              {selectedRole?.isSystem && (
+                <p className="text-xs text-muted-foreground">
+                  System role permissions are locked to prevent privilege drift.
+                </p>
+              )}
+              <PermissionTree
+                catalog={catalog}
+                selected={formData.permissions}
+                disabled={selectedRole?.isSystem}
+                onToggle={togglePermission}
+                idPrefix="edit"
+              />
             </div>
             <DialogFooter className="pt-2">
               <Button

@@ -7,6 +7,7 @@ import { createSettingsRoutes } from './routes/settings.js'
 import { createInviteRoutes } from './routes/invites.js'
 import { createOverviewRoutes } from './routes/overview.js'
 import { createMastersRoutes } from './routes/masters.js'
+import { createAccessRoutes } from './routes/access.js'
 import { createNotificationPlugin } from '@projectx/plugin-notification-server'
 import { createStoragePlugin } from '@projectx/plugin-storage-server'
 
@@ -46,6 +47,7 @@ export function createPlatformCompose(mediator: Mediator) {
     .use(createInviteRoutes())
     .use(createOverviewRoutes(mediator))
     .use(createMastersRoutes(mediator))
+    .use(createAccessRoutes(mediator))
     .use(createNotificationRoutes())
     .use(createSettingsRoutes())
     .use(storagePlugin.plugin as any)
@@ -68,3 +70,4 @@ export {
 
 // Re-export seed function
 export { seedPlatform } from './db/seed/platform'
+export { platformAccessManifest } from './access/manifest'

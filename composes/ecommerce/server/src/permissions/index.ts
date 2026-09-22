@@ -51,20 +51,45 @@ export const ECOMMERCE_PERMISSIONS = {
   },
 } as const
 
+import { canAccess, COMPOSE_ADMIN_ROLES } from '@projectx/access'
+import type { AccessActorLike } from '@projectx/access'
+import { AuthorizationError } from '@core'
+
 export type EcommerceRole = keyof typeof ECOMMERCE_PERMISSIONS
 export type EcommerceResource = string
 export type EcommerceAction = 'create' | 'read' | 'update' | 'delete'
 
 export function hasPermission(
-  role: EcommerceRole,
+  actor: AccessActorLike | EcommerceRole,
   resource: EcommerceResource,
   action: EcommerceAction,
 ): boolean {
-  const rolePermissions = ECOMMERCE_PERMISSIONS[role]
-  if (!rolePermissions) return false
+  if (typeof actor === 'string') {
+    const rolePermissions = ECOMMERCE_PERMISSIONS[actor]
+    if (!rolePermissions) return false
+    const resourcePermissions = (rolePermissions as Record<string, Record<string, boolean>>)[
+      resource
+    ]
+    if (!resourcePermissions) return false
+    return resourcePermissions[action] === true
+  }
+  return canAccess(actor, `${resource}:${action}`, {
+    composeAdminRoles: COMPOSE_ADMIN_ROLES.ecommerce,
+  })
+}
 
-  const resourcePermissions = (rolePermissions as Record<string, Record<string, boolean>>)[resource]
-  if (!resourcePermissions) return false
-
-  return resourcePermissions[action] === true
+export function requireEcommercePermission(
+  actor: AccessActorLike | null | undefined,
+  resource: EcommerceResource,
+  action: EcommerceAction,
+): void {
+  if (!actor) {
+    throw new AuthorizationError('Authentication required', { reason: 'AUTH_REQUIRED' })
+  }
+  if (!hasPermission(actor, resource, action)) {
+    throw new AuthorizationError(`Missing permission: ${resource}:${action}`, {
+      reason: 'FORBIDDEN',
+      permission: `${resource}:${action}`,
+    })
+  }
 }

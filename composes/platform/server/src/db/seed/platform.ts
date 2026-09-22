@@ -123,6 +123,13 @@ const platformRoles = [
     isDefault: false,
   },
   {
+    name: 'platform-developer',
+    description: 'Platform Developer - Full system access for development and debugging',
+    permissions: ['*:*'],
+    isSystem: true,
+    isDefault: false,
+  },
+  {
     name: 'platform-ops',
     description: 'Platform Operations - User and template management',
     permissions: [

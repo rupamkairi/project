@@ -2,14 +2,16 @@ import Elysia, { t } from 'elysia'
 import type { Mediator } from '@core'
 import { generateId } from '@core'
 import { db } from '@db/client'
-import { actors, actorRoles, sessions } from '@db/schema/identity'
-import { eq, and, desc, isNull } from 'drizzle-orm'
+import { actors, actorRoles, sessions, roles } from '@db/schema/identity'
+import { eq, and, desc, isNull, inArray } from 'drizzle-orm'
 import type { AuthActor } from '@projectx/plugin-auth-server'
+import { requirePlatformPermission } from '../permissions'
 
 export function createUserRoutes(mediator: Mediator) {
   return new Elysia({ prefix: '/users' })
     .get('/', async (ctx) => {
       const actor = (ctx as any).actor as AuthActor
+      requirePlatformPermission(actor, 'actor:read')
       const q = (ctx as any).query ?? {}
       const page = parseInt(q.page as string) || 1
       const limit = parseInt(q.limit as string) || 20
@@ -45,6 +47,7 @@ export function createUserRoutes(mediator: Mediator) {
     })
     .get('/:id', async (ctx) => {
       const actor = (ctx as any).actor as AuthActor
+      requirePlatformPermission(actor, 'actor:read')
       const { params, set } = ctx as any
 
       const user = await mediator.query<any>({
@@ -59,7 +62,15 @@ export function createUserRoutes(mediator: Mediator) {
         return { error: 'User not found' }
       }
 
-      const userRoles = await db.select().from(actorRoles).where(eq(actorRoles.actorId, user.id))
+      const assigned = await db
+        .select({
+          id: roles.id,
+          name: roles.name,
+          description: roles.description,
+        })
+        .from(actorRoles)
+        .innerJoin(roles, eq(actorRoles.roleId, roles.id))
+        .where(eq(actorRoles.actorId, user.id))
 
       return {
         id: user.id,
@@ -71,13 +82,14 @@ export function createUserRoutes(mediator: Mediator) {
         avatarUrl: user.avatarUrl,
         lastLoginAt: user.lastLoginAt,
         createdAt: user.createdAt,
-        roles: userRoles.map((r: any) => r.roleId),
+        roles: assigned,
       }
     })
     .post(
       '/',
       async (ctx) => {
         const actor = (ctx as any).actor as AuthActor
+        requirePlatformPermission(actor, 'actor:create')
         const { body, set } = ctx as any
         const { email, firstName, lastName, password } = body as {
           email: string
@@ -135,6 +147,7 @@ export function createUserRoutes(mediator: Mediator) {
     )
     .patch('/:id', async (ctx) => {
       const actor = (ctx as any).actor as AuthActor
+      requirePlatformPermission(actor, 'actor:update')
       const { params, body, set } = ctx as any
       const { firstName, lastName, avatarUrl } = body as {
         firstName?: string
@@ -180,6 +193,7 @@ export function createUserRoutes(mediator: Mediator) {
     })
     .post('/:id/suspend', async (ctx) => {
       const actor = (ctx as any).actor as AuthActor
+      requirePlatformPermission(actor, 'actor:update')
       const { params, set } = ctx as any
 
       try {
@@ -204,6 +218,7 @@ export function createUserRoutes(mediator: Mediator) {
     })
     .post('/:id/activate', async (ctx) => {
       const actor = (ctx as any).actor as AuthActor
+      requirePlatformPermission(actor, 'actor:update')
       const { params, set } = ctx as any
 
       try {
@@ -223,6 +238,7 @@ export function createUserRoutes(mediator: Mediator) {
     })
     .delete('/:id', async (ctx) => {
       const actor = (ctx as any).actor as AuthActor
+      requirePlatformPermission(actor, 'actor:delete')
       const { params, set } = ctx as any
 
       const [existing] = await db
@@ -256,6 +272,7 @@ export function createUserRoutes(mediator: Mediator) {
     })
     .get('/:id/sessions', async (ctx) => {
       const actor = (ctx as any).actor as AuthActor
+      requirePlatformPermission(actor, 'session:read')
       const { params } = ctx as any
       const now = new Date()
 
@@ -277,6 +294,7 @@ export function createUserRoutes(mediator: Mediator) {
     })
     .delete('/:id/sessions/:sessionId', async (ctx) => {
       const actor = (ctx as any).actor as AuthActor
+      requirePlatformPermission(actor, 'session:revoke')
       const { params } = ctx as any
 
       await mediator.dispatch({
@@ -289,6 +307,91 @@ export function createUserRoutes(mediator: Mediator) {
 
       return { success: true }
     })
+    .put(
+      '/:id/roles',
+      async (ctx) => {
+        const actor = (ctx as any).actor as AuthActor
+        requirePlatformPermission(actor, 'role:assign')
+        const { params, body, set } = ctx as any
+        const { roleIds } = body as { roleIds: string[] }
+
+        const [user] = await db
+          .select({ id: actors.id })
+          .from(actors)
+          .where(
+            and(
+              eq(actors.id, params.id),
+              eq(actors.organizationId, actor.orgId),
+              isNull(actors.deletedAt),
+            ),
+          )
+          .limit(1)
+        if (!user) {
+          set.status = 404
+          return { error: 'User not found' }
+        }
+
+        const allowedRoles = roleIds.length
+          ? await db
+              .select({ id: roles.id })
+              .from(roles)
+              .where(
+                and(
+                  inArray(roles.id, roleIds),
+                  eq(roles.organizationId, actor.orgId),
+                  isNull(roles.deletedAt),
+                ),
+              )
+          : []
+        const allowedIds = new Set(allowedRoles.map((r) => r.id))
+
+        const current = await db
+          .select({ roleId: actorRoles.roleId })
+          .from(actorRoles)
+          .where(eq(actorRoles.actorId, params.id))
+        const currentIds = new Set(current.map((r) => r.roleId))
+        const nextIds = [...allowedIds]
+
+        for (const roleId of nextIds) {
+          if (!currentIds.has(roleId)) {
+            await mediator.dispatch({
+              type: 'identity.assignRole',
+              payload: { actorId: params.id, roleId },
+              actorId: actor.id,
+              orgId: actor.orgId,
+              correlationId: generateId(),
+            })
+          }
+        }
+        for (const roleId of currentIds) {
+          if (!allowedIds.has(roleId)) {
+            await mediator.dispatch({
+              type: 'identity.revokeRole',
+              payload: { actorId: params.id, roleId },
+              actorId: actor.id,
+              orgId: actor.orgId,
+              correlationId: generateId(),
+            })
+          }
+        }
+
+        const assigned = await db
+          .select({
+            id: roles.id,
+            name: roles.name,
+            description: roles.description,
+          })
+          .from(actorRoles)
+          .innerJoin(roles, eq(actorRoles.roleId, roles.id))
+          .where(eq(actorRoles.actorId, params.id))
+        return { roles: assigned }
+      },
+      {
+        body: t.Object({
+          roleIds: t.Array(t.String()),
+        }),
+      },
+    )
 }
 
 export type UserRoutes = ReturnType<typeof createUserRoutes>

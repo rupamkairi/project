@@ -30,6 +30,7 @@ export function createHospitalityCompose(mediator: Mediator) {
 }
 
 export { seedHospitality } from './db/seed/hospitality'
+export { hospitalityAccessManifest } from './access/manifest'
 export * from './db/schema/hospitality'
 export { registerHospitalityHooks } from './hooks/index'
 export { registerHospitalityJobs } from './jobs/index'

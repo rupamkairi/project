@@ -221,6 +221,12 @@ class CrmApiClient {
   async resolveTicket(id: string) {
     return this.request<any>(`/tickets/${id}/resolve`, { method: 'POST' })
   }
+  async updateTicket(id: string, data: any) {
+    return this.request<any>(`/tickets/${id}`, { method: 'PATCH', body: JSON.stringify(data) })
+  }
+  async deleteTicket(id: string) {
+    return this.request<any>(`/tickets/${id}`, { method: 'DELETE' })
+  }
 }
 
 export const crmApi = new CrmApiClient()

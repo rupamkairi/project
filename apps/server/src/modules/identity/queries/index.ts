@@ -3,6 +3,7 @@ import { db } from '@db/client'
 import { actors, actorRoles, apiKeys, roles, sessions } from '@db/schema/identity'
 import type { Actor, ApiKey, Role, Session } from '@db/schema/identity'
 import { eq, and, isNull, gt, inArray } from 'drizzle-orm'
+import { canAccess } from '@projectx/access'
 
 // ---------------------------------------------------------------------------
 // identity.getActor
@@ -127,6 +128,40 @@ export const resolveAPIKeyHandler: QueryHandler<ResolveAPIKeyParams, ApiKey | nu
   return key
 }
 
+async function loadActorAccess(actorId: string): Promise<{
+  roleKeys: string[]
+  permissions: string[]
+  roles: { id: string; name: string; description: string | null }[]
+}> {
+  const assignments = await db
+    .select({
+      roleId: roles.id,
+      name: roles.name,
+      description: roles.description,
+      permissions: roles.permissions,
+    })
+    .from(actorRoles)
+    .innerJoin(roles, eq(actorRoles.roleId, roles.id))
+    .where(and(eq(actorRoles.actorId, actorId), isNull(roles.deletedAt)))
+
+  const roleKeys = assignments.map((row) => row.name)
+  const perms = new Set<string>()
+  for (const row of assignments) {
+    const p = row.permissions as string[]
+    if (Array.isArray(p)) p.forEach((x) => perms.add(x))
+  }
+
+  return {
+    roleKeys,
+    permissions: Array.from(perms),
+    roles: assignments.map((row) => ({
+      id: row.roleId,
+      name: row.name,
+      description: row.description,
+    })),
+  }
+}
+
 // ---------------------------------------------------------------------------
 // identity.getPermissions — flat permission strings for actor via roles
 // ---------------------------------------------------------------------------
@@ -138,28 +173,28 @@ export interface GetPermissionsParams {
 export const getPermissionsHandler: QueryHandler<GetPermissionsParams, string[]> = async (
   query,
 ) => {
-  const { actorId } = query.params
+  const access = await loadActorAccess(query.params.actorId)
+  return access.permissions
+}
 
-  const assignments = await db
-    .select({ roleId: actorRoles.roleId })
-    .from(actorRoles)
-    .where(eq(actorRoles.actorId, actorId))
+// ---------------------------------------------------------------------------
+// identity.getActorAccess — role keys + flattened permission grants
+// ---------------------------------------------------------------------------
 
-  if (assignments.length === 0) return []
+export interface GetActorAccessParams {
+  actorId: string
+}
 
-  const roleIds = assignments.map((r) => r.roleId)
-  const roleRows = await db
-    .select({ permissions: roles.permissions })
-    .from(roles)
-    .where(and(inArray(roles.id, roleIds), isNull(roles.deletedAt)))
+export interface ActorAccess {
+  roleKeys: string[]
+  permissions: string[]
+  roles: { id: string; name: string; description: string | null }[]
+}
 
-  const perms = new Set<string>()
-  for (const row of roleRows) {
-    const p = row.permissions as string[]
-    if (Array.isArray(p)) p.forEach((x) => perms.add(x))
-  }
-
-  return Array.from(perms)
+export const getActorAccessHandler: QueryHandler<GetActorAccessParams, ActorAccess> = async (
+  query,
+) => {
+  return loadActorAccess(query.params.actorId)
 }
 
 // ---------------------------------------------------------------------------
@@ -173,26 +208,8 @@ export interface HasPermissionParams {
 
 export const hasPermissionHandler: QueryHandler<HasPermissionParams, boolean> = async (query) => {
   const { actorId, permission } = query.params
-
-  const assignments = await db
-    .select({ roleId: actorRoles.roleId })
-    .from(actorRoles)
-    .where(eq(actorRoles.actorId, actorId))
-
-  if (assignments.length === 0) return false
-
-  const roleIds = assignments.map((r) => r.roleId)
-  const roleRows = await db
-    .select({ permissions: roles.permissions })
-    .from(roles)
-    .where(and(inArray(roles.id, roleIds), isNull(roles.deletedAt)))
-
-  for (const row of roleRows) {
-    const p = row.permissions as string[]
-    if (Array.isArray(p) && p.includes(permission)) return true
-  }
-
-  return false
+  const access = await loadActorAccess(actorId)
+  return canAccess(access, permission)
 }
 
 // ---------------------------------------------------------------------------

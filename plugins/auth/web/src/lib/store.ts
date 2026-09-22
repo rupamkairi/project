@@ -10,6 +10,8 @@ export interface AuthUser {
   orgId: string
   sessionId: string
   roles: string[]
+  roleKeys: string[]
+  permissions: string[]
   email: string
   firstName?: string | null
   lastName?: string | null
@@ -52,7 +54,9 @@ function toUser(me: MeResponse): AuthUser {
     id: me.actorId,
     orgId: me.orgId,
     sessionId: me.sessionId,
-    roles: me.roles,
+    roles: me.roleKeys ?? me.roles ?? [],
+    roleKeys: me.roleKeys ?? me.roles ?? [],
+    permissions: me.permissions ?? [],
     email: me.email ?? '',
     firstName: me.firstName ?? null,
     lastName: me.lastName ?? null,

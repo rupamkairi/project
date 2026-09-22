@@ -5,6 +5,7 @@ import { pltInvites } from '../db/schema/platform'
 import { eq, and, isNull, desc, like } from 'drizzle-orm'
 import { randomBytes } from 'crypto'
 import type { AuthActor } from '@projectx/plugin-auth-server'
+import { requirePlatformPermission } from '../permissions'
 
 const INVITE_EXPIRY_DAYS = 7
 
@@ -20,6 +21,7 @@ export function createInviteRoutes() {
   return new Elysia({ prefix: '/invites' })
     .get('/', async (ctx) => {
       const actor = (ctx as any).actor as AuthActor
+      requirePlatformPermission(actor, 'invite:read')
       const q = (ctx as any).query ?? {}
       const page = parseInt(q.page as string) || 1
       const limit = parseInt(q.limit as string) || 20
@@ -77,6 +79,7 @@ export function createInviteRoutes() {
     })
     .get('/:id', async (ctx) => {
       const actor = (ctx as any).actor as AuthActor
+      requirePlatformPermission(actor, 'invite:read')
       const { params, set } = ctx as any
       const orgId = actor.orgId
 
@@ -111,6 +114,7 @@ export function createInviteRoutes() {
       '/',
       async (ctx) => {
         const actor = (ctx as any).actor as AuthActor
+        requirePlatformPermission(actor, 'invite:write')
         const { body, set } = ctx as any
         const { email, roleIds } = body as {
           email: string
@@ -186,6 +190,7 @@ export function createInviteRoutes() {
     )
     .post('/:id/resend', async (ctx) => {
       const actor = (ctx as any).actor as AuthActor
+      requirePlatformPermission(actor, 'invite:write')
       const { params, set } = ctx as any
       const orgId = actor.orgId
 
@@ -243,6 +248,7 @@ export function createInviteRoutes() {
     })
     .delete('/:id', async (ctx) => {
       const actor = (ctx as any).actor as AuthActor
+      requirePlatformPermission(actor, 'invite:write')
       const { params, set } = ctx as any
 
       const [existing] = await db

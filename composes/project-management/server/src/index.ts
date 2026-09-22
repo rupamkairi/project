@@ -28,6 +28,7 @@ export function createProjectManagementCompose(mediator: Mediator) {
 }
 
 export { seedProjectManagement } from './db/seed/project-management'
+export { projectManagementAccessManifest } from './access/manifest'
 export * from './db/schema/project-management'
 export { registerProjectManagementHooks } from './hooks'
 export { registerProjectManagementJobs } from './jobs'
