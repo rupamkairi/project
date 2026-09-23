@@ -58,6 +58,7 @@ Non-negotiable:
 - **Compose** — orchestration only; never import from another compose
 - **Shell** (`apps/server`, `apps/web`) — zero feature logic; mounts composes only
 - **Plugin** — never import from a module; never imported by a module; compose is the only meeting point
+- **Persistence** — reuse master tables as much as possible; do not introduce new compose tables without justification. New columns are acceptable only with generic, cross-compose reusable names; prefer `meta` / `attributes` / `conditions` JSONB for compose-specific detail.
 
 ---
 

@@ -1,6 +1,6 @@
 import type { AppModule, BootRegistry } from '@core'
 import { createBomHandler, activateBomHandler } from './commands'
-import { listBomsHandler, getBomHandler } from './queries'
+import { listBomsHandler, getBomHandler, resolvePriceHandler } from './queries'
 
 export const CatalogModule: AppModule = {
   manifest: {
@@ -11,7 +11,7 @@ export const CatalogModule: AppModule = {
     idPrefixes: { CatBom: 'bom_' },
     events: [],
     commands: ['catalog.createBom', 'catalog.activateBom'],
-    queries: ['catalog.listBoms', 'catalog.getBom'],
+    queries: ['catalog.listBoms', 'catalog.getBom', 'catalog.resolvePrice'],
     fsms: [],
     migrations: [],
   },
@@ -22,6 +22,7 @@ export const CatalogModule: AppModule = {
     mediator.registerCommand('catalog.activateBom', activateBomHandler)
     mediator.registerQuery('catalog.listBoms', listBomsHandler)
     mediator.registerQuery('catalog.getBom', getBomHandler)
+    mediator.registerQuery('catalog.resolvePrice', resolvePriceHandler)
   },
 
   async shutdown(): Promise<void> {},

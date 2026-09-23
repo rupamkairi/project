@@ -37,6 +37,7 @@ import { LocationModule } from './modules/location'
 import { PipelineModule } from './modules/pipeline'
 import { CommerceModule } from './modules/commerce'
 import { ActivityModule } from './modules/activity'
+import { TaxModule } from './modules/tax'
 import { CoreError, getHttpStatus } from '@core'
 import { createPgSearchAdapter } from './infra/search'
 import { createPlatformAuthConfig } from './infra/auth'
@@ -437,6 +438,7 @@ const moduleLayers = [
   PipelineModule,
   CommerceModule,
   ActivityModule,
+  TaxModule,
 ]
 
 async function main() {
