@@ -96,6 +96,7 @@ export interface UpdateTransactionPayload {
   partyId?: string
   stageId?: string
   taxAmount?: number
+  meta?: Record<string, unknown>
 }
 
 export const updateTransactionHandler: CommandHandler<

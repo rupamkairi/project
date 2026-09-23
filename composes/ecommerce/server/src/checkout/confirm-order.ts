@@ -2,6 +2,13 @@ import type { Mediator } from '@core'
 import { generateId } from '@core'
 import { ORDER_CONFIRMED_STAGE } from './place-order'
 
+const PROCESSED_EVENTS_KEY = 'processedPaymentEvents'
+
+function metaPaymentEvents(meta: Record<string, unknown> | undefined): string[] {
+  const list = meta?.[PROCESSED_EVENTS_KEY]
+  return Array.isArray(list) ? list.filter((e): e is string => typeof e === 'string') : []
+}
+
 export interface ConfirmOrderLine {
   variantId: string
   locationId: string
@@ -33,8 +40,10 @@ export async function confirmOrder(
     params: { id: input.orderId },
     actorId: input.actorId,
     orgId: input.orgId,
-  })) as { stageId?: string | null } | null
-  if (order?.stageId === ORDER_CONFIRMED_STAGE) return { orderId: input.orderId, deduped: true }
+  })) as { stageId?: string | null; meta?: Record<string, unknown> } | null
+  const processed = metaPaymentEvents(order?.meta)
+  if (order?.stageId === ORDER_CONFIRMED_STAGE || processed.includes(input.paymentEventId))
+    return { orderId: input.orderId, deduped: true }
 
   for (const line of input.lines) {
     await deps.mediator.dispatch({
@@ -52,6 +61,9 @@ export async function confirmOrder(
     })
   }
 
+  // Ledger boundary requires major units; the saga holds minor units
+  // end to end and converts once here. Division is exact for 2-decimal
+  // currencies; toMinorUnits rounds on the way back in.
   const amountMajor = input.grandTotalAmount / 100
   const journal = (await deps.mediator.dispatch({
     type: 'ledger.createJournal',
@@ -79,7 +91,14 @@ export async function confirmOrder(
 
   await deps.mediator.dispatch({
     type: 'commerce.updateTransaction',
-    payload: { id: input.orderId, referenceNo: input.gatewayRef },
+    payload: {
+      id: input.orderId,
+      referenceNo: input.gatewayRef,
+      meta: {
+        ...(order?.meta ?? {}),
+        processedPaymentEvents: [...processed, input.paymentEventId],
+      },
+    },
     actorId: input.actorId,
     orgId: input.orgId,
     correlationId,

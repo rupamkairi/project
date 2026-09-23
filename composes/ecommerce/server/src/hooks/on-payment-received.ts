@@ -18,7 +18,10 @@ export async function onPaymentReceived(
   mediator: Mediator,
   ctx: PaymentReceivedContext,
 ): Promise<{ orderId: string; deduped: boolean }> {
-  void amount
+  if (amount.amount !== ctx.grandTotalAmount || amount.currency !== ctx.currency)
+    throw new Error(
+      `webhook amount ${amount.amount} ${amount.currency} does not match order total ${ctx.grandTotalAmount} ${ctx.currency}`,
+    )
   return confirmOrder(
     {
       orderId,

@@ -9,6 +9,7 @@ export interface PlaceOrderLine {
   variantId: string
   locationId: string
   qty: number
+  productType?: string
 }
 
 export interface PlaceOrderInput {
@@ -71,7 +72,10 @@ export async function placeOrder(input: PlaceOrderInput, deps: Deps): Promise<Pl
 
     const tax = (await mediator.query({
       type: 'tax.resolveRate',
-      params: { jurisdiction: input.jurisdiction ?? null, productType: input.productType ?? null },
+      params: {
+        jurisdiction: input.jurisdiction ?? null,
+        productType: line.productType ?? input.productType ?? null,
+      },
       actorId: input.actorId,
       orgId: input.orgId,
     })) as { rateBps: number } | null

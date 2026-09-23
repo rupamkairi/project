@@ -3,10 +3,13 @@ import { placeOrder, cancelOrder, applyTaxedTotal } from './place-order'
 
 function fakeMediator(behaviour: { calls: Array<{ type: string; correlationId?: string | undefined }> }) {
   return {
-    async query(msg: { type: string }) {
+    async query(msg: { type: string; params?: Record<string, unknown> }) {
       if (msg.type === 'catalog.resolvePrice')
         return { unitPriceAmount: 1000, unitPriceCurrency: 'USD', priceListId: 'pl', priceRuleId: 'r', minQty: 1 }
-      if (msg.type === 'tax.resolveRate') return { taxRateId: 't', templateId: 'tpl', rateBps: 900 }
+      if (msg.type === 'tax.resolveRate')
+        return msg.params?.productType === 'food'
+          ? { taxRateId: 't-food', templateId: 'tpl', rateBps: 0 }
+          : { taxRateId: 't', templateId: 'tpl', rateBps: 900 }
       throw new Error(`unexpected query ${msg.type}`)
     },
     async dispatch(msg: { type: string; correlationId?: string | undefined }) {
@@ -66,8 +69,24 @@ describe('placeOrder saga', () => {
   })
 
   it('cancelOrder releases holds and marks cancelled', async () => {
-    const calls: Array<{ type: string; correlationId?: string }> = []
+    const calls: Array<{ type: string; correlationId?: string | undefined }> = []
     await cancelOrder(input, { mediator: fakeMediator({ calls }) } as never)
     expect(calls.map((c) => c.type)).toEqual(['inventory.release', 'commerce.moveStage'])
+  })
+
+  it('taxes each line by its own product type', async () => {
+    const calls: Array<{ type: string; correlationId?: string | undefined }> = []
+    const out = await placeOrder(
+      {
+        ...input,
+        lines: [
+          { variantId: 'var-food', locationId: 'loc-1', qty: 1, productType: 'food' },
+          { variantId: 'var-std', locationId: 'loc-1', qty: 1 },
+        ],
+      },
+      { mediator: fakeMediator({ calls }), payment: paymentOk } as never,
+    )
+    expect(out.lines.map((l) => l.lineTotalAmount)).toEqual([1000, 1090])
+    expect(out.grandTotalAmount).toBe(2090)
   })
 })
