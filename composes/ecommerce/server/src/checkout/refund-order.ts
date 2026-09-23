@@ -1,5 +1,6 @@
 import type { Mediator, PaymentAdapter } from '@core'
 import { generateId } from '@core'
+import { toMajorUnits } from './money'
 
 export const ORDER_REFUNDED_STAGE = 'refunded'
 
@@ -18,8 +19,9 @@ export interface RefundOrderInput {
 export async function refundOrder(
   input: RefundOrderInput,
   deps: { mediator: Mediator; payment: PaymentAdapter },
-): Promise<{ orderId: string; refundId: string }> {
+): Promise<{ orderId: string; refundId: string; deduped: boolean }> {
   const correlationId = input.idempotencyKey ?? generateId()
+  const eventId = input.idempotencyKey ?? `refund:${input.orderId}`
 
   const order = (await deps.mediator.query({
     type: 'commerce.getTransaction',
@@ -27,7 +29,20 @@ export async function refundOrder(
     actorId: input.actorId,
     orgId: input.orgId,
   })) as { stageId?: string | null } | null
-  if (order?.stageId !== 'confirmed') throw new Error('only confirmed orders can be refunded')
+  if (order?.stageId !== 'confirmed' && order?.stageId !== ORDER_REFUNDED_STAGE)
+    throw new Error('only confirmed orders can be refunded')
+
+  const claim = (await deps.mediator.dispatch({
+    type: 'commerce.claimReconcileEvent',
+    payload: { id: input.orderId, eventId },
+    actorId: input.actorId,
+    orgId: input.orgId,
+    correlationId,
+  })) as { state: 'new' | 'in-progress' | 'done' }
+  if (claim.state === 'done' || order?.stageId === ORDER_REFUNDED_STAGE) {
+    if (claim.state !== 'done') await finish(input, deps.mediator, correlationId)
+    return { orderId: input.orderId, refundId: '', deduped: true }
+  }
 
   const refund = await deps.payment.refund(input.gatewayRef, {
     amount: input.amount,
@@ -36,12 +51,14 @@ export async function refundOrder(
   if (!refund.success) throw new Error(refund.error ?? 'gateway refund failed')
 
   // Reversal of the confirm-time receivable: debit revenue, credit receivable.
-  const amountMajor = input.amount / 100
+  // Reference stays the order id (recorded against the original document);
+  // the refund journal carries referenceType 'refund' so lookups stay unique.
+  const amountMajor = toMajorUnits(input.amount)
   const journal = (await deps.mediator.dispatch({
     type: 'ledger.createJournal',
     payload: {
       reference: input.orderId,
-      referenceType: 'transaction',
+      referenceType: 'refund',
       description: `Refund ${refund.refundId ?? ''} for order ${input.orderId}`.trim(),
       currency: input.currency,
       lines: [
@@ -67,5 +84,20 @@ export async function refundOrder(
     orgId: input.orgId,
     correlationId,
   })
-  return { orderId: input.orderId, refundId: refund.refundId ?? '' }
+  await finish(input, deps.mediator, correlationId)
+  return { orderId: input.orderId, refundId: refund.refundId ?? '', deduped: false }
+}
+
+async function finish(
+  input: RefundOrderInput,
+  mediator: Mediator,
+  correlationId: string,
+): Promise<void> {
+  await mediator.dispatch({
+    type: 'commerce.finishReconcileEvent',
+    payload: { id: input.orderId, eventId: input.idempotencyKey ?? `refund:${input.orderId}` },
+    actorId: input.actorId,
+    orgId: input.orgId,
+    correlationId,
+  })
 }

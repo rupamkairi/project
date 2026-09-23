@@ -1,14 +1,6 @@
 import { Elysia } from 'elysia'
 import type { Mediator } from '@core'
-
-function scope(ctx: unknown) {
-  const actor = (ctx as { actor?: { id?: string; orgId?: string } }).actor
-  return {
-    actorId: actor?.id ?? 'system',
-    orgId: actor?.orgId ?? '',
-    correlationId: crypto.randomUUID(),
-  }
-}
+import { routeScope as scope } from './scope'
 
 export function createTaxRoutes(mediator: Mediator) {
   return new Elysia({ prefix: '/tax' })

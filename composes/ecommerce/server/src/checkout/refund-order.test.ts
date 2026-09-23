@@ -1,7 +1,12 @@
 import { describe, it, expect } from 'bun:test'
 import { refundOrder } from './refund-order'
 
-function fakes(stage: string | null, mediatorCalls: string[], refundCalls: string[]) {
+function fakes(
+  stage: string | null,
+  mediatorCalls: string[],
+  refundCalls: string[],
+  claimState: 'new' | 'done' = 'new',
+) {
   return {
     mediator: {
       async query(msg: { type: string }) {
@@ -10,6 +15,7 @@ function fakes(stage: string | null, mediatorCalls: string[], refundCalls: strin
       },
       async dispatch(msg: { type: string }) {
         mediatorCalls.push(msg.type)
+        if (msg.type === 'commerce.claimReconcileEvent') return { state: claimState, first: true }
         if (msg.type === 'ledger.createJournal') return { id: 'journal-9' }
         return { ok: true }
       },
@@ -48,11 +54,23 @@ describe('refundOrder', () => {
     const refundCalls: string[] = []
     const out = await refundOrder(input, fakes('confirmed', mediatorCalls, refundCalls) as never)
     expect(out.refundId).toBe('ref-1')
+    expect(out.deduped).toBe(false)
     expect(refundCalls).toEqual(['refund'])
     expect(mediatorCalls).toEqual([
+      'commerce.claimReconcileEvent',
       'ledger.createJournal',
       'ledger.postJournal',
       'commerce.moveStage',
+      'commerce.finishReconcileEvent',
     ])
+  })
+
+  it('dedupes an already-refunded order without touching the gateway', async () => {
+    const mediatorCalls: string[] = []
+    const refundCalls: string[] = []
+    const out = await refundOrder(input, fakes('refunded', mediatorCalls, refundCalls, 'done') as never)
+    expect(out.deduped).toBe(true)
+    expect(refundCalls).toEqual([])
+    expect(mediatorCalls).toEqual(['commerce.claimReconcileEvent'])
   })
 })

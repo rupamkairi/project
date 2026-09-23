@@ -6,7 +6,7 @@ function fakeMediator(behaviour: {
   stage?: string | null
   movements?: Array<{ variantId: string }>
   journal?: { id: string } | null
-  calls: Array<{ type: string; payload?: Record<string, unknown> }>
+  calls: Array<{ type: string; payload?: Record<string, unknown> | undefined }>
 }) {
   return {
     async query(msg: { type: string }) {
@@ -15,7 +15,7 @@ function fakeMediator(behaviour: {
       if (msg.type === 'ledger.getJournalByReference') return behaviour.journal ?? null
       throw new Error(`unexpected query ${msg.type}`)
     },
-    async dispatch(msg: { type: string; payload?: Record<string, unknown> }) {
+    async dispatch(msg: { type: string; payload?: Record<string, unknown> | undefined }) {
       behaviour.calls.push({ type: msg.type, payload: msg.payload })
       if (msg.type === 'commerce.claimReconcileEvent')
         return { state: behaviour.claimState ?? 'new', first: true }
@@ -54,9 +54,9 @@ describe('confirmOrder', () => {
       'commerce.finishReconcileEvent',
     ])
     const journal = calls.find((c) => c.type === 'ledger.createJournal')?.payload as {
-      lines: Array<{ debit: number; credit: number }>
+      lines: Array<{ accountCode: string; debit: number; credit: number }>
     }
-    expect(journal.lines[0]).toEqual({ accountCode: 'RECEIVABLE', debit: 21.8, credit: 0 })
+    expect(journal.lines[0]!).toEqual({ accountCode: 'RECEIVABLE', debit: 21.8, credit: 0 })
   })
 
   it('dedupes a claimed event without touching stock or ledger', async () => {

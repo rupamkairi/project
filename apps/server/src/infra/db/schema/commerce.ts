@@ -20,6 +20,7 @@ export const transactions = pgTable(
     ...baseColumns,
     type: transactionTypeEnum('type').notNull(),
     referenceNo: text('reference_no'),
+    externalRef: text('external_ref'),
     personId: text('person_id'), // → persons (nullable)
     partyId: text('party_id'), // → parties (nullable)
     stageId: text('stage_id'), // → pipeline_stages (fulfillment flow)

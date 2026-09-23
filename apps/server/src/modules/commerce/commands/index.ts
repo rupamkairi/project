@@ -92,6 +92,7 @@ export const createTransactionHandler: CommandHandler<
 export interface UpdateTransactionPayload {
   id: string
   referenceNo?: string
+  externalRef?: string
   personId?: string
   partyId?: string
   stageId?: string
@@ -233,27 +234,45 @@ export const claimReconcileEventHandler: CommandHandler<
   const prior = reconcileEventsOf(existing.meta)[eventId]
   if (prior === 'done') return { state: 'done', first: false }
 
-  const [row] = await db
+  // Winner election is the single guarded UPDATE below: exactly one
+  // worker flips absent -> in-progress. Losers read the current state.
+  // The meta value is computed client-side so the event id stays a bound
+  // parameter (never interpolated into SQL).
+  const nextMeta = {
+    ...((existing.meta ?? {}) as Record<string, unknown>),
+    reconcileEvents: { ...reconcileEventsOf(existing.meta), [eventId]: 'in-progress' },
+  }
+  const [won] = await db
     .update(transactions)
-    .set({
-      meta: {
-        ...((existing.meta ?? {}) as Record<string, unknown>),
-        reconcileEvents: { ...reconcileEventsOf(existing.meta), [eventId]: 'in-progress' },
-      },
-      updatedAt: new Date(),
-    })
+    .set({ meta: nextMeta, updatedAt: new Date() })
     .where(
       and(
         eq(transactions.id, id),
         eq(transactions.organizationId, command.orgId),
         isNull(transactions.deletedAt),
-        sql`COALESCE(${transactions.meta}->'reconcileEvents'->>${eventId}, '') <> 'done'`,
+        sql`(${transactions.meta}->'reconcileEvents'->>${eventId}) IS NULL`,
       ),
     )
     .returning({ id: transactions.id })
-  if (!row) return { state: 'done', first: false }
-  await context.publish(CommerceEvents.updated(id))
-  return { state: prior === 'in-progress' ? 'in-progress' : 'new', first: prior === undefined }
+  if (won) {
+    await context.publish(CommerceEvents.updated(id))
+    return { state: 'new', first: true }
+  }
+
+  const [current] = await db
+    .select({ meta: transactions.meta })
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.id, id),
+        eq(transactions.organizationId, command.orgId),
+        isNull(transactions.deletedAt),
+      ),
+    )
+    .limit(1)
+  const state = reconcileEventsOf(current?.meta)[eventId]
+  if (state === 'done') return { state: 'done', first: false }
+  return { state: 'in-progress', first: false }
 }
 
 export const finishReconcileEventHandler: CommandHandler<

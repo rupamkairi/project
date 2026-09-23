@@ -1,6 +1,7 @@
 import type { Mediator } from '@core'
 import { generateId } from '@core'
 import { ORDER_CONFIRMED_STAGE } from './place-order'
+import { toMajorUnits } from './money'
 
 export interface ConfirmOrderLine {
   variantId: string
@@ -80,9 +81,8 @@ export async function confirmOrder(
   })
   if (!journal) {
     // Ledger boundary requires major units; the saga holds minor units
-    // end to end and converts once here. Division is exact for 2-decimal
-    // currencies; toMinorUnits rounds on the way back in.
-    const amountMajor = input.grandTotalAmount / 100
+    // end to end and converts once here (see money.ts).
+    const amountMajor = toMajorUnits(input.grandTotalAmount)
     const created = (await deps.mediator.dispatch({
       type: 'ledger.createJournal',
       payload: {
@@ -110,7 +110,7 @@ export async function confirmOrder(
 
   await deps.mediator.dispatch({
     type: 'commerce.updateTransaction',
-    payload: { id: input.orderId, referenceNo: input.gatewayRef },
+    payload: { id: input.orderId, externalRef: input.gatewayRef },
     actorId: input.actorId,
     orgId: input.orgId,
     correlationId,
