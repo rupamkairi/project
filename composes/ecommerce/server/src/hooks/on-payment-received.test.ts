@@ -14,10 +14,13 @@ function mediatorFor(stage: string | null) {
     calls,
     async query(msg: { type: string }) {
       if (msg.type === 'commerce.getTransaction') return { id: 'order-1', stageId: stage, meta: {} }
+      if (msg.type === 'inventory.listMovements') return []
+      if (msg.type === 'ledger.getJournalByReference') return null
       throw new Error(`unexpected query ${msg.type}`)
     },
     async dispatch(msg: { type: string }) {
       calls.push(msg.type)
+      if (msg.type === 'commerce.claimReconcileEvent') return { state: 'new', first: true }
       if (msg.type === 'ledger.createJournal') return { id: 'journal-1' }
       return { ok: true }
     },

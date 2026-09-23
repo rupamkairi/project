@@ -20,7 +20,9 @@ function fakeMediator(behaviour: { calls: Array<{ type: string; correlationId?: 
 }
 
 const paymentOk = {
-  async createPaymentSession() {
+  lastOrder: null as null | { lines?: Array<{ unitAmount: number; quantity: number }> },
+  async createPaymentSession(order: { lines?: Array<{ unitAmount: number; quantity: number }> }) {
+    paymentOk.lastOrder = order
     return { sessionId: 'sess-1', url: 'https://pay/sess-1', expiresAt: 999 }
   },
 }
@@ -88,5 +90,7 @@ describe('placeOrder saga', () => {
     )
     expect(out.lines.map((l) => l.lineTotalAmount)).toEqual([1000, 1090])
     expect(out.grandTotalAmount).toBe(2090)
+    const sessionLines = paymentOk.lastOrder?.lines ?? []
+    expect(sessionLines.reduce((s, l) => s + l.unitAmount * l.quantity, 0)).toBe(2090)
   })
 })

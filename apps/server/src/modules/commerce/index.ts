@@ -10,6 +10,8 @@ import {
   moveStageHandler,
   addLineHandler,
   removeLineHandler,
+  claimReconcileEventHandler,
+  finishReconcileEventHandler,
 } from './commands'
 import { getTransactionHandler, listTransactionsHandler, countTransactionsHandler } from './queries'
 
@@ -33,6 +35,8 @@ export const CommerceModule: AppModule = {
       'commerce.moveStage',
       'commerce.addLine',
       'commerce.removeLine',
+      'commerce.claimReconcileEvent',
+      'commerce.finishReconcileEvent',
     ],
     queries: ['commerce.getTransaction', 'commerce.listTransactions', 'commerce.countTransactions'],
     fsms: [],
@@ -51,6 +55,8 @@ export const CommerceModule: AppModule = {
     mediator.registerCommand('commerce.moveStage', moveStageHandler)
     mediator.registerCommand('commerce.addLine', addLineHandler)
     mediator.registerCommand('commerce.removeLine', removeLineHandler)
+    mediator.registerCommand('commerce.claimReconcileEvent', claimReconcileEventHandler)
+    mediator.registerCommand('commerce.finishReconcileEvent', finishReconcileEventHandler)
 
     mediator.registerQuery('commerce.getTransaction', getTransactionHandler)
     mediator.registerQuery('commerce.listTransactions', listTransactionsHandler)

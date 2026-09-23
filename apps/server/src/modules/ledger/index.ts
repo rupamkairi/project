@@ -12,6 +12,7 @@ import {
   getAccountBalanceHandler,
   listJournalsHandler,
   getJournalHandler,
+  getJournalByReferenceHandler,
 } from './queries'
 
 export const LedgerModule: AppModule = {
@@ -41,6 +42,7 @@ export const LedgerModule: AppModule = {
       'ledger.getAccountBalance',
       'ledger.listJournals',
       'ledger.getJournal',
+      'ledger.getJournalByReference',
     ],
     fsms: [],
     migrations: [],
@@ -58,6 +60,7 @@ export const LedgerModule: AppModule = {
     mediator.registerQuery('ledger.getAccountBalance', getAccountBalanceHandler)
     mediator.registerQuery('ledger.listJournals', listJournalsHandler)
     mediator.registerQuery('ledger.getJournal', getJournalHandler)
+    mediator.registerQuery('ledger.getJournalByReference', getJournalByReferenceHandler)
   },
 
   async shutdown(): Promise<void> {},

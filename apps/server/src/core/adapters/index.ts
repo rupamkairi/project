@@ -232,11 +232,20 @@ export interface AuthAdapter {
  *
  * @category Core
  */
+export interface PaymentOrderLine {
+  name: string
+  unitAmount: number
+  currency: string
+  quantity: number
+}
+
 export interface PaymentOrder {
   amount: Money
   currency: string
   description?: string
   metadata?: Record<string, unknown>
+  lines?: PaymentOrderLine[]
+  capture?: 'automatic' | 'manual'
 }
 
 /**

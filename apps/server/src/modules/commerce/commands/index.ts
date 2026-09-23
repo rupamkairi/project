@@ -3,7 +3,7 @@ import { generateId } from '@core'
 import { db } from '@db/client'
 import { transactions, transactionLines } from '@db/schema/commerce'
 import type { Transaction, TransactionLine } from '@db/schema/commerce'
-import { eq, and, isNull } from 'drizzle-orm'
+import { eq, and, isNull, sql } from 'drizzle-orm'
 import { CommerceEvents } from '../events'
 
 type TransactionType = Transaction['type']
@@ -196,4 +196,92 @@ export const removeLineHandler: CommandHandler<{ id: string }, void> = async (co
     .where(and(eq(transactionLines.id, id), eq(transactionLines.organizationId, command.orgId)))
     .returning()
   if (row) await context.publish(CommerceEvents.updated(row.transactionId))
+}
+
+export type ReconcileEventState = 'new' | 'in-progress' | 'done'
+
+function reconcileEventsOf(meta: unknown): Record<string, string> {
+  const root = (meta ?? {}) as Record<string, unknown>
+  const events = root.reconcileEvents
+  if (events && typeof events === 'object' && !Array.isArray(events)) {
+    const out: Record<string, string> = {}
+    for (const [k, v] of Object.entries(events as Record<string, unknown>)) {
+      if (typeof v === 'string') out[k] = v
+    }
+    return out
+  }
+  return {}
+}
+
+export const claimReconcileEventHandler: CommandHandler<
+  { id: string; eventId: string },
+  { state: ReconcileEventState; first: boolean }
+> = async (command, context) => {
+  const { id, eventId } = command.payload
+  const [existing] = await db
+    .select({ id: transactions.id, meta: transactions.meta })
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.id, id),
+        eq(transactions.organizationId, command.orgId),
+        isNull(transactions.deletedAt),
+      ),
+    )
+    .limit(1)
+  if (!existing) throw new Error('Transaction not found')
+  const prior = reconcileEventsOf(existing.meta)[eventId]
+  if (prior === 'done') return { state: 'done', first: false }
+
+  const [row] = await db
+    .update(transactions)
+    .set({
+      meta: {
+        ...((existing.meta ?? {}) as Record<string, unknown>),
+        reconcileEvents: { ...reconcileEventsOf(existing.meta), [eventId]: 'in-progress' },
+      },
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(transactions.id, id),
+        eq(transactions.organizationId, command.orgId),
+        isNull(transactions.deletedAt),
+        sql`COALESCE(${transactions.meta}->'reconcileEvents'->>${eventId}, '') <> 'done'`,
+      ),
+    )
+    .returning({ id: transactions.id })
+  if (!row) return { state: 'done', first: false }
+  await context.publish(CommerceEvents.updated(id))
+  return { state: prior === 'in-progress' ? 'in-progress' : 'new', first: prior === undefined }
+}
+
+export const finishReconcileEventHandler: CommandHandler<
+  { id: string; eventId: string },
+  void
+> = async (command, context) => {
+  const { id, eventId } = command.payload
+  const [existing] = await db
+    .select({ meta: transactions.meta })
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.id, id),
+        eq(transactions.organizationId, command.orgId),
+        isNull(transactions.deletedAt),
+      ),
+    )
+    .limit(1)
+  if (!existing) throw new Error('Transaction not found')
+  await db
+    .update(transactions)
+    .set({
+      meta: {
+        ...((existing.meta ?? {}) as Record<string, unknown>),
+        reconcileEvents: { ...reconcileEventsOf(existing.meta), [eventId]: 'done' },
+      },
+      updatedAt: new Date(),
+    })
+    .where(and(eq(transactions.id, id), eq(transactions.organizationId, command.orgId)))
+  await context.publish(CommerceEvents.updated(id))
 }

@@ -112,10 +112,25 @@ export async function placeOrder(input: PlaceOrderInput, deps: Deps): Promise<Pl
   // Payment failure preserves the reservation so the shopper can retry
   // without rebuilding the cart. Explicit cancellation releases via cancelOrder.
   // TODO: reservation expiry job must release stale holds.
+  // Multi-line session that sums exactly to the grand total: pre-tax
+  // unit lines plus a single tax adjustment line when tax applies.
+  const preTaxSum = resolved.reduce((sum, l) => sum + l.unitPriceAmount * l.qty, 0)
+  const taxDelta = grandTotalAmount - preTaxSum
   const session = await payment.createPaymentSession({
     amount: { amount: grandTotalAmount, currency: input.currency },
     currency: input.currency,
     description: `Order ${input.orderId}`,
+    lines: [
+      ...resolved.map((l) => ({
+        name: l.variantId,
+        unitAmount: l.unitPriceAmount,
+        currency: l.unitPriceCurrency,
+        quantity: l.qty,
+      })),
+      ...(taxDelta > 0
+        ? [{ name: 'Tax', unitAmount: taxDelta, currency: input.currency, quantity: 1 }]
+        : []),
+    ],
     metadata: { orderId: input.orderId, orgId: input.orgId, idempotencyKey: correlationId },
   })
   await mediator.dispatch({

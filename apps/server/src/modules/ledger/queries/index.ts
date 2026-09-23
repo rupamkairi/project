@@ -96,3 +96,27 @@ export const getJournalHandler: QueryHandler<
     .where(and(eq(ldgJournalEntries.transactionId, row.id), isNull(ldgJournalEntries.deletedAt)))
   return { ...row, lines }
 }
+
+export const getJournalByReferenceHandler: QueryHandler<
+  { reference: string; referenceType?: string },
+  (LdgTransaction & { lines: LdgJournalEntry[] }) | null
+> = async (query) => {
+  const conditions = [
+    eq(ldgTransactions.organizationId, query.orgId),
+    eq(ldgTransactions.reference, query.params.reference),
+    isNull(ldgTransactions.deletedAt),
+  ]
+  if (query.params.referenceType)
+    conditions.push(eq(ldgTransactions.referenceType, query.params.referenceType))
+  const [row] = await db
+    .select()
+    .from(ldgTransactions)
+    .where(and(...conditions))
+    .limit(1)
+  if (!row) return null
+  const lines = await db
+    .select()
+    .from(ldgJournalEntries)
+    .where(and(eq(ldgJournalEntries.transactionId, row.id), isNull(ldgJournalEntries.deletedAt)))
+  return { ...row, lines }
+}

@@ -16,7 +16,7 @@ export const listStockUnitsHandler: QueryHandler<
 }
 
 export const listMovementsHandler: QueryHandler<
-  { variantId?: string; locationId?: string; limit?: number },
+  { variantId?: string; locationId?: string; limit?: number; referenceId?: string; reason?: string },
   InvMovement[]
 > = async (query) => {
   const conditions = [eq(invMovements.organizationId, query.orgId)]
@@ -24,6 +24,8 @@ export const listMovementsHandler: QueryHandler<
   if (query.params.locationId) {
     conditions.push(eq(invMovements.toLocationId, query.params.locationId))
   }
+  if (query.params.referenceId) conditions.push(eq(invMovements.referenceId, query.params.referenceId))
+  if (query.params.reason) conditions.push(eq(invMovements.reason, query.params.reason))
   return db
     .select()
     .from(invMovements)

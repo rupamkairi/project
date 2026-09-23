@@ -15,19 +15,35 @@ export function createStripeAdapter(secretKey: string, webhookSecret: string): P
 
   return {
     async createPaymentSession(order: PaymentOrder): Promise<PaymentSession> {
+      const lineItems =
+        order.lines?.length
+          ? order.lines.map(
+              (l: { name: string; unitAmount: number; currency: string; quantity: number }) => ({
+                price_data: {
+                  currency: l.currency.toLowerCase(),
+                  product_data: { name: l.name },
+                  unit_amount: l.unitAmount,
+                },
+                quantity: l.quantity,
+              }),
+            )
+          : [
+              {
+                price_data: {
+                  currency: order.amount.currency.toLowerCase(),
+                  product_data: { name: order.description ?? 'Order' },
+                  unit_amount: order.amount.amount,
+                },
+                quantity: 1,
+              },
+            ]
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
-        line_items: [
-          {
-            price_data: {
-              currency: order.amount.currency.toLowerCase(),
-              product_data: { name: order.description ?? 'Order' },
-              unit_amount: order.amount.amount,
-            },
-            quantity: 1,
-          },
-        ],
+        line_items: lineItems,
         mode: 'payment',
+        ...(order.capture === 'manual'
+          ? { payment_intent_data: { capture_method: 'manual' as const } }
+          : {}),
         success_url: (order.metadata?.successUrl as string | undefined) ?? '/',
         cancel_url: (order.metadata?.cancelUrl as string | undefined) ?? '/',
         metadata: order.metadata as Record<string, string> | undefined,
