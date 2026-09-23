@@ -82,7 +82,7 @@ export async function confirmOrder(
   if (!journal) {
     // Ledger boundary requires major units; the saga holds minor units
     // end to end and converts once here (see money.ts).
-    const amountMajor = toMajorUnits(input.grandTotalAmount)
+    const amountMajor = toMajorUnits(input.grandTotalAmount, input.currency)
     const created = (await deps.mediator.dispatch({
       type: 'ledger.createJournal',
       payload: {

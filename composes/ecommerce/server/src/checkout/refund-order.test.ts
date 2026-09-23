@@ -5,12 +5,13 @@ function fakes(
   stage: string | null,
   mediatorCalls: string[],
   refundCalls: string[],
-  claimState: 'new' | 'done' = 'new',
+  claimState: 'new' | 'in-progress' | 'done' = 'new',
+  meta: Record<string, unknown> = {},
 ) {
   return {
     mediator: {
       async query(msg: { type: string }) {
-        if (msg.type === 'commerce.getTransaction') return { id: 'order-1', stageId: stage }
+        if (msg.type === 'commerce.getTransaction') return { id: 'order-1', stageId: stage, meta }
         throw new Error(`unexpected query ${msg.type}`)
       },
       async dispatch(msg: { type: string }) {
@@ -36,6 +37,7 @@ const input = {
   gatewayRef: 'pay-1',
   amount: 2180,
   currency: 'USD',
+  idempotencyKey: 'refund-attempt-1',
 }
 
 describe('refundOrder', () => {
@@ -61,15 +63,30 @@ describe('refundOrder', () => {
       'ledger.createJournal',
       'ledger.postJournal',
       'commerce.moveStage',
+      'commerce.updateTransaction',
       'commerce.finishReconcileEvent',
     ])
   })
 
-  it('dedupes an already-refunded order without touching the gateway', async () => {
+  it('dedupes an already-refunded order and returns the recorded refund id', async () => {
     const mediatorCalls: string[] = []
     const refundCalls: string[] = []
-    const out = await refundOrder(input, fakes('refunded', mediatorCalls, refundCalls, 'done') as never)
-    expect(out.deduped).toBe(true)
+    const out = await refundOrder(input, {
+      mediator: fakes('refunded', mediatorCalls, refundCalls, 'done', { refunds: ['ref-1'] })
+        .mediator as never,
+      payment: fakes('refunded', mediatorCalls, refundCalls, 'done').payment as never,
+    })
+    expect(out).toEqual({ orderId: 'order-1', refundId: 'ref-1', deduped: true })
+    expect(refundCalls).toEqual([])
+    expect(mediatorCalls).toEqual(['commerce.claimReconcileEvent'])
+  })
+
+  it('backs off when a refund for the same key is already in progress', async () => {
+    const mediatorCalls: string[] = []
+    const refundCalls: string[] = []
+    await expect(
+      refundOrder(input, fakes('confirmed', mediatorCalls, refundCalls, 'in-progress') as never),
+    ).rejects.toThrow(/already in progress/)
     expect(refundCalls).toEqual([])
     expect(mediatorCalls).toEqual(['commerce.claimReconcileEvent'])
   })

@@ -11,9 +11,20 @@ export interface RefundOrderInput {
   gatewayRef: string
   amount: number
   currency: string
-  idempotencyKey?: string
+  /** Required: each refund attempt (including partials) carries its own key. */
+  idempotencyKey: string
   receivableAccountCode?: string
   revenueAccountCode?: string
+}
+
+interface OrderState {
+  stageId?: string | null
+  meta?: Record<string, unknown>
+}
+
+function recordedRefundIds(meta: Record<string, unknown> | undefined): string[] {
+  const list = meta?.refunds
+  return Array.isArray(list) ? list.filter((e): e is string => typeof e === 'string') : []
 }
 
 export async function refundOrder(
@@ -21,14 +32,14 @@ export async function refundOrder(
   deps: { mediator: Mediator; payment: PaymentAdapter },
 ): Promise<{ orderId: string; refundId: string; deduped: boolean }> {
   const correlationId = input.idempotencyKey ?? generateId()
-  const eventId = input.idempotencyKey ?? `refund:${input.orderId}`
+  const eventId = input.idempotencyKey
 
   const order = (await deps.mediator.query({
     type: 'commerce.getTransaction',
     params: { id: input.orderId },
     actorId: input.actorId,
     orgId: input.orgId,
-  })) as { stageId?: string | null } | null
+  })) as OrderState | null
   if (order?.stageId !== 'confirmed' && order?.stageId !== ORDER_REFUNDED_STAGE)
     throw new Error('only confirmed orders can be refunded')
 
@@ -40,9 +51,12 @@ export async function refundOrder(
     correlationId,
   })) as { state: 'new' | 'in-progress' | 'done' }
   if (claim.state === 'done' || order?.stageId === ORDER_REFUNDED_STAGE) {
-    if (claim.state !== 'done') await finish(input, deps.mediator, correlationId)
-    return { orderId: input.orderId, refundId: '', deduped: true }
+    if (claim.state !== 'done') await finish(input, eventId, deps.mediator, correlationId)
+    const ids = recordedRefundIds(order?.meta)
+    return { orderId: input.orderId, refundId: ids[ids.length - 1] ?? '', deduped: true }
   }
+  if (claim.state === 'in-progress')
+    throw new Error(`refund ${eventId} already in progress for order ${input.orderId}; retry`)
 
   const refund = await deps.payment.refund(input.gatewayRef, {
     amount: input.amount,
@@ -53,7 +67,7 @@ export async function refundOrder(
   // Reversal of the confirm-time receivable: debit revenue, credit receivable.
   // Reference stays the order id (recorded against the original document);
   // the refund journal carries referenceType 'refund' so lookups stay unique.
-  const amountMajor = toMajorUnits(input.amount)
+  const amountMajor = toMajorUnits(input.amount, input.currency)
   const journal = (await deps.mediator.dispatch({
     type: 'ledger.createJournal',
     payload: {
@@ -84,18 +98,32 @@ export async function refundOrder(
     orgId: input.orgId,
     correlationId,
   })
-  await finish(input, deps.mediator, correlationId)
+  await deps.mediator.dispatch({
+    type: 'commerce.updateTransaction',
+    payload: {
+      id: input.orderId,
+      meta: {
+        ...((order?.meta ?? {}) as Record<string, unknown>),
+        refunds: [...recordedRefundIds(order?.meta), refund.refundId ?? ''],
+      },
+    },
+    actorId: input.actorId,
+    orgId: input.orgId,
+    correlationId,
+  })
+  await finish(input, eventId, deps.mediator, correlationId)
   return { orderId: input.orderId, refundId: refund.refundId ?? '', deduped: false }
 }
 
 async function finish(
   input: RefundOrderInput,
+  eventId: string,
   mediator: Mediator,
   correlationId: string,
 ): Promise<void> {
   await mediator.dispatch({
     type: 'commerce.finishReconcileEvent',
-    payload: { id: input.orderId, eventId: input.idempotencyKey ?? `refund:${input.orderId}` },
+    payload: { id: input.orderId, eventId },
     actorId: input.actorId,
     orgId: input.orgId,
     correlationId,
