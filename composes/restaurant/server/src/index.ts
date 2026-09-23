@@ -27,6 +27,10 @@ export function createRestaurantCompose(mediator: Mediator, bus: EventBus, sched
       const path = new URL(ctx.request.url).pathname
       const permission = restaurantPermissionForPath(path, ctx.request.method)
       requireRestaurantPermission(actor, permission)
+      // Bridge the auth actor to the legacy `(request as any).session` shape
+      // route handlers read ({ actorId, orgId }). requireRestaurantPermission
+      // throws for missing actors, so actor is non-null here.
+      ;(ctx.request as any).session = { actorId: actor.id, orgId: actor.orgId }
     })
     .use(createMenuRoutes(mediator, bus))
     .use(createOutletRoutes(mediator, bus))

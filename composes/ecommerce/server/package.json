@@ -21,9 +21,10 @@
     "format:write": "prettier --write ."
   },
   "dependencies": {
-    "elysia": "^1.4.25",
+    "@projectx/access": "workspace:*",
+    "@projectx/plugin-payment-server": "workspace:*",
     "drizzle-orm": "^0.45.1",
-    "@projectx/plugin-payment-server": "workspace:*"
+    "elysia": "^1.4.25"
   },
   "devDependencies": {
     "@projectx/config": "workspace:*",
