@@ -23,4 +23,13 @@ export const InventoryEvents = {
   moved(id: string, reason: string) {
     return ev('inventory.moved', id, 'InvMovement', { reason })
   },
+  reserved(id: string, variantId: string) {
+    return ev('inventory.reserved', id, 'InvMovement', { variantId })
+  },
+  released(id: string, variantId: string) {
+    return ev('inventory.released', id, 'InvMovement', { variantId })
+  },
+  deducted(id: string, variantId: string) {
+    return ev('inventory.deducted', id, 'InvMovement', { variantId })
+  },
 }

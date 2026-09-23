@@ -15,6 +15,7 @@ export function resolveTaxRate(rates: TaxRate[], ctx: TaxResolveContext): TaxRat
     let score = -1
     if (jMatch && pMatch) score = 3
     else if (jMatch && pGeneric) score = 2
+    else if (jGeneric && pMatch) score = 1.5
     else if (jGeneric && pGeneric && r.isDefault) score = 1
     else if (jGeneric && pGeneric) score = 0
     return { r, score }

@@ -41,4 +41,12 @@ describe('resolveTaxRate', () => {
     expect(resolveTaxRate(rates, { jurisdiction: 'MH' })?.id).toBe('r-default')
     expect(resolveTaxRate([], { jurisdiction: 'MH' })).toBeNull()
   })
+
+  it('honours a global product-type override over the default', () => {
+    const rates = [
+      rate({ id: 'r-default', rateBps: 500, isDefault: true }),
+      rate({ id: 'r-food', productType: 'food', rateBps: 100 }),
+    ]
+    expect(resolveTaxRate(rates, { jurisdiction: 'MH', productType: 'food' })?.id).toBe('r-food')
+  })
 })

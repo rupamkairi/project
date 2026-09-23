@@ -5,6 +5,113 @@ import { invMovements, invStockUnits } from '@db/schema/inventory'
 import type { InvMovement, InvStockUnit } from '@db/schema/inventory'
 import { eq, and } from 'drizzle-orm'
 import { InventoryEvents } from '../events'
+import { applyReserve, applyRelease, applyDeduct } from '../reservation'
+
+export interface ReservationPayload {
+  variantId: string
+  locationId: string
+  quantity: number
+  referenceId?: string
+  referenceType?: string
+}
+
+async function loadUnit(orgId: string, variantId: string, locationId: string) {
+  const [row] = await db
+    .select()
+    .from(invStockUnits)
+    .where(
+      and(
+        eq(invStockUnits.organizationId, orgId),
+        eq(invStockUnits.variantId, variantId),
+        eq(invStockUnits.locationId, locationId),
+      ),
+    )
+    .limit(1)
+  return row ?? null
+}
+
+async function logReservation(
+  orgId: string,
+  actorId: string | undefined,
+  p: ReservationPayload,
+  reason: string,
+) {
+  const now = new Date()
+  const [row] = await db
+    .insert(invMovements)
+    .values({
+      id: generateId(),
+      organizationId: orgId,
+      variantId: p.variantId,
+      fromLocationId: null,
+      toLocationId: p.locationId,
+      quantity: Math.round(p.quantity),
+      reason,
+      referenceId: p.referenceId ?? null,
+      referenceType: p.referenceType ?? null,
+      actorId: actorId ?? null,
+      createdAt: now,
+      updatedAt: now,
+      version: 1,
+      meta: {},
+    })
+    .returning()
+  return row!
+}
+
+export const reserveHandler: CommandHandler<ReservationPayload, InvStockUnit> = async (
+  command,
+  context,
+) => {
+  const p = command.payload
+  const unit = await loadUnit(command.orgId, p.variantId, p.locationId)
+  if (!unit) throw new Error(`insufficient stock: no holdings for ${p.variantId}`)
+  const next = applyReserve({ onHand: unit.onHand, reserved: unit.reserved }, p.quantity)
+  const [row] = await db
+    .update(invStockUnits)
+    .set({ reserved: next.reserved, updatedAt: new Date() })
+    .where(eq(invStockUnits.id, unit.id))
+    .returning()
+  const movement = await logReservation(command.orgId, command.actorId, p, 'reserve')
+  await context.publish(InventoryEvents.reserved(movement.id, p.variantId))
+  return row!
+}
+
+export const releaseHandler: CommandHandler<ReservationPayload, InvStockUnit> = async (
+  command,
+  context,
+) => {
+  const p = command.payload
+  const unit = await loadUnit(command.orgId, p.variantId, p.locationId)
+  if (!unit) throw new Error(`insufficient reserved stock: no holdings for ${p.variantId}`)
+  const next = applyRelease({ onHand: unit.onHand, reserved: unit.reserved }, p.quantity)
+  const [row] = await db
+    .update(invStockUnits)
+    .set({ reserved: next.reserved, updatedAt: new Date() })
+    .where(eq(invStockUnits.id, unit.id))
+    .returning()
+  const movement = await logReservation(command.orgId, command.actorId, p, 'release')
+  await context.publish(InventoryEvents.released(movement.id, p.variantId))
+  return row!
+}
+
+export const deductHandler: CommandHandler<ReservationPayload, InvStockUnit> = async (
+  command,
+  context,
+) => {
+  const p = command.payload
+  const unit = await loadUnit(command.orgId, p.variantId, p.locationId)
+  if (!unit) throw new Error(`insufficient stock: no holdings for ${p.variantId}`)
+  const next = applyDeduct({ onHand: unit.onHand, reserved: unit.reserved }, p.quantity)
+  const [row] = await db
+    .update(invStockUnits)
+    .set({ onHand: next.onHand, reserved: next.reserved, updatedAt: new Date() })
+    .where(eq(invStockUnits.id, unit.id))
+    .returning()
+  const movement = await logReservation(command.orgId, command.actorId, p, 'sale')
+  await context.publish(InventoryEvents.deducted(movement.id, p.variantId))
+  return row!
+}
 
 export interface RecordMovementPayload {
   variantId: string

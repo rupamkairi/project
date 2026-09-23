@@ -3,6 +3,7 @@ import { db } from '@db/client'
 import { invMovements, invStockUnits } from '@db/schema/inventory'
 import type { InvMovement, InvStockUnit } from '@db/schema/inventory'
 import { eq, and, desc } from 'drizzle-orm'
+import { availableQty } from '../reservation'
 
 export const listStockUnitsHandler: QueryHandler<
   { variantId?: string; locationId?: string },
@@ -29,4 +30,17 @@ export const listMovementsHandler: QueryHandler<
     .where(and(...conditions))
     .orderBy(desc(invMovements.createdAt))
     .limit(query.params.limit ?? 200)
+}
+
+export const getAvailabilityHandler: QueryHandler<
+  { variantId: string; locationId?: string },
+  Array<InvStockUnit & { available: number }>
+> = async (query) => {
+  const conditions = [
+    eq(invStockUnits.organizationId, query.orgId),
+    eq(invStockUnits.variantId, query.params.variantId),
+  ]
+  if (query.params.locationId) conditions.push(eq(invStockUnits.locationId, query.params.locationId))
+  const rows = await db.select().from(invStockUnits).where(and(...conditions))
+  return rows.map((r) => ({ ...r, available: availableQty({ onHand: r.onHand, reserved: r.reserved }) }))
 }
