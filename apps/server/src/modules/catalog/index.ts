@@ -1,6 +1,19 @@
 import type { AppModule, BootRegistry } from '@core'
-import { createBomHandler, activateBomHandler } from './commands'
-import { listBomsHandler, getBomHandler, resolvePriceHandler } from './queries'
+import {
+  createBomHandler,
+  activateBomHandler,
+  createPriceListHandler,
+  updatePriceListHandler,
+  createPriceRuleHandler,
+  updatePriceRuleHandler,
+} from './commands'
+import {
+  listBomsHandler,
+  getBomHandler,
+  resolvePriceHandler,
+  listPriceListsHandler,
+  listPriceRulesHandler,
+} from './queries'
 
 export const CatalogModule: AppModule = {
   manifest: {
@@ -10,8 +23,21 @@ export const CatalogModule: AppModule = {
     entities: [],
     idPrefixes: { CatBom: 'bom_' },
     events: [],
-    commands: ['catalog.createBom', 'catalog.activateBom'],
-    queries: ['catalog.listBoms', 'catalog.getBom', 'catalog.resolvePrice'],
+    commands: [
+      'catalog.createBom',
+      'catalog.activateBom',
+      'catalog.createPriceList',
+      'catalog.updatePriceList',
+      'catalog.createPriceRule',
+      'catalog.updatePriceRule',
+    ],
+    queries: [
+      'catalog.listBoms',
+      'catalog.getBom',
+      'catalog.resolvePrice',
+      'catalog.listPriceLists',
+      'catalog.listPriceRules',
+    ],
     fsms: [],
     migrations: [],
   },
@@ -20,9 +46,15 @@ export const CatalogModule: AppModule = {
     const { mediator } = registry
     mediator.registerCommand('catalog.createBom', createBomHandler)
     mediator.registerCommand('catalog.activateBom', activateBomHandler)
+    mediator.registerCommand('catalog.createPriceList', createPriceListHandler)
+    mediator.registerCommand('catalog.updatePriceList', updatePriceListHandler)
+    mediator.registerCommand('catalog.createPriceRule', createPriceRuleHandler)
+    mediator.registerCommand('catalog.updatePriceRule', updatePriceRuleHandler)
     mediator.registerQuery('catalog.listBoms', listBomsHandler)
     mediator.registerQuery('catalog.getBom', getBomHandler)
     mediator.registerQuery('catalog.resolvePrice', resolvePriceHandler)
+    mediator.registerQuery('catalog.listPriceLists', listPriceListsHandler)
+    mediator.registerQuery('catalog.listPriceRules', listPriceRulesHandler)
   },
 
   async shutdown(): Promise<void> {},

@@ -24,6 +24,18 @@ function audienceMatches(listAudience: unknown, ctx: Record<string, unknown>): n
   return keys.length
 }
 
+function conditionsMatch(
+  conditions: unknown,
+  ctx: { audience: Record<string, unknown>; qty: number },
+): boolean {
+  const want = (conditions ?? {}) as Record<string, unknown>
+  const flat: Record<string, unknown> = { qty: ctx.qty, ...ctx.audience }
+  for (const k of Object.keys(want)) {
+    if (flat[k] !== want[k]) return false
+  }
+  return true
+}
+
 function listUsable(l: CatPriceList, ctx: PriceResolveContext): number | null {
   if (l.status !== 'active') return null
   if (l.currency !== ctx.currency) return null
@@ -44,17 +56,29 @@ export function resolvePriceRule(
   }
 
   const qty = Math.max(1, Math.round(ctx.qty))
-  const candidates: Array<{ rule: CatPriceRule; list: CatPriceList; specificity: number }> = []
+  const candidates: Array<{
+    rule: CatPriceRule
+    list: CatPriceList
+    specificity: number
+    priority: number
+  }> = []
   for (const r of rules) {
     if (r.variantId !== ctx.variantId) continue
     if ((r.minQty ?? 1) > qty) continue
+    if (!conditionsMatch(r.conditions, { audience: ctx.audience, qty })) continue
     const hit = usable.get(r.priceListId)
     if (!hit) continue
-    candidates.push({ rule: r, list: hit.list, specificity: hit.specificity })
+    candidates.push({
+      rule: r,
+      list: hit.list,
+      specificity: hit.specificity,
+      priority: (hit.list as { priority?: number }).priority ?? 0,
+    })
   }
   if (!candidates.length) return null
 
   candidates.sort((a, b) => {
+    if (b.priority !== a.priority) return b.priority - a.priority
     if ((b.rule.minQty ?? 1) !== (a.rule.minQty ?? 1)) return (b.rule.minQty ?? 1) - (a.rule.minQty ?? 1)
     if (b.specificity !== a.specificity) return b.specificity - a.specificity
     return a.rule.id < b.rule.id ? -1 : a.rule.id > b.rule.id ? 1 : 0

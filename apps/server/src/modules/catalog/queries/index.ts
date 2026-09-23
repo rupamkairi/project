@@ -81,3 +81,29 @@ export const resolvePriceHandler: QueryHandler<
     minQty: out.rule.minQty ?? 1,
   }
 }
+
+export const listPriceListsHandler: QueryHandler<
+  { status?: string; currency?: string },
+  typeof catPriceLists.$inferSelect[]
+> = async (query) => {
+  const conditions = [
+    eq(catPriceLists.organizationId, query.orgId),
+    isNull(catPriceLists.deletedAt),
+  ]
+  if (query.params.status) conditions.push(eq(catPriceLists.status, query.params.status as never))
+  if (query.params.currency) conditions.push(eq(catPriceLists.currency, query.params.currency))
+  return db.select().from(catPriceLists).where(and(...conditions))
+}
+
+export const listPriceRulesHandler: QueryHandler<
+  { priceListId?: string; variantId?: string },
+  typeof catPriceRules.$inferSelect[]
+> = async (query) => {
+  const conditions = [
+    eq(catPriceRules.organizationId, query.orgId),
+    isNull(catPriceRules.deletedAt),
+  ]
+  if (query.params.priceListId) conditions.push(eq(catPriceRules.priceListId, query.params.priceListId))
+  if (query.params.variantId) conditions.push(eq(catPriceRules.variantId, query.params.variantId))
+  return db.select().from(catPriceRules).where(and(...conditions))
+}

@@ -22,6 +22,7 @@ export const taxRates = pgTable(
     jurisdiction: text('jurisdiction'),
     productType: text('product_type'),
     isDefault: boolean('is_default').notNull().default(false),
+    priority: integer('priority').notNull().default(0),
   },
   (table) => [
     index('tax_rates_org_template_idx').on(table.organizationId, table.templateId),

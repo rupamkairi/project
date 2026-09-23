@@ -49,4 +49,12 @@ describe('resolveTaxRate', () => {
     ]
     expect(resolveTaxRate(rates, { jurisdiction: 'MH', productType: 'food' })?.id).toBe('r-food')
   })
+
+  it('prefers higher priority among equally specific rates', () => {
+    const rates = [
+      rate({ id: 'r-ka-lo', jurisdiction: 'KA', rateBps: 900, priority: 0 } as Partial<TaxRate> & { id: string }),
+      rate({ id: 'r-ka-hi', jurisdiction: 'KA', rateBps: 800, priority: 5 } as Partial<TaxRate> & { id: string }),
+    ]
+    expect(resolveTaxRate(rates, { jurisdiction: 'KA' })?.id).toBe('r-ka-hi')
+  })
 })

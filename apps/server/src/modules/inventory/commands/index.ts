@@ -11,8 +11,40 @@ export interface ReservationPayload {
   variantId: string
   locationId: string
   quantity: number
-  referenceId?: string
+  referenceId: string
   referenceType?: string
+}
+
+export const INVENTORY_REASONS = [
+  'receipt',
+  'sale',
+  'reserve',
+  'release',
+  'adjust',
+  'correction',
+  'transfer',
+] as const
+
+export type InventoryReason = (typeof INVENTORY_REASONS)[number]
+
+function assertReason(reason: string): asserts reason is InventoryReason {
+  if (!(INVENTORY_REASONS as readonly string[]).includes(reason))
+    throw new Error(`unknown movement reason: ${reason}`)
+}
+
+function assertReference(p: { referenceId?: string }, what: string): void {
+  if (!p.referenceId) throw new Error(`${what} requires referenceId`)
+}
+
+async function withUnit(
+  orgId: string,
+  variantId: string,
+  locationId: string,
+  fn: (unit: InvStockUnit) => Promise<InvStockUnit>,
+): Promise<InvStockUnit> {
+  const unit = await loadUnit(orgId, variantId, locationId)
+  if (!unit) throw new Error(`insufficient stock: no holdings for ${variantId}`)
+  return fn(unit)
 }
 
 async function loadUnit(orgId: string, variantId: string, locationId: string) {
@@ -64,6 +96,9 @@ export const reserveHandler: CommandHandler<ReservationPayload, InvStockUnit> = 
   context,
 ) => {
   const p = command.payload
+  const reason = 'reserve'
+  assertReason(reason)
+  assertReference(p, 'inventory.reserve')
   const unit = await loadUnit(command.orgId, p.variantId, p.locationId)
   if (!unit) throw new Error(`insufficient stock: no holdings for ${p.variantId}`)
   const next = applyReserve({ onHand: unit.onHand, reserved: unit.reserved }, p.quantity)
@@ -72,7 +107,7 @@ export const reserveHandler: CommandHandler<ReservationPayload, InvStockUnit> = 
     .set({ reserved: next.reserved, updatedAt: new Date() })
     .where(eq(invStockUnits.id, unit.id))
     .returning()
-  const movement = await logReservation(command.orgId, command.actorId, p, 'reserve')
+  const movement = await logReservation(command.orgId, command.actorId, p, reason)
   await context.publish(InventoryEvents.reserved(movement.id, p.variantId))
   return row!
 }
@@ -82,6 +117,9 @@ export const releaseHandler: CommandHandler<ReservationPayload, InvStockUnit> = 
   context,
 ) => {
   const p = command.payload
+  const reason = 'release'
+  assertReason(reason)
+  assertReference(p, 'inventory.release')
   const unit = await loadUnit(command.orgId, p.variantId, p.locationId)
   if (!unit) throw new Error(`insufficient reserved stock: no holdings for ${p.variantId}`)
   const next = applyRelease({ onHand: unit.onHand, reserved: unit.reserved }, p.quantity)
@@ -90,7 +128,7 @@ export const releaseHandler: CommandHandler<ReservationPayload, InvStockUnit> = 
     .set({ reserved: next.reserved, updatedAt: new Date() })
     .where(eq(invStockUnits.id, unit.id))
     .returning()
-  const movement = await logReservation(command.orgId, command.actorId, p, 'release')
+  const movement = await logReservation(command.orgId, command.actorId, p, reason)
   await context.publish(InventoryEvents.released(movement.id, p.variantId))
   return row!
 }
@@ -100,6 +138,9 @@ export const deductHandler: CommandHandler<ReservationPayload, InvStockUnit> = a
   context,
 ) => {
   const p = command.payload
+  const reason = 'sale'
+  assertReason(reason)
+  assertReference(p, 'inventory.deduct')
   const unit = await loadUnit(command.orgId, p.variantId, p.locationId)
   if (!unit) throw new Error(`insufficient stock: no holdings for ${p.variantId}`)
   const next = applyDeduct({ onHand: unit.onHand, reserved: unit.reserved }, p.quantity)
@@ -108,7 +149,7 @@ export const deductHandler: CommandHandler<ReservationPayload, InvStockUnit> = a
     .set({ onHand: next.onHand, reserved: next.reserved, updatedAt: new Date() })
     .where(eq(invStockUnits.id, unit.id))
     .returning()
-  const movement = await logReservation(command.orgId, command.actorId, p, 'sale')
+  const movement = await logReservation(command.orgId, command.actorId, p, reason)
   await context.publish(InventoryEvents.deducted(movement.id, p.variantId))
   return row!
 }
@@ -177,6 +218,7 @@ export const recordMovementHandler: CommandHandler<RecordMovementPayload, InvMov
   context,
 ) => {
   const p = command.payload
+  assertReason(p.reason)
   const qty = Math.round(Math.abs(Number(p.quantity)))
   if (!qty) throw new Error('quantity must be non-zero')
   if (p.fromLocationId) await bumpStock(command.orgId, p.variantId, p.fromLocationId, -qty)

@@ -9,6 +9,7 @@ import { createRegionsRoutes } from './regions'
 import { createShippingRoutes } from './shipping'
 import { createTaxRoutes } from './tax'
 import { createAnalyticsRoutes } from './analytics'
+import { createPricingRoutes } from './pricing'
 
 export function createAdminRoutes(mediator: Mediator, adapters: AdapterRegistry) {
   return [
@@ -22,5 +23,6 @@ export function createAdminRoutes(mediator: Mediator, adapters: AdapterRegistry)
     createShippingRoutes(mediator),
     createTaxRoutes(mediator),
     createAnalyticsRoutes(mediator),
+    createPricingRoutes(mediator),
   ]
 }

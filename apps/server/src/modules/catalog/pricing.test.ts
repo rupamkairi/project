@@ -123,4 +123,44 @@ describe('resolvePriceRule', () => {
     })
     expect(none).toBeNull()
   })
+
+  it('prefers higher list priority over deeper tiers', () => {
+    const lists = [
+      list({ id: 'pl-base', priority: 10 } as Partial<CatPriceList> & { id: string }),
+      list({ id: 'pl-promo', priority: 1 } as Partial<CatPriceList> & { id: string }),
+    ]
+    const rules = [
+      rule({ id: 'r-base', priceListId: 'pl-base', minQty: 1, priceAmount: 1000 }),
+      rule({ id: 'r-promo-tier', priceListId: 'pl-promo', minQty: 10, priceAmount: 100 }),
+    ]
+    const out = resolvePriceRule(lists, rules, {
+      variantId: 'var-1',
+      qty: 12,
+      currency: 'USD',
+      audience: {},
+      now: NOW,
+    })
+    expect(out?.rule.id).toBe('r-base')
+  })
+
+  it('skips rules whose conditions do not match the context', () => {
+    const lists = [list({ id: 'pl-base' })]
+    const rules = [
+      rule({ id: 'r-base', priceListId: 'pl-base', priceAmount: 1000 }),
+      rule({
+        id: 'r-vip',
+        priceListId: 'pl-base',
+        priceAmount: 100,
+        conditions: { customerGroup: 'vip' },
+      }),
+    ]
+    const out = resolvePriceRule(lists, rules, {
+      variantId: 'var-1',
+      qty: 1,
+      currency: 'USD',
+      audience: {},
+      now: NOW,
+    })
+    expect(out?.rule.id).toBe('r-base')
+  })
 })

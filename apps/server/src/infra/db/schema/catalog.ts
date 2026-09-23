@@ -94,6 +94,7 @@ export const catPriceLists = pgTable(
     validFrom: timestamp('valid_from'),
     validTo: timestamp('valid_to'),
     status: priceListStatusEnum('status').notNull().default('draft'),
+    priority: integer('priority').notNull().default(0),
   },
   (table) => [
     index('cat_price_lists_org_status_idx').on(table.organizationId, table.status),
