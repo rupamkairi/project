@@ -172,7 +172,7 @@ export const updatePriceListHandler: CommandHandler<UpdatePriceListPayload, CatP
         validTo: patch.validTo !== undefined ? (patch.validTo ? new Date(patch.validTo) : null) : undefined,
         updatedAt: new Date(),
       })
-      .where(eq(catPriceLists.id, id))
+      .where(and(eq(catPriceLists.id, id), eq(catPriceLists.organizationId, command.orgId)))
       .returning()
     return row!
   }
@@ -260,7 +260,7 @@ export const updatePriceRuleHandler: CommandHandler<UpdatePriceRulePayload, CatP
     const [row] = await db
       .update(catPriceRules)
       .set({ ...patch, updatedAt: new Date() })
-      .where(eq(catPriceRules.id, id))
+      .where(and(eq(catPriceRules.id, id), eq(catPriceRules.organizationId, command.orgId)))
       .returning()
     return row!
   }

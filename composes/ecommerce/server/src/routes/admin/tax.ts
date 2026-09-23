@@ -48,14 +48,14 @@ export function createTaxRoutes(mediator: Mediator) {
       const { params, body } = ctx as { params: { id: string }; body: Record<string, unknown> }
       const s = scope(ctx)
       const input = body as { rate?: number; rateBps?: number } & Record<string, unknown>
+      // `rate` is a whole percent (9 = 9% = 900bps); prefer explicit `rateBps`.
+      const rateBps =
+        input.rateBps ?? (input.rate !== undefined ? Math.round(Number(input.rate) * 100) : undefined)
+      if (rateBps === undefined || Number.isNaN(rateBps))
+        throw new Error('either rateBps or rate is required')
       return mediator.dispatch({
         type: 'tax.createRate',
-        payload: {
-          ...input,
-          templateId: params.id,
-          rateBps:
-            input.rateBps ?? (input.rate !== undefined ? Math.round(Number(input.rate) * 100) : undefined),
-        },
+        payload: { ...input, templateId: params.id, rateBps },
         actorId: s.actorId,
         orgId: s.orgId,
         correlationId: s.correlationId,

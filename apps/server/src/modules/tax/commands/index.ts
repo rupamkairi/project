@@ -109,7 +109,7 @@ export const updateRateHandler: CommandHandler<
   const [row] = await db
     .update(taxRates)
     .set({ ...patch, updatedAt: new Date() })
-    .where(eq(taxRates.id, id))
+    .where(and(eq(taxRates.id, id), eq(taxRates.organizationId, command.orgId)))
     .returning()
   return row!
 }
