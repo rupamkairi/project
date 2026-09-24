@@ -18,6 +18,7 @@ export const ecommerceAdminManifest: ComposeManifest = {
     { label: 'Returns', path: '/ecommerce/admin/returns', icon: ManifestIcon },
     { label: 'Customers', path: '/ecommerce/admin/customers', icon: ManifestIcon },
     { label: 'Analytics', path: '/ecommerce/admin/analytics', icon: ManifestIcon },
+    { label: 'Pricing', path: '/ecommerce/admin/pricing', icon: ManifestIcon },
     { label: 'Settings', path: '/ecommerce/admin/settings', icon: ManifestIcon },
   ],
   description: 'Store operations',

@@ -22,26 +22,51 @@ import { Link } from '@tanstack/react-router'
 function StorefrontProductDetail() {
   const id = window.location.pathname.split('/').at(-1) ?? ''
   const addItem = useCartStore((s) => s.addItem)
+  const cartId = useCartStore((s) => s.cartId)
+  const setCartId = useCartStore((s) => s.setCartId)
   const [qty, setQty] = useState(1)
   const [added, setAdded] = useState(false)
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null)
+  const [syncError, setSyncError] = useState('')
   const { data, isLoading } = useQuery({
     queryKey: ['store-product', id],
     queryFn: () => ecommerceStorefrontApi.getProduct(id),
   })
 
   const product = data?.data
-  const variant = product?.variants?.[0]
+  const variants: any[] = product?.variants ?? []
+  const variant = variants.find((v: any) => v.id === selectedVariantId) ?? variants[0]
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
+    const variantId = variant?.id ?? product.id
+    const unitPrice =
+      variant?.price ?? product?.price ?? variant?.unitPriceAmount ?? 0
     addItem({
-      variantId: variant?.id ?? product.id,
+      variantId,
+      productId: product.id,
       productTitle: product.title,
-      variantTitle: variant?.title ?? '',
-      unitPrice: product.price ?? 0,
+      variantTitle: variant?.title ?? variant?.sku ?? '',
+      unitPrice,
       qty,
     })
     setAdded(true)
     setTimeout(() => setAdded(false), 2000)
+    // Persist to backend draft order (cart = order stage). Local-first:
+    // UI updates instantly, server sync failures surface inline.
+    try {
+      setSyncError('')
+      let draftId = cartId
+      if (!draftId) {
+        const created = await ecommerceStorefrontApi.createCart()
+        draftId = (created.data as any)?.id ?? (created.data as any)?.data?.id ?? null
+        if (draftId) setCartId(draftId)
+      }
+      if (draftId) {
+        await ecommerceStorefrontApi.addToCart(draftId, variantId, qty)
+      }
+    } catch {
+      setSyncError('Saved locally — server sync failed')
+    }
   }
 
   if (isLoading)
@@ -126,18 +151,24 @@ function StorefrontProductDetail() {
             <div className="space-y-2">
               <p className="text-sm font-medium">Variants</p>
               <div className="flex flex-wrap gap-2">
-                {product.variants.map((v: any) => (
-                  <Badge
-                    key={v.id}
-                    variant="outline"
-                    className="px-3 py-1 cursor-pointer hover:bg-accent"
-                  >
-                    {v.title}
-                  </Badge>
-                ))}
+                {product.variants.map((v: any) => {
+                  const active = (selectedVariantId ?? product.variants[0]?.id) === v.id
+                  return (
+                    <button key={v.id} type="button" onClick={() => setSelectedVariantId(v.id)}>
+                      <Badge
+                        variant={active ? 'default' : 'outline'}
+                        className="px-3 py-1 cursor-pointer hover:bg-accent"
+                      >
+                        {v.title ?? v.sku ?? v.id.slice(0, 8)}
+                        {v.price != null ? ` · ${formatCurrency(v.price)}` : ''}
+                      </Badge>
+                    </button>
+                  )
+                })}
               </div>
             </div>
           )}
+          {syncError && <p className="text-xs text-amber-600">{syncError}</p>}
 
           <div className="flex items-center gap-3">
             <div className="flex items-center border rounded-lg">

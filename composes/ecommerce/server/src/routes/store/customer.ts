@@ -5,12 +5,20 @@ export function createCustomerRoutes(mediator: Mediator) {
   return new Elysia({ prefix: '/account' })
     .get('/orders', async ({ query }) => {
       const { page = 1, limit = 20 } = query
-      return mediator.query({
+      const out = (await mediator.query({
         type: 'commerce.listTransactions',
-        params: { type: 'order', page, limit },
+        params: {
+          type: 'order',
+          limit: Number(limit),
+          offset: (Number(page) - 1) * Number(limit),
+        },
         actorId: 'anonymous',
         orgId: '',
-      })
+      })) as { items: any[]; total: number }
+      return {
+        data: out.items,
+        pagination: { page: Number(page), limit: Number(limit), total: out.total },
+      }
     })
     .get('/orders/:id', async ({ params }) => {
       return mediator.query({

@@ -8,9 +8,48 @@ import { Separator } from '@projectx/ui'
 import { Link } from '@tanstack/react-router'
 
 function StorefrontCart() {
-  const { items, updateQty, removeItem, clearCart } = useCartStore()
+  const { items, updateQty, removeItem, clearCart, cartId, setCartId } = useCartStore()
 
   const subtotal = items.reduce((s, i) => s + i.unitPrice * i.qty, 0)
+
+  const syncQty = async (variantId: string, qty: number, lineId?: string) => {
+    updateQty(variantId, qty)
+    if (!cartId || !lineId) return
+    try {
+      const { ecommerceStorefrontApi } = await import('../lib/api')
+      await ecommerceStorefrontApi.updateCartItem(cartId, lineId, qty)
+    } catch {
+      // local-first: server sync is best-effort
+    }
+  }
+
+  const syncRemove = async (variantId: string, lineId?: string) => {
+    removeItem(variantId)
+    if (!cartId || !lineId) return
+    try {
+      const { ecommerceStorefrontApi } = await import('../lib/api')
+      await ecommerceStorefrontApi.removeFromCart(cartId, lineId)
+    } catch {
+      // local-first
+    }
+  }
+
+  const ensureBackendCart = async () => {
+    if (cartId || items.length === 0) return cartId
+    try {
+      const { ecommerceStorefrontApi } = await import('../lib/api')
+      const created = await ecommerceStorefrontApi.createCart()
+      const draftId = (created.data as any)?.id ?? null
+      if (!draftId) return null
+      setCartId(draftId)
+      for (const item of items) {
+        await ecommerceStorefrontApi.addToCart(draftId, item.variantId, item.qty)
+      }
+      return draftId
+    } catch {
+      return null
+    }
+  }
 
   return (
     <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-8">
@@ -72,7 +111,7 @@ function StorefrontCart() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 rounded-none"
-                        onClick={() => updateQty(item.variantId, item.qty - 1)}
+                        onClick={() => syncQty(item.variantId, item.qty - 1, item.lineId)}
                       >
                         <Minus className="h-3 w-3" />
                       </Button>
@@ -81,7 +120,7 @@ function StorefrontCart() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 rounded-none"
-                        onClick={() => updateQty(item.variantId, item.qty + 1)}
+                        onClick={() => syncQty(item.variantId, item.qty + 1, item.lineId)}
                       >
                         <Plus className="h-3 w-3" />
                       </Button>
@@ -90,7 +129,7 @@ function StorefrontCart() {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-destructive"
-                      onClick={() => removeItem(item.variantId)}
+                      onClick={() => syncRemove(item.variantId, item.lineId)}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
@@ -118,7 +157,14 @@ function StorefrontCart() {
                 <span>Total</span>
                 <span>{formatCurrency(subtotal)}</span>
               </div>
-              <Button size="lg" className="w-full h-12" asChild>
+              <Button
+                size="lg"
+                className="w-full h-12"
+                asChild
+                onClick={() => {
+                  void ensureBackendCart()
+                }}
+              >
                 <Link to="/ecommerce/store/checkout">
                   Checkout <ArrowRight className="h-4 w-4 ml-2" />
                 </Link>

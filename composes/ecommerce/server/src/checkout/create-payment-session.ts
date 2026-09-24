@@ -36,12 +36,11 @@ export async function createPaymentSession(
   })
 
   await mediator.dispatch({
-    type: 'commerce.transitionStage',
-    transactionId: cartId,
+    type: 'commerce.moveStage',
+    payload: { id: cartId, stageId: 'placed' },
     orgId,
     actorId: 'system',
     correlationId: crypto.randomUUID(),
-    payload: { toStage: 'placed' },
   } as any)
 
   return {

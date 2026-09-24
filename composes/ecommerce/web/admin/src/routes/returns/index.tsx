@@ -1,10 +1,9 @@
 import { createRoute } from '@tanstack/react-router'
 import { ecommerceAdminLayoutRoute } from '../admin.layout'
 import { PageHeader, Button, Badge } from '@projectx/ui'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { ecommerceAdminApi } from '../../lib/api'
-import { formatCurrency } from '../../lib/format'
 
 const STATUS_BADGES: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-700',
@@ -72,17 +71,60 @@ function AdminReturns() {
 
 function AdminReturnDetail() {
   const id = window.location.pathname.split('/').at(-1) ?? ''
+  const queryClient = useQueryClient()
   const { data: retData } = useQuery({
     queryKey: ['admin-return', id],
     queryFn: () => ecommerceAdminApi.getReturn(id),
   })
   const ret = retData?.data
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['admin-return', id] })
+  const approve = useMutation({
+    mutationFn: () => ecommerceAdminApi.approveReturn(id),
+    onSuccess: invalidate,
+  })
+  const reject = useMutation({
+    mutationFn: () => ecommerceAdminApi.rejectReturn(id),
+    onSuccess: invalidate,
+  })
+  const receive = useMutation({
+    mutationFn: () => ecommerceAdminApi.receiveReturn(id),
+    onSuccess: invalidate,
+  })
 
   return (
     <div className="space-y-4">
       <PageHeader
         title={`Return ${id.slice(0, 8)}`}
         breadcrumbs={[{ label: 'Returns', href: '/ecommerce/admin/returns' }]}
+        actions={
+          ret && (
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => approve.mutate()}
+                disabled={approve.isPending || ret.status !== 'pending'}
+              >
+                Approve
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => reject.mutate()}
+                disabled={reject.isPending || ret.status !== 'pending'}
+              >
+                Reject
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => receive.mutate()}
+                disabled={receive.isPending || ret.status !== 'approved'}
+              >
+                Mark received
+              </Button>
+            </div>
+          )
+        }
       />
       {ret && (
         <div className="rounded-lg border p-4 space-y-2 text-sm">

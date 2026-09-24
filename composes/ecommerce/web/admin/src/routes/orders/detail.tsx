@@ -1,22 +1,7 @@
 import { createRoute } from '@tanstack/react-router'
 import { ecommerceAdminLayoutRoute } from '../admin.layout'
-import { useState } from 'react'
-import {
-  PageHeader,
-  Button,
-  Badge,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  Input,
-} from '@projectx/ui'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { PageHeader, Badge, Tabs, TabsContent, TabsList, TabsTrigger } from '@projectx/ui'
+import { useQuery } from '@tanstack/react-query'
 import { ecommerceAdminApi } from '../../lib/api'
 import { formatCurrency } from '../../lib/format'
 
@@ -28,70 +13,14 @@ const STATUS_BADGES: Record<string, string> = {
   refunded: 'bg-zinc-100 text-zinc-600',
 }
 
-function FulfillmentDialog({ orderId, onClose }: { orderId: string; onClose: () => void }) {
-  const queryClient = useQueryClient()
-  const [form, setForm] = useState({
-    carrier: '',
-    trackingNumber: '',
-    shippedAt: new Date().toISOString().slice(0, 10),
-  })
-  const mutation = useMutation({
-    mutationFn: () => ecommerceAdminApi.createFulfillment(orderId, form),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-order', orderId] })
-      onClose()
-    },
-  })
-
-  return (
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>Create Fulfillment</DialogTitle>
-      </DialogHeader>
-      <div className="space-y-3">
-        <Input
-          placeholder="Carrier *"
-          value={form.carrier}
-          onChange={(e) => setForm({ ...form, carrier: e.target.value })}
-        />
-        <Input
-          placeholder="Tracking Number"
-          value={form.trackingNumber}
-          onChange={(e) => setForm({ ...form, trackingNumber: e.target.value })}
-        />
-        <Input
-          type="date"
-          value={form.shippedAt}
-          onChange={(e) => setForm({ ...form, shippedAt: e.target.value })}
-        />
-      </div>
-      <DialogFooter>
-        <Button variant="outline" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button onClick={() => mutation.mutate()} disabled={!form.carrier || mutation.isPending}>
-          {mutation.isPending ? 'Saving...' : 'Create'}
-        </Button>
-      </DialogFooter>
-    </DialogContent>
-  )
-}
-
 function AdminOrderDetail() {
   const id = window.location.pathname.split('/').at(-1) ?? ''
-  const queryClient = useQueryClient()
-  const [fulfillDialog, setFulfillDialog] = useState(false)
 
   const { data: orderData } = useQuery({
     queryKey: ['admin-order', id],
     queryFn: () => ecommerceAdminApi.getOrder(id),
   })
   const order = orderData?.data
-
-  const cancelMut = useMutation({
-    mutationFn: () => ecommerceAdminApi.updateOrderStatus(id, 'cancelled'),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-order', id] }),
-  })
 
   const items = order?.lines ?? []
   const subtotal = items.reduce(
@@ -107,15 +36,6 @@ function AdminOrderDetail() {
           { label: 'Orders', href: '/ecommerce/admin/orders' },
           { label: order?.referenceNo ?? '' },
         ]}
-        actions={
-          order &&
-          order.status !== 'cancelled' &&
-          order.status !== 'fulfilled' && (
-            <Button variant="outline" onClick={() => cancelMut.mutate()}>
-              Cancel Order
-            </Button>
-          )
-        }
       />
 
       {order && (
@@ -220,18 +140,14 @@ function AdminOrderDetail() {
                 </div>
               ))
             ) : (
-              <p className="text-sm text-muted-foreground">No fulfillment yet</p>
-            )}
-            {(!order?.fulfillments || order.fulfillments.length === 0) && (
-              <Button onClick={() => setFulfillDialog(true)}>Create Fulfillment</Button>
+              <p className="text-sm text-muted-foreground">
+                Fulfillments live in the Fulfillment queue — order detail is read-only until
+                order write endpoints land.
+              </p>
             )}
           </div>
         </TabsContent>
       </Tabs>
-
-      <Dialog open={fulfillDialog} onOpenChange={setFulfillDialog}>
-        <FulfillmentDialog orderId={id} onClose={() => setFulfillDialog(false)} />
-      </Dialog>
     </div>
   )
 }

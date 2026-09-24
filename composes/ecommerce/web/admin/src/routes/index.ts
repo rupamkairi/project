@@ -9,6 +9,7 @@ import { ecoAdminFulfillmentRoute } from './fulfillment/index'
 import { ecoAdminReturnsRoute, ecoAdminReturnDetailRoute } from './returns/index'
 import { ecoAdminCustomersRoute, ecoAdminCustomerDetailRoute } from './customers/index'
 import { ecoAdminAnalyticsRoute } from './analytics/index'
+import { ecoAdminPricingRoute } from './pricing/index'
 import { ecoAdminSettingsRoute } from './settings/index'
 import { ecommerceIndexRoute } from './ecommerce-index'
 
@@ -27,6 +28,7 @@ export const ecommerceAdminRoutes = [
     ecoAdminCustomersRoute,
     ecoAdminCustomerDetailRoute,
     ecoAdminAnalyticsRoute,
+    ecoAdminPricingRoute,
     ecoAdminSettingsRoute,
   ]),
 ]

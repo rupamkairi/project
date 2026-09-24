@@ -146,6 +146,12 @@ function AdminProducts() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-products'] }),
   })
 
+  const publishMutation = useMutation({
+    mutationFn: ({ id, active }: { id: string; active: boolean }) =>
+      active ? ecommerceAdminApi.unpublishProduct(id) : ecommerceAdminApi.publishProduct(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-products'] }),
+  })
+
   const products = data?.data?.data ?? []
   const columns = [
     { header: 'Title', accessorKey: 'title' },
@@ -217,6 +223,17 @@ function AdminProducts() {
                     <Badge className={STATUS_BADGES[p.status]}>{p.status}</Badge>
                   </td>
                   <td className="p-3 flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7"
+                      onClick={() =>
+                        publishMutation.mutate({ id: p.id, active: p.status === 'active' })
+                      }
+                      disabled={publishMutation.isPending}
+                    >
+                      {p.status === 'active' ? 'Unpublish' : 'Publish'}
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"

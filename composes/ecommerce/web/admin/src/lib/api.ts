@@ -123,23 +123,32 @@ class EcommerceAdminApiClient {
     return this.request<any>(`/orders/${id}`)
   }
 
-  async updateOrder(id: string, data: any) {
-    return this.request<any>(`/orders/${id}`, { method: 'PATCH', body: JSON.stringify(data) })
+  // Orders are read-only in the backend (GET list/detail only).
+  // Status changes flow through fulfillments + returns.
+  async updateOrder(_id: string, _data: any) {
+    return { error: 'Order updates are not backed by the admin API yet' as const }
   }
 
-  async updateOrderStatus(id: string, status: string) {
-    return this.updateOrder(id, { status })
+  async updateOrderStatus(_id: string, _status: string) {
+    return { error: 'Order status changes flow through fulfillments' as const }
   }
 
-  async cancelOrder(id: string) {
-    return this.request<any>(`/orders/${id}/cancel`, { method: 'POST' })
+  async cancelOrder(_id: string) {
+    return { error: 'Order cancel is not backed by the admin API yet' as const }
   }
 
-  async createFulfillment(orderId: string, data: any) {
-    return this.request<any>(`/orders/${orderId}/fulfillments`, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    })
+  async createFulfillment(_orderId: string, _data: any) {
+    return {
+      error: 'Use Fulfillment queue (POST /fulfillments/:id/status) instead' as const,
+    }
+  }
+
+  async publishProduct(id: string) {
+    return this.request<any>(`/products/${id}/publish`, { method: 'POST' })
+  }
+
+  async unpublishProduct(id: string) {
+    return this.request<any>(`/products/${id}/unpublish`, { method: 'POST' })
   }
 
   // Customers
@@ -185,6 +194,18 @@ class EcommerceAdminApiClient {
     return this.request<any>(`/returns/${id}`)
   }
 
+  async approveReturn(id: string) {
+    return this.request<any>(`/returns/${id}/approve`, { method: 'POST' })
+  }
+
+  async rejectReturn(id: string) {
+    return this.request<any>(`/returns/${id}/reject`, { method: 'POST' })
+  }
+
+  async receiveReturn(id: string) {
+    return this.request<any>(`/returns/${id}/receive`, { method: 'POST' })
+  }
+
   // Regions
   async getRegions() {
     return this.request<{ data: any[] }>('/regions')
@@ -202,18 +223,77 @@ class EcommerceAdminApiClient {
     return this.request<any>(`/regions/${id}`, { method: 'PATCH', body: JSON.stringify(data) })
   }
 
-  // Shipping Options
-  async getShippingOptions(params?: { regionId?: string }) {
-    const query = new URLSearchParams()
-    if (params?.regionId) query.set('regionId', params.regionId)
-    return this.request<{ data: any[] }>(`/shipping-options?${query}`)
+  async deleteRegion(id: string) {
+    return this.request<any>(`/regions/${id}`, { method: 'DELETE' })
   }
 
-  // Tax
-  async getTaxRates(params?: { regionId?: string }) {
+  // Shipping — backend prefix is /shipping
+  async getShippingOptions() {
+    return this.request<{ data: any[] }>('/shipping')
+  }
+
+  async createShippingOption(data: any) {
+    return this.request<any>('/shipping', { method: 'POST', body: JSON.stringify(data) })
+  }
+
+  async updateShippingOption(id: string, data: any) {
+    return this.request<any>(`/shipping/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async deleteShippingOption(id: string) {
+    return this.request<any>(`/shipping/${id}`, { method: 'DELETE' })
+  }
+
+  // Tax — backend is /tax/profiles + /tax/profiles/:id/rates
+  async getTaxProfiles() {
+    return this.request<{ data: any[] }>('/tax/profiles')
+  }
+
+  async createTaxProfile(data: any) {
+    return this.request<any>('/tax/profiles', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async getTaxRates(profileId: string) {
+    return this.request<{ data: any[] }>(`/tax/profiles/${profileId}/rates`)
+  }
+
+  async createTaxRate(profileId: string, data: any) {
+    return this.request<any>(`/tax/profiles/${profileId}/rates`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  // Pricing — backend prefix is /pricing
+  async getPriceLists(params?: { status?: string; currency?: string }) {
     const query = new URLSearchParams()
-    if (params?.regionId) query.set('regionId', params.regionId)
-    return this.request<{ data: any[] }>(`/tax-rates?${query}`)
+    if (params?.status) query.set('status', params.status)
+    if (params?.currency) query.set('currency', params.currency)
+    return this.request<{ data: any[] }>(`/pricing/price-lists?${query}`)
+  }
+
+  async createPriceList(data: any) {
+    return this.request<any>('/pricing/price-lists', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async getPriceRules(priceListId: string) {
+    return this.request<{ data: any[] }>(`/pricing/price-lists/${priceListId}/rules`)
+  }
+
+  async createPriceRule(priceListId: string, data: any) {
+    return this.request<any>(`/pricing/price-lists/${priceListId}/rules`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
   }
 
   // Analytics

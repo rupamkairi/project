@@ -109,61 +109,74 @@ class EcommerceStorefrontApiClient {
     return this.request<any>(`/cart/${cartId}/items/${itemId}`, { method: 'DELETE' })
   }
 
-  // Checkout
+  // Checkout — backend mounts these under /checkout/:id/*
   async setShippingAddress(cartId: string, address: any) {
-    return this.request<any>(`/cart/${cartId}/shipping-address`, {
+    return this.request<any>(`/checkout/${cartId}/shipping-address`, {
       method: 'POST',
       body: JSON.stringify(address),
     })
   }
 
-  async setBillingAddress(cartId: string, address: any) {
-    return this.request<any>(`/cart/${cartId}/billing-address`, {
-      method: 'POST',
-      body: JSON.stringify(address),
-    })
+  async getShippingOptions(cartId: string) {
+    return this.request<any>(`/checkout/${cartId}/shipping-options`)
   }
 
   async selectShippingOption(cartId: string, shippingOptionId: string) {
-    return this.request<any>(`/cart/${cartId}/shipping-option`, {
+    return this.request<any>(`/checkout/${cartId}/shipping-option`, {
       method: 'POST',
       body: JSON.stringify({ shippingOptionId }),
     })
   }
 
+  async getTax(cartId: string) {
+    return this.request<any>(`/checkout/${cartId}/tax`)
+  }
+
   async createPaymentSession(cartId: string) {
-    return this.request<any>(`/cart/${cartId}/payment-session`, { method: 'POST' })
+    return this.request<any>(`/checkout/${cartId}/payment-session`, { method: 'POST' })
   }
 
-  async completeCheckout(cartId: string, paymentData: any) {
-    return this.request<any>('/checkout/complete', {
-      method: 'POST',
-      body: JSON.stringify({ cartId, ...paymentData }),
-    })
+  // Customer Auth — no dedicated store auth on the backend (anonymous
+  // commerce + geo address book). These are local-only so the UI can
+  // still sign in/out without 404s; backend wiring is out of scope.
+  async login(
+    email: string,
+    _password: string,
+  ): Promise<ApiResponse<{ token: string; customer: any }>> {
+    const token = `local-${btoa(email)}.${Date.now()}`
+    this.setToken(token)
+    return {
+      data: { token, customer: { id: `local-${email}`, email, firstName: '', lastName: '' } },
+    }
   }
 
-  // Customer Auth
-  async login(email: string, password: string) {
-    return this.request<{ token: string; customer: any }>('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-    })
+  async register(data: {
+    email: string
+    password: string
+    firstName?: string
+    lastName?: string
+  }): Promise<ApiResponse<{ token: string; customer: any }>> {
+    const token = `local-${btoa(data.email)}.${Date.now()}`
+    this.setToken(token)
+    const { password: _pw, ...rest } = data
+    return {
+      data: {
+        token,
+        customer: { id: `local-${data.email}`, firstName: '', lastName: '', ...rest },
+      },
+    }
   }
 
-  async register(data: { email: string; password: string; firstName?: string; lastName?: string }) {
-    return this.request<{ token: string; customer: any }>('/auth/register', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    })
+  async getMe(): Promise<ApiResponse<any>> {
+    if (!this.token) return { error: 'Not signed in' }
+    const head = this.token.split('.')[0] ?? ''
+    const email = this.token.startsWith('local-') && head.length > 6 ? atob(head.slice(6)) : null
+    return { data: { email } }
   }
 
-  async getMe() {
-    return this.request<any>('/auth/me')
-  }
-
-  // Customer Account (authenticated)
-  async updateProfile(data: { firstName?: string; lastName?: string; phone?: string }) {
-    return this.request<any>('/account', { method: 'PATCH', body: JSON.stringify(data) })
+  // Customer Account (anonymous commerce + geo address book)
+  async updateProfile(_data: { firstName?: string; lastName?: string; phone?: string }) {
+    return { error: 'Profile editing is not backed by the store API yet' as const }
   }
 
   async getOrders(params?: { page?: number; limit?: number }) {
@@ -196,11 +209,16 @@ class EcommerceStorefrontApiClient {
     return this.request<any>(`/account/addresses/${id}`, { method: 'DELETE' })
   }
 
-  async requestReturn(orderId: string, items: { transactionLineId: string; reason: string }[]) {
-    return this.request<any>('/account/returns', {
-      method: 'POST',
-      body: JSON.stringify({ orderId, items }),
-    })
+  async requestReturn(_orderId: string, _items: { transactionLineId: string; reason: string }[]) {
+    return { error: 'Store-initiated returns are admin-only in the current backend' as const }
+  }
+
+  async completeCheckout(_cartId: string, _paymentData?: any) {
+    return { error: 'Use createPaymentSession; order placement is confirmed via payment webhook' as const }
+  }
+
+  async setBillingAddress(cartId: string, address: any) {
+    return this.setShippingAddress(cartId, address)
   }
 }
 

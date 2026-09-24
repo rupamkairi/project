@@ -9,8 +9,7 @@ export function createCheckoutRoutes(mediator: Mediator, adapters: AdapterRegist
     .post('/:id/shipping-address', async ({ params, body }) => {
       return mediator.dispatch({
         type: 'commerce.updateTransaction',
-        id: params.id,
-        payload: { shippingAddress: body },
+        payload: { id: params.id, meta: { shippingAddress: body } },
         actorId: 'anonymous',
         orgId: '',
         correlationId: crypto.randomUUID(),
@@ -20,10 +19,10 @@ export function createCheckoutRoutes(mediator: Mediator, adapters: AdapterRegist
       return resolveShippingOptions(params.id, '', '')
     })
     .post('/:id/shipping-option', async ({ params, body }) => {
+      const b = body as { shippingOptionId?: string }
       return mediator.dispatch({
         type: 'commerce.updateTransaction',
-        id: params.id,
-        payload: { shippingOptionId: body.shippingOptionId },
+        payload: { id: params.id, meta: { shippingOptionId: b.shippingOptionId } },
         actorId: 'anonymous',
         orgId: '',
         correlationId: crypto.randomUUID(),

@@ -73,10 +73,10 @@ function StorefrontAccount() {
           </div>
           <div>
             <h1 className="text-2xl font-bold">
-              {profile?.person?.name ?? customer.email ?? 'Account'}
+              {(profile as any)?.person?.name ?? customer.email ?? 'Account'}
             </h1>
             <p className="text-sm text-muted-foreground flex items-center gap-1">
-              <Mail className="h-3.5 w-3.5" /> {profile?.email ?? customer.email}
+              <Mail className="h-3.5 w-3.5" /> {(profile as any)?.email ?? customer.email}
             </p>
           </div>
         </div>
@@ -103,8 +103,8 @@ function StorefrontAccount() {
                 <Icon className="h-4 w-4 mx-auto text-muted-foreground" />
                 <p className="text-xl font-bold">
                   {stat.label === 'Member Since'
-                    ? profile?.createdAt
-                      ? new Date(profile.createdAt).toLocaleDateString().slice(-4)
+                    ? (profile as any)?.createdAt
+                      ? new Date((profile as any).createdAt).toLocaleDateString().slice(-4)
                       : '—'
                     : stat.value}
                 </p>

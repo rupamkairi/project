@@ -13,7 +13,7 @@ import {
 } from '@projectx/ui'
 import { useCartStore } from '../stores/cart'
 import { formatCurrency } from '../lib/format'
-import { useNavigate, Link } from '@tanstack/react-router'
+import { Link } from '@tanstack/react-router'
 import { ShoppingBag, Check, CreditCard, MapPin, Truck, ArrowLeft } from 'lucide-react'
 
 const STEPS = ['address', 'shipping', 'payment', 'confirmation'] as const
@@ -33,19 +33,118 @@ const STEP_ICONS: Record<Step, typeof MapPin> = {
 }
 
 function StorefrontCheckout() {
-  const navigate = useNavigate()
-  const { items, clearCart } = useCartStore()
+  const { items, clearCart, cartId, setCartId } = useCartStore()
   const [step, setStep] = useState<Step>('address')
   const [address, setAddress] = useState({ line1: '', city: '', state: '', zip: '', country: 'US' })
   const [shippingOption, setShippingOption] = useState('standard')
   const [paymentMethod, setPaymentMethod] = useState('card')
+  const [busy, setBusy] = useState(false)
+  const [apiError, setApiError] = useState('')
+  const [serverOptions, setServerOptions] = useState<any[] | null>(null)
+  const [serverTax, setServerTax] = useState<any | null>(null)
+  const [sessionUrl, setSessionUrl] = useState<string | null>(null)
 
   const subtotal = items.reduce((s, i) => s + i.unitPrice * i.qty, 0)
   const shipping = shippingOption === 'express' ? 1299 : 499
-  const total = subtotal + shipping
+  const taxAmount = serverTax?.total?.amount ?? serverTax?.amount ?? 0
+  const total = subtotal + shipping + taxAmount
   const currentStepIndex = STEPS.indexOf(step)
 
-  if (items.length === 0) {
+  const ensureDraft = async (): Promise<string | null> => {
+    if (cartId) return cartId
+    setBusy(true)
+    setApiError('')
+    try {
+      const { ecommerceStorefrontApi } = await import('../lib/api')
+      const created = await ecommerceStorefrontApi.createCart()
+      if (created.error) throw new Error(created.error)
+      const draftId = (created.data as any)?.id ?? null
+      if (!draftId) throw new Error('Could not create cart')
+      setCartId(draftId)
+      for (const item of items) {
+        await ecommerceStorefrontApi.addToCart(draftId, item.variantId, item.qty)
+      }
+      return draftId
+    } catch (e) {
+      setApiError(e instanceof Error ? e.message : 'Could not create cart')
+      return null
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleAddressNext = async () => {
+    const draftId = await ensureDraft()
+    if (!draftId) return
+    setBusy(true)
+    setApiError('')
+    try {
+      const { ecommerceStorefrontApi } = await import('../lib/api')
+      const res = await ecommerceStorefrontApi.setShippingAddress(draftId, address)
+      if (res.error) throw new Error(res.error)
+      const opts = await ecommerceStorefrontApi.getShippingOptions(draftId)
+      if (!opts.error) {
+        const list = (opts.data as any)?.data ?? opts.data ?? []
+        if (Array.isArray(list) && list.length > 0) setServerOptions(list)
+      }
+      setStep('shipping')
+    } catch (e) {
+      setApiError(e instanceof Error ? e.message : 'Could not save address')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleShippingNext = async () => {
+    const draftId = cartId ?? (await ensureDraft())
+    if (!draftId) return
+    setBusy(true)
+    setApiError('')
+    try {
+      const { ecommerceStorefrontApi } = await import('../lib/api')
+      // Server options carry ids; local standard/express fallback otherwise.
+      const match = serverOptions?.find((o: any) => o.id === shippingOption)
+      await ecommerceStorefrontApi.selectShippingOption(
+        draftId,
+        match?.id ?? shippingOption,
+      )
+      const tax = await ecommerceStorefrontApi.getTax(draftId)
+      if (!tax.error) setServerTax(tax.data)
+      setStep('payment')
+    } catch (e) {
+      setApiError(e instanceof Error ? e.message : 'Could not save shipping')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handlePay = async () => {
+    const draftId = cartId ?? (await ensureDraft())
+    if (!draftId) return
+    setBusy(true)
+    setApiError('')
+    try {
+      const { ecommerceStorefrontApi } = await import('../lib/api')
+      const session = await ecommerceStorefrontApi.createPaymentSession(draftId)
+      if (session.error) throw new Error(session.error)
+      const url = (session.data as any)?.url ?? null
+      setSessionUrl(url)
+      clearCart()
+      setStep('confirmation')
+    } catch (e) {
+      // Payment adapter may be unconfigured (see backend handoff open item #2).
+      // Surface the error but still confirm locally for COD-style flows.
+      setApiError(e instanceof Error ? e.message : 'Payment failed')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleComplete = () => {
+    void handlePay()
+  }
+
+  if (items.length === 0 && step !== 'confirmation') {
     return (
       <div className="mx-auto max-w-lg px-4 py-16 text-center space-y-4">
         <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mx-auto">
@@ -58,11 +157,6 @@ function StorefrontCheckout() {
         </Button>
       </div>
     )
-  }
-
-  const handleComplete = () => {
-    clearCart()
-    setStep('confirmation')
   }
 
   return (
@@ -148,12 +242,15 @@ function StorefrontCheckout() {
               </SelectContent>
             </Select>
           </div>
+          {apiError && (
+            <p className="text-sm text-destructive bg-destructive/10 rounded-md p-2">{apiError}</p>
+          )}
           <Button
             className="w-full h-11 mt-2"
-            onClick={() => setStep('shipping')}
-            disabled={!address.line1 || !address.city || !address.zip}
+            onClick={() => void handleAddressNext()}
+            disabled={!address.line1 || !address.city || !address.zip || busy}
           >
-            Continue to Shipping
+            {busy ? 'Saving...' : 'Continue to Shipping'}
           </Button>
         </div>
       )}
@@ -163,10 +260,10 @@ function StorefrontCheckout() {
           <h2 className="text-lg font-semibold flex items-center gap-2">
             <Truck className="h-5 w-5 text-primary" /> Shipping Method
           </h2>
-          {[
+          {(serverOptions ?? [
             { id: 'standard', label: 'Standard Shipping', desc: '5-7 business days', price: 499 },
             { id: 'express', label: 'Express Shipping', desc: '2-3 business days', price: 1299 },
-          ].map((opt) => (
+          ]).map((opt: any) => (
             <label
               key={opt.id}
               className={`flex items-center justify-between rounded-xl border p-5 cursor-pointer transition-all ${shippingOption === opt.id ? 'border-primary bg-primary/5 shadow-sm' : 'hover:border-muted-foreground/20'}`}
@@ -187,12 +284,19 @@ function StorefrontCheckout() {
               <span className="text-sm font-semibold">{formatCurrency(opt.price)}</span>
             </label>
           ))}
+          {apiError && (
+            <p className="text-sm text-destructive bg-destructive/10 rounded-md p-2">{apiError}</p>
+          )}
           <div className="flex gap-3">
             <Button variant="outline" onClick={() => setStep('address')}>
               <ArrowLeft className="h-4 w-4 mr-1" /> Back
             </Button>
-            <Button className="flex-1 h-11" onClick={() => setStep('payment')}>
-              Continue to Payment
+            <Button
+              className="flex-1 h-11"
+              onClick={() => void handleShippingNext()}
+              disabled={busy}
+            >
+              {busy ? 'Saving...' : 'Continue to Payment'}
             </Button>
           </div>
         </div>
@@ -223,18 +327,32 @@ function StorefrontCheckout() {
               <span className="text-muted-foreground">Shipping</span>
               <span>{formatCurrency(shipping)}</span>
             </div>
+            {taxAmount > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Tax</span>
+                <span>{formatCurrency(taxAmount)}</span>
+              </div>
+            )}
             <Separator />
             <div className="flex justify-between font-semibold text-base">
               <span>Total</span>
               <span>{formatCurrency(total)}</span>
             </div>
           </div>
+          {apiError && (
+            <p className="text-sm text-destructive bg-destructive/10 rounded-md p-2">{apiError}</p>
+          )}
           <div className="flex gap-3">
             <Button variant="outline" onClick={() => setStep('shipping')}>
               <ArrowLeft className="h-4 w-4 mr-1" /> Back
             </Button>
-            <Button className="flex-1 h-11" size="lg" onClick={handleComplete}>
-              Pay {formatCurrency(total)}
+            <Button
+              className="flex-1 h-11"
+              size="lg"
+              onClick={handleComplete}
+              disabled={busy}
+            >
+              {busy ? 'Placing order...' : `Pay ${formatCurrency(total)}`}
             </Button>
           </div>
         </div>
@@ -251,6 +369,13 @@ function StorefrontCheckout() {
               Thank you for your purchase. You'll receive a confirmation email shortly.
             </p>
           </div>
+          {sessionUrl && (
+            <Button asChild className="w-full">
+              <a href={sessionUrl} target="_blank" rel="noreferrer">
+                Complete payment
+              </a>
+            </Button>
+          )}
           <div className="rounded-xl border p-4 text-sm space-y-1 text-left bg-muted/30">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Payment</span>

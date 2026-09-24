@@ -20,6 +20,7 @@ import {
   RotateCcw,
   Users,
   BarChart3,
+  Tag,
   Settings,
 } from 'lucide-react'
 
@@ -32,6 +33,7 @@ const NAV_ITEMS = [
   { label: 'Returns', href: '/ecommerce/admin/returns', icon: RotateCcw },
   { label: 'Customers', href: '/ecommerce/admin/customers', icon: Users },
   { label: 'Analytics', href: '/ecommerce/admin/analytics', icon: BarChart3 },
+  { label: 'Pricing', href: '/ecommerce/admin/pricing', icon: Tag },
   { label: 'Settings', href: '/ecommerce/admin/settings', icon: Settings },
 ]
 
