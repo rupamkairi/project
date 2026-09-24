@@ -53,9 +53,10 @@ export function createRazorpayAdapter(
       const refund = await rzp.payments.refund(transactionId, {
         amount: amount.amount,
       })
+      const refundId = (refund as { id?: string }).id
       return {
-        success: !!(refund as { id?: string }).id,
-        refundId: (refund as { id?: string }).id,
+        success: !!refundId,
+        ...(refundId ? { refundId } : {}),
       }
     },
 
@@ -63,7 +64,7 @@ export function createRazorpayAdapter(
       const payment = await rzp.payments.fetch(id)
       return {
         id: payment.id,
-        amount: { amount: payment.amount, currency: payment.currency },
+        amount: { amount: Number(payment.amount), currency: payment.currency },
         status: payment.status,
         createdAt: payment.created_at,
         metadata: payment.notes as Record<string, unknown>,
@@ -75,7 +76,9 @@ export function createRazorpayAdapter(
       const expected = createHmac('sha256', webhookSecret).update(body).digest('hex')
 
       if (expected !== signature) {
-        throw new IntegrationError('Razorpay webhook signature mismatch', 'WEBHOOK_INVALID')
+        throw new IntegrationError('Razorpay webhook signature mismatch', {
+          code: 'WEBHOOK_INVALID',
+        })
       }
 
       const event = JSON.parse(body) as { event: string; payload: Record<string, unknown> }

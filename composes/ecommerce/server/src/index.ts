@@ -1,6 +1,6 @@
 import { Elysia } from 'elysia'
 import type { Mediator } from '@core'
-import type { AdapterRegistry } from '@core'
+import type { AdapterRegistry, Scheduler } from '@core'
 import { createAdminRoutes } from './routes/admin'
 import { createStoreRoutes } from './routes/store'
 import { registerEcommerceJobs } from './jobs'
@@ -28,8 +28,12 @@ function ecommerceAdminPermission(path: string, method: string): string {
   return `products:${verb}`
 }
 
-export function createEcommerceCompose(mediator: Mediator, adapters: AdapterRegistry) {
-  registerEcommerceJobs(mediator)
+export function createEcommerceCompose(
+  mediator: Mediator,
+  adapters: AdapterRegistry,
+  scheduler?: Scheduler,
+) {
+  registerEcommerceJobs(mediator, scheduler)
 
   const adminRoutes = createAdminRoutes(mediator, adapters)
   const storeRoutes = createStoreRoutes(mediator, adapters)

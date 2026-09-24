@@ -1,8 +1,6 @@
 import { Elysia } from 'elysia'
-import { eq, like, and, desc } from 'drizzle-orm'
-import { db } from '@db/client'
-import { catItems, catVariants, catCategories } from '@projectx/ecommerce-server/db/schema/index'
 import type { Mediator } from '@core'
+import { routeScope as scope } from '../admin/scope'
 
 const toProduct = (row: any, opts?: { variants?: any[]; category?: any }) => ({
   id: row.id,
@@ -25,40 +23,29 @@ const toProduct = (row: any, opts?: { variants?: any[]; category?: any }) => ({
 
 export function createCatalogRoutes(mediator: Mediator) {
   return new Elysia({ prefix: '/products' })
-    .get('/', async ({ query }: any) => {
-      const { page = 1, limit = 20, search, categoryId } = query
-      const conditions = [eq(catItems.type, 'product'), eq(catItems.status, 'active')]
-      if (search) conditions.push(like(catItems.name, `%${search}%`))
-      if (categoryId) conditions.push(eq(catItems.categoryId, categoryId))
-      const results = await db
-        .select()
-        .from(catItems)
-        .where(and(...conditions))
-        .limit(Number(limit))
-        .offset((Number(page) - 1) * Number(limit))
-        .orderBy(desc(catItems.createdAt))
+    .get('/', async (ctx: any) => {
+      const { page = 1, limit = 20, search, categoryId } = ctx.query
+      const s = scope(ctx)
+      const out = (await mediator.query({
+        type: 'catalog.listItems',
+        params: { type: 'product', status: 'active', search, categoryId, page: Number(page), limit: Number(limit) },
+        actorId: s.actorId,
+        orgId: s.orgId,
+      })) as { data: any[]; page: number; limit: number; total: number }
       return {
-        data: results.map((r) => toProduct(r)),
-        pagination: { page: Number(page), limit: Number(limit) },
+        data: out.data.map((r) => toProduct(r)),
+        pagination: { page: out.page, limit: out.limit, total: out.total },
       }
     })
-    .get('/:id', async ({ params }: any) => {
-      const result = await db
-        .select()
-        .from(catItems)
-        .where(and(eq(catItems.id, params.id), eq(catItems.type, 'product')))
-        .limit(1)
-      if (!result[0]) return null
-      const variants = await db.select().from(catVariants).where(eq(catVariants.itemId, params.id))
-      let category: any = undefined
-      if (result[0].categoryId) {
-        const [cat] = await db
-          .select()
-          .from(catCategories)
-          .where(eq(catCategories.id, result[0].categoryId))
-          .limit(1)
-        category = cat
-      }
-      return toProduct(result[0], { variants, category })
+    .get('/:id', async (ctx: any) => {
+      const s = scope(ctx)
+      const out = (await mediator.query({
+        type: 'catalog.getItem',
+        params: { id: ctx.params.id },
+        actorId: s.actorId,
+        orgId: s.orgId,
+      })) as { item: any; variants: any[]; category: any } | null
+      if (!out || out.item.type !== 'product') return null
+      return toProduct(out.item, { variants: out.variants, category: out.category })
     })
 }

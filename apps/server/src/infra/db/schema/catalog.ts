@@ -44,7 +44,7 @@ export const catCategories = pgTable(
   ],
 )
 
-export const catItems = pgTable(
+  export const catItems = pgTable(
   'cat_items',
   {
     ...baseColumns,
@@ -57,6 +57,8 @@ export const catItems = pgTable(
     status: itemStatusEnum('status').notNull().default('draft'),
     tags: jsonb('tags').notNull().default('[]'),
     media: jsonb('media').notNull().default('[]'),
+    barcode: text('barcode'),
+    uom: text('uom'),
   },
   (table) => [
     uniqueIndex('cat_items_org_slug_idx').on(table.organizationId, table.slug),
@@ -66,7 +68,7 @@ export const catItems = pgTable(
   ],
 )
 
-export const catVariants = pgTable(
+  export const catVariants = pgTable(
   'cat_variants',
   {
     ...baseColumns,
@@ -75,6 +77,8 @@ export const catVariants = pgTable(
     attributes: jsonb('attributes').notNull().default('{}'),
     stockTracked: boolean('stock_tracked').notNull().default(true),
     status: text('status').notNull().default('active'),
+    barcode: text('barcode'),
+    uom: text('uom'),
   },
   (table) => [
     uniqueIndex('cat_variants_org_sku_idx').on(table.organizationId, table.sku),

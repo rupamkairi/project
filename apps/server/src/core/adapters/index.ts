@@ -321,6 +321,11 @@ export interface PaymentAdapter {
   capturePayment(sessionId: string): Promise<PaymentResult>
   refund(transactionId: string, amount: Money): Promise<RefundResult>
   /**
+   * Voids an uncaptured authorization. Optional: providers without a
+   * distinct void concept omit it and callers fall back to refund.
+   */
+  voidPayment?(paymentIntentId: string): Promise<PaymentResult>
+  /**
    * Returns the payment-level transaction record.
    *
    * Returns {@link PaymentTransaction} (not the DB transaction type introduced

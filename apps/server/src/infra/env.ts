@@ -28,8 +28,7 @@ const envSchema = z.object({
   S3_PUBLIC_URL: z.string().url().optional(),
 
   // Notification
-  EMAIL_PROVIDER: z.enum(['console', 'smtp', 'resend', 'sendgrid']).default('console'),
-  SMTP_HOST: z.string().optional(),
+  EMAIL_PROVIDER: z.enum(['console', 'smtp', 'resend', 'sendgrid']).default('console'),  SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().optional(),
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
@@ -39,6 +38,16 @@ const envSchema = z.object({
   TWILIO_ACCOUNT_SID: z.string().optional(),
   TWILIO_AUTH_TOKEN: z.string().optional(),
   TWILIO_FROM: z.string().optional(),
+
+  // Payments — all optional. The ecommerce payment webhook mounts only
+  // when a default provider is fully configured; per-org overrides live
+  // in PAYMENT_<ORG>_ prefixed siblings (see ecommerce lib/payment.ts).
+  PAYMENT_PROVIDER: z.enum(['stripe', 'razorpay']).optional(),
+  STRIPE_SECRET_KEY: z.string().optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().optional(),
+  RAZORPAY_KEY_ID: z.string().optional(),
+  RAZORPAY_KEY_SECRET: z.string().optional(),
+  RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
 
   // Maps
   GEO_PROVIDER: z.enum(['osm', 'google', 'mapbox']).default('osm'),

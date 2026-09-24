@@ -46,7 +46,9 @@ export function createStripeAdapter(secretKey: string, webhookSecret: string): P
           : {}),
         success_url: (order.metadata?.successUrl as string | undefined) ?? '/',
         cancel_url: (order.metadata?.cancelUrl as string | undefined) ?? '/',
-        metadata: order.metadata as Record<string, string> | undefined,
+        ...(order.metadata
+          ? { metadata: order.metadata as Record<string, string> }
+          : {}),
       })
 
       return {
@@ -66,6 +68,14 @@ export function createStripeAdapter(secretKey: string, webhookSecret: string): P
       const intent = await stripe.paymentIntents.capture(paymentIntentId)
       return {
         success: intent.status === 'succeeded',
+        transactionId: intent.id,
+      }
+    },
+
+    async voidPayment(paymentIntentId: string): Promise<PaymentResult> {
+      const intent = await stripe.paymentIntents.cancel(paymentIntentId)
+      return {
+        success: intent.status === 'canceled',
         transactionId: intent.id,
       }
     },

@@ -40,7 +40,11 @@ export function createWebhookRoutes(adapter: PaymentAdapter, config: PaymentPlug
           currency: String(meta.currency ?? 'USD').toUpperCase(),
         }
         const gatewayRef = String(meta.id ?? '')
-        await config.onPaymentReceived(orderId, amount, gatewayRef).catch(console.error)
+        const metadata =
+          meta.metadata && typeof meta.metadata === 'object'
+            ? (meta.metadata as Record<string, unknown>)
+            : undefined
+        await config.onPaymentReceived(orderId, amount, gatewayRef, metadata).catch(console.error)
       }
 
       if (event.type === 'payment.failed' && config.onPaymentFailed) {
@@ -50,7 +54,11 @@ export function createWebhookRoutes(adapter: PaymentAdapter, config: PaymentPlug
             : '',
         )
         const gatewayRef = String(meta.id ?? '')
-        await config.onPaymentFailed(orderId, gatewayRef).catch(console.error)
+        const metadata =
+          meta.metadata && typeof meta.metadata === 'object'
+            ? (meta.metadata as Record<string, unknown>)
+            : undefined
+        await config.onPaymentFailed(orderId, gatewayRef, metadata).catch(console.error)
       }
 
       if (event.type === 'refund.created' && config.onRefundIssued) {
@@ -60,7 +68,11 @@ export function createWebhookRoutes(adapter: PaymentAdapter, config: PaymentPlug
           amount: Number(meta.amount ?? 0),
           currency: String(meta.currency ?? 'USD').toUpperCase(),
         }
-        await config.onRefundIssued(orderId, refundId, amount).catch(console.error)
+        const metadata =
+          meta.metadata && typeof meta.metadata === 'object'
+            ? (meta.metadata as Record<string, unknown>)
+            : undefined
+        await config.onRefundIssued(orderId, refundId, amount, metadata).catch(console.error)
       }
 
       return { received: true }

@@ -11,18 +11,16 @@ export function createPaymentPlugin(config: PaymentPluginConfig): PaymentPlugin 
 
   if (config.provider === 'stripe') {
     if (!config.stripe) {
-      throw new IntegrationError(
-        "Stripe config required when provider is 'stripe'",
-        'CONFIG_MISSING',
-      )
+      throw new IntegrationError("Stripe config required when provider is 'stripe'", {
+        code: 'CONFIG_MISSING',
+      })
     }
     adapter = createStripeAdapter(config.stripe.secretKey, config.stripe.webhookSecret)
   } else if (config.provider === 'razorpay') {
     if (!config.razorpay) {
-      throw new IntegrationError(
-        "Razorpay config required when provider is 'razorpay'",
-        'CONFIG_MISSING',
-      )
+      throw new IntegrationError("Razorpay config required when provider is 'razorpay'", {
+        code: 'CONFIG_MISSING',
+      })
     }
     adapter = createRazorpayAdapter(
       config.razorpay.keyId,
@@ -30,7 +28,9 @@ export function createPaymentPlugin(config: PaymentPluginConfig): PaymentPlugin 
       config.razorpay.webhookSecret,
     )
   } else {
-    throw new IntegrationError(`Unknown payment provider: ${config.provider}`, 'CONFIG_INVALID')
+    throw new IntegrationError(`Unknown payment provider: ${config.provider}`, {
+      code: 'CONFIG_INVALID',
+    })
   }
 
   const plugin = new Elysia({ prefix: '/payment' })
