@@ -20,6 +20,12 @@ function ev<T>(
 }
 
 export const CatalogEvents = {
+  bomCreated(id: string) {
+    return ev('catalog.bom.created', id, 'CatBomHeader', {})
+  },
+  bomActivated(id: string) {
+    return ev('catalog.bom.activated', id, 'CatBomHeader', {})
+  },
   itemCreated(id: string) {
     return ev('catalog.item.created', id, 'CatItem', {})
   },

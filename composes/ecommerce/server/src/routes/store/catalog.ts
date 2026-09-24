@@ -39,6 +39,17 @@ export function createCatalogRoutes(mediator: Mediator) {
     })
     .get('/:id', async (ctx: any) => {
       const s = scope(ctx)
+      const {
+        currency = 'USD',
+        audience: audienceParam,
+        qty = 1,
+        jurisdiction = null,
+        productType = null,
+      } = ctx.query
+      const audience =
+        typeof audienceParam === 'string'
+          ? (JSON.parse(audienceParam) as Record<string, unknown>)
+          : ((audienceParam ?? {}) as Record<string, unknown>)
       const out = (await mediator.query({
         type: 'catalog.getItem',
         params: { id: ctx.params.id },
@@ -48,24 +59,44 @@ export function createCatalogRoutes(mediator: Mediator) {
       if (!out || out.item.type !== 'product') return null
       const variants = await Promise.all(
         out.variants.map(async (v: any) => {
-          const [price, availability] = await Promise.all([
+          const [price, tax, availability] = await Promise.all([
             mediator.query({
               type: 'catalog.resolvePrice',
-              params: { variantId: v.id, qty: 1, currency: 'USD', audience: {} },
+              params: {
+                variantId: v.id,
+                qty: Number(qty),
+                currency,
+                audience,
+              },
               actorId: s.actorId,
               orgId: s.orgId,
-            }) as Promise<{ unitPriceAmount: number; unitPriceCurrency: string } | null>,
+            }) as Promise<{
+              unitPriceAmount: number
+              unitPriceCurrency: string
+              priceListId: string
+              priceRuleId: string
+            } | null>,
+            mediator.query({
+              type: 'tax.resolveRate',
+              params: { jurisdiction, productType: v.productType ?? productType },
+              actorId: s.actorId,
+              orgId: s.orgId,
+            }) as Promise<{ taxRateId: string; rateBps: number } | null>,
             mediator.query({
               type: 'inventory.getAvailability',
               params: { variantId: v.id },
               actorId: s.actorId,
               orgId: s.orgId,
-            }) as Promise<Array<{ available: number }>>,
+            }) as Promise<Array<{ locationId: string; available: number }>>,
           ])
           return {
             ...v,
             price: price?.unitPriceAmount ?? null,
             currency: price?.unitPriceCurrency ?? null,
+            priceListId: price?.priceListId ?? null,
+            priceRuleId: price?.priceRuleId ?? null,
+            taxBps: tax?.rateBps ?? 0,
+            availability,
             available: availability.reduce((sum, a) => sum + a.available, 0),
           }
         }),

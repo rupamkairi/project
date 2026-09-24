@@ -34,7 +34,10 @@ export interface CreateBomPayload {
   lines?: Array<{ componentItemId: string; qty: number; uom?: string; scrapPercent?: number }>
 }
 
-export const createBomHandler: CommandHandler<CreateBomPayload, CatBomHeader> = async (command) => {
+export const createBomHandler: CommandHandler<CreateBomPayload, CatBomHeader> = async (
+  command,
+  context,
+) => {
   const p = command.payload
   const now = new Date()
   const existing = await db
@@ -81,10 +84,14 @@ export const createBomHandler: CommandHandler<CreateBomPayload, CatBomHeader> = 
       })),
     )
   }
+  await context.publish(CatalogEvents.bomCreated(row!.id))
   return row!
 }
 
-export const activateBomHandler: CommandHandler<{ id: string }, CatBomHeader> = async (command) => {
+export const activateBomHandler: CommandHandler<{ id: string }, CatBomHeader> = async (
+  command,
+  context,
+) => {
   const [bom] = await db
     .select()
     .from(catBomHeaders)
@@ -104,6 +111,7 @@ export const activateBomHandler: CommandHandler<{ id: string }, CatBomHeader> = 
     .set({ isActive: true, updatedAt: new Date() })
     .where(eq(catBomHeaders.id, bom.id))
     .returning()
+  await context.publish(CatalogEvents.bomActivated(row!.id))
   return row!
 }
 

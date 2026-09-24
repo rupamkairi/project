@@ -38,6 +38,8 @@ export const CatalogModule: AppModule = {
     entities: [],
     idPrefixes: { CatBom: 'bom_' },
     events: [
+      'catalog.bom.created',
+      'catalog.bom.activated',
       'catalog.item.created',
       'catalog.item.updated',
       'catalog.item.deleted',

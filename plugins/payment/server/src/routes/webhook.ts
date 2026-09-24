@@ -2,7 +2,10 @@ import { Elysia, t } from 'elysia'
 import type { PaymentAdapter } from '@core'
 import type { PaymentPluginConfig } from '../types'
 
-function gatewayMeta(event: { data: unknown }): {
+function gatewayMeta(
+  event: { data: unknown },
+  orderIdSource: 'metadata' | 'gateway',
+): {
   orderId: string
   gatewayRef: string
   amount: { amount: number; currency: string }
@@ -14,7 +17,10 @@ function gatewayMeta(event: { data: unknown }): {
       ? (meta.metadata as Record<string, unknown>)
       : undefined
   return {
-    orderId: String(nested?.orderId ?? meta.payment_intent ?? meta.payment_id ?? ''),
+    orderId:
+      orderIdSource === 'gateway'
+        ? String(meta.payment_intent ?? meta.payment_id ?? '')
+        : String(nested?.orderId ?? ''),
     gatewayRef: String(meta.id ?? ''),
     amount: {
       amount: Number(meta.amount ?? 0),
@@ -49,19 +55,20 @@ export function createWebhookRoutes(adapter: PaymentAdapter, config: PaymentPlug
         return { error: 'Invalid webhook signature' }
       }
 
-      const meta = gatewayMeta(event)
-
       if (event.type === 'payment.received' && config.onPaymentReceived) {
+        const meta = gatewayMeta(event, 'metadata')
         await config
           .onPaymentReceived(meta.orderId, meta.amount, meta.gatewayRef, meta.metadata)
           .catch(console.error)
       }
 
       if (event.type === 'payment.failed' && config.onPaymentFailed) {
+        const meta = gatewayMeta(event, 'metadata')
         await config.onPaymentFailed(meta.orderId, meta.gatewayRef, meta.metadata).catch(console.error)
       }
 
       if (event.type === 'refund.created' && config.onRefundIssued) {
+        const meta = gatewayMeta(event, 'gateway')
         const refundId = String((event.data as Record<string, unknown>).id ?? '')
         await config.onRefundIssued(meta.orderId, refundId, meta.amount, meta.metadata).catch(console.error)
       }
