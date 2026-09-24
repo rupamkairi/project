@@ -10,7 +10,7 @@ import {
   catCategories,
 } from '@db/schema/catalog'
 import type { CatBomHeader, CatBomLine } from '@db/schema/catalog'
-import { eq, and, isNull, like, desc, count } from 'drizzle-orm'
+import { eq, and, isNull, like, desc, count, sql } from 'drizzle-orm'
 import { resolvePriceRule } from '../pricing'
 
 export const listBomsHandler: QueryHandler<{ parentItemId?: string }, CatBomHeader[]> = async (
@@ -121,6 +121,7 @@ export interface ListItemsParams {
   status?: string
   categoryId?: string
   search?: string
+  tag?: string
   page?: number
   limit?: number
 }
@@ -129,12 +130,13 @@ export const listItemsHandler: QueryHandler<
   ListItemsParams,
   { data: typeof catItems.$inferSelect[]; page: number; limit: number; total: number }
 > = async (query) => {
-  const { type, status, categoryId, search, page = 1, limit = 20 } = query.params
+  const { type, status, categoryId, search, tag, page = 1, limit = 20 } = query.params
   const conditions = [eq(catItems.organizationId, query.orgId), isNull(catItems.deletedAt)]
   if (type) conditions.push(eq(catItems.type, type as never))
   if (status) conditions.push(eq(catItems.status, status as never))
   if (categoryId) conditions.push(eq(catItems.categoryId, categoryId))
   if (search) conditions.push(like(catItems.name, `%${search}%`))
+  if (tag) conditions.push(sql`${catItems.tags} ? ${tag}`)
   const where = and(...conditions)
   const [rows, [c]] = await Promise.all([
     db

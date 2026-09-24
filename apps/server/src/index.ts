@@ -522,24 +522,6 @@ async function main() {
   const { createEcommerceCompose } = await import('@projectx/ecommerce-server')
   const ecommerceCompose = createEcommerceCompose(mediator, bootRegistry.adapters, bootRegistry.scheduler)
 
-  // Payment webhooks mount only when a default provider is configured.
-  // Absent env means zero behavior change: no routes, no adapter.
-  // Resolution runs here so a misconfigured provider fails fast at boot.
-  const { resolvePaymentConfig, createEcommercePaymentPlugin } = await import(
-    '@projectx/ecommerce-server/lib/payment'
-  )
-  const defaultPaymentConfig = resolvePaymentConfig(
-    'default',
-    process.env as Record<string, string | undefined>,
-  )
-  const ecommercePayment = defaultPaymentConfig
-    ? createEcommercePaymentPlugin(mediator, defaultPaymentConfig)
-    : null
-  if (ecommercePayment) {
-    bootRegistry.adapters.register('payment', ecommercePayment.adapter)
-    console.log(`✓ Payment webhooks configured (${defaultPaymentConfig?.provider})`)
-  }
-
   const { createErpCompose } = await import('@projectx/erp-server')
   const erpCompose = createErpCompose(mediator, bus, bootRegistry.scheduler)
 
@@ -627,8 +609,6 @@ async function main() {
         message: env.NODE_ENV === 'production' ? 'Internal server error' : String(error),
       }
     })
-
-  if (ecommercePayment) app.use(ecommercePayment.plugin)
 
   // Start server
   app.listen(env.PORT, () => {

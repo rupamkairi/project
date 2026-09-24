@@ -10,8 +10,7 @@
     "./db/seed/regions": "./src/db/seed/regions.seed.ts",
     "./db/seed/roles": "./src/db/seed/roles.seed.ts",
     "./db/schema/index": "./src/db/schema/index.ts",
-    "./db/schema/ecommerce": "./src/db/schema/index.ts",
-    "./lib/payment": "./src/lib/payment.ts"
+    "./db/schema/ecommerce": "./src/db/schema/index.ts"
   },
   "scripts": {
     "test": "bun test",

@@ -22,6 +22,7 @@ import type {
 import { eq, and, isNull } from 'drizzle-orm'
 import { validatePriceListInput, validatePriceRuleInput } from '../price-lists'
 import { toItemRow, validateVariantInput, toCategoryRow } from '../items'
+import { CatalogEvents } from '../events'
 
 export interface CreateBomPayload {
   parentItemId: string
@@ -144,6 +145,7 @@ async function assertSkuFree(orgId: string, sku: string, excludeId?: string): Pr
 
 export const createItemHandler: CommandHandler<Record<string, unknown>, CatItem> = async (
   command,
+  context,
 ) => {
   const row = toItemRow(command.payload as never) as Record<string, unknown>
   await assertSlugFree(command.orgId, row.slug as string)
@@ -160,13 +162,14 @@ export const createItemHandler: CommandHandler<Record<string, unknown>, CatItem>
       meta: {},
     } as never)
     .returning()
+  await context.publish(CatalogEvents.itemCreated(created!.id))
   return created!
 }
 
 export const updateItemHandler: CommandHandler<
   { id: string } & Record<string, unknown>,
   CatItem
-> = async (command) => {
+> = async (command, context) => {
   const { id, ...patch } = command.payload as { id: string } & Record<string, unknown>
   const [existing] = await db
     .select()
@@ -201,10 +204,11 @@ export const updateItemHandler: CommandHandler<
     .set({ ...(row as object), updatedAt: new Date() } as never)
     .where(and(eq(catItems.id, id), eq(catItems.organizationId, command.orgId)))
     .returning()
+  await context.publish(CatalogEvents.itemUpdated(id))
   return updated!
 }
 
-export const deleteItemHandler: CommandHandler<{ id: string }, void> = async (command) => {
+export const deleteItemHandler: CommandHandler<{ id: string }, void> = async (command, context) => {
   const now = new Date()
   await db
     .update(catVariants)
@@ -216,10 +220,11 @@ export const deleteItemHandler: CommandHandler<{ id: string }, void> = async (co
     .update(catItems)
     .set({ deletedAt: now })
     .where(and(eq(catItems.id, command.payload.id), eq(catItems.organizationId, command.orgId)))
+  await context.publish(CatalogEvents.itemDeleted(command.payload.id))
 }
 
 export const setItemStatusHandler: CommandHandler<{ id: string; status: string }, CatItem> =
-  async (command) => {
+  async (command, context) => {
     const { id, status } = command.payload
     if (!['draft', 'active', 'archived'].includes(status)) throw new Error(`unknown item status: ${status}`)
     const [row] = await db
@@ -234,11 +239,13 @@ export const setItemStatusHandler: CommandHandler<{ id: string; status: string }
       )
       .returning()
     if (!row) throw new Error('Item not found')
+    await context.publish(CatalogEvents.itemStatusChanged(id, status))
     return row
   }
 
 export const createVariantHandler: CommandHandler<Record<string, unknown>, CatVariant> = async (
   command,
+  context,
 ) => {
   const p = command.payload as {
     itemId: string
@@ -282,13 +289,14 @@ export const createVariantHandler: CommandHandler<Record<string, unknown>, CatVa
       meta: {},
     })
     .returning()
+  await context.publish(CatalogEvents.variantCreated(row!.id, p.itemId))
   return row!
 }
 
 export const updateVariantHandler: CommandHandler<
   { id: string } & Record<string, unknown>,
   CatVariant
-> = async (command) => {
+> = async (command, context) => {
   const { id, ...patch } = command.payload as { id: string } & Record<string, unknown>
   const [existing] = await db
     .select()
@@ -317,18 +325,21 @@ export const updateVariantHandler: CommandHandler<
     .set(update as never)
     .where(and(eq(catVariants.id, id), eq(catVariants.organizationId, command.orgId)))
     .returning()
+  await context.publish(CatalogEvents.variantUpdated(id))
   return row!
 }
 
-export const deleteVariantHandler: CommandHandler<{ id: string }, void> = async (command) => {
+export const deleteVariantHandler: CommandHandler<{ id: string }, void> = async (command, context) => {
   await db
     .update(catVariants)
     .set({ deletedAt: new Date() })
     .where(and(eq(catVariants.id, command.payload.id), eq(catVariants.organizationId, command.orgId)))
+  await context.publish(CatalogEvents.variantDeleted(command.payload.id))
 }
 
 export const createCategoryHandler: CommandHandler<Record<string, unknown>, CatCategory> = async (
   command,
+  context,
 ) => {
   const row = toCategoryRow(command.payload as never) as Record<string, unknown>
   const now = new Date()
@@ -344,13 +355,14 @@ export const createCategoryHandler: CommandHandler<Record<string, unknown>, CatC
       meta: {},
     } as never)
     .returning()
+  await context.publish(CatalogEvents.categoryCreated(created!.id))
   return created!
 }
 
 export const updateCategoryHandler: CommandHandler<
   { id: string } & Record<string, unknown>,
   CatCategory
-> = async (command) => {
+> = async (command, context) => {
   const { id, ...patch } = command.payload as { id: string } & Record<string, unknown>
   const [existing] = await db
     .select()
@@ -377,16 +389,18 @@ export const updateCategoryHandler: CommandHandler<
     .set({ ...(row as object), updatedAt: new Date() } as never)
     .where(and(eq(catCategories.id, id), eq(catCategories.organizationId, command.orgId)))
     .returning()
+  await context.publish(CatalogEvents.categoryUpdated(id))
   return updated!
 }
 
-export const deleteCategoryHandler: CommandHandler<{ id: string }, void> = async (command) => {
+export const deleteCategoryHandler: CommandHandler<{ id: string }, void> = async (command, context) => {
   await db
     .update(catCategories)
     .set({ deletedAt: new Date() })
     .where(
       and(eq(catCategories.id, command.payload.id), eq(catCategories.organizationId, command.orgId)),
     )
+  await context.publish(CatalogEvents.categoryDeleted(command.payload.id))
 }
 
 export interface CreatePriceListPayload {
@@ -400,7 +414,7 @@ export interface CreatePriceListPayload {
 }
 
 export const createPriceListHandler: CommandHandler<CreatePriceListPayload, CatPriceList> =
-  async (command) => {
+  async (command, context) => {
     validatePriceListInput(command.payload)
     const p = command.payload
     const now = new Date()
@@ -422,6 +436,7 @@ export const createPriceListHandler: CommandHandler<CreatePriceListPayload, CatP
         meta: {},
       })
       .returning()
+    await context.publish(CatalogEvents.priceListCreated(row!.id))
     return row!
   }
 
@@ -437,7 +452,7 @@ export interface UpdatePriceListPayload {
 }
 
 export const updatePriceListHandler: CommandHandler<UpdatePriceListPayload, CatPriceList> =
-  async (command) => {
+  async (command, context) => {
     const { id, ...patch } = command.payload
     const [existing] = await db
       .select()
@@ -467,6 +482,7 @@ export const updatePriceListHandler: CommandHandler<UpdatePriceListPayload, CatP
       })
       .where(and(eq(catPriceLists.id, id), eq(catPriceLists.organizationId, command.orgId)))
       .returning()
+    await context.publish(CatalogEvents.priceListUpdated(id))
     return row!
   }
 
@@ -480,7 +496,7 @@ export interface CreatePriceRulePayload {
 }
 
 export const createPriceRuleHandler: CommandHandler<CreatePriceRulePayload, CatPriceRule> =
-  async (command) => {
+  async (command, context) => {
     validatePriceRuleInput(command.payload)
     const p = command.payload
     const [list] = await db
@@ -513,6 +529,7 @@ export const createPriceRuleHandler: CommandHandler<CreatePriceRulePayload, CatP
         meta: {},
       })
       .returning()
+    await context.publish(CatalogEvents.priceRuleCreated(row!.id, p.priceListId))
     return row!
   }
 
@@ -525,7 +542,7 @@ export interface UpdatePriceRulePayload {
 }
 
 export const updatePriceRuleHandler: CommandHandler<UpdatePriceRulePayload, CatPriceRule> =
-  async (command) => {
+  async (command, context) => {
     const { id, ...patch } = command.payload
     const [existing] = await db
       .select()
@@ -555,5 +572,6 @@ export const updatePriceRuleHandler: CommandHandler<UpdatePriceRulePayload, CatP
       .set({ ...patch, updatedAt: new Date() })
       .where(and(eq(catPriceRules.id, id), eq(catPriceRules.organizationId, command.orgId)))
       .returning()
+    await context.publish(CatalogEvents.priceRuleUpdated(id))
     return row!
   }

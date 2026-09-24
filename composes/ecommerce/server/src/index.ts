@@ -4,6 +4,7 @@ import type { AdapterRegistry, Scheduler } from '@core'
 import { createAdminRoutes } from './routes/admin'
 import { createStoreRoutes } from './routes/store'
 import { registerEcommerceJobs } from './jobs'
+import { resolvePaymentConfig, createEcommercePaymentPlugin } from './lib/payment'
 import { canAccess, COMPOSE_ADMIN_ROLES } from '@projectx/access'
 
 function ecommerceAdminPermission(path: string, method: string): string {
@@ -28,17 +29,40 @@ function ecommerceAdminPermission(path: string, method: string): string {
   return `products:${verb}`
 }
 
+export interface EcommerceComposeOptions {
+  scheduler?: Scheduler
+  env?: Record<string, string | undefined>
+}
+
 export function createEcommerceCompose(
   mediator: Mediator,
   adapters: AdapterRegistry,
-  scheduler?: Scheduler,
+  schedulerOrOptions?: Scheduler | EcommerceComposeOptions,
 ) {
+  const scheduler =
+    schedulerOrOptions && typeof (schedulerOrOptions as Scheduler).define === 'function'
+      ? (schedulerOrOptions as Scheduler)
+      : (schedulerOrOptions as EcommerceComposeOptions | undefined)?.scheduler
+  const env =
+    (schedulerOrOptions as EcommerceComposeOptions | undefined)?.env ??
+    (process.env as Record<string, string | undefined>)
   registerEcommerceJobs(mediator, scheduler)
 
   const adminRoutes = createAdminRoutes(mediator, adapters)
   const storeRoutes = createStoreRoutes(mediator, adapters)
 
-  return new Elysia({ prefix: '/ecommerce' })
+  // Payment webhooks are a compose-owned integration: they mount here,
+  // only when a default provider is configured. Absent env means zero
+  // behavior change. Saga-time calls resolve per-org adapters instead.
+  const defaultPaymentConfig = resolvePaymentConfig('default', env)
+  const ecommercePayment = defaultPaymentConfig
+    ? createEcommercePaymentPlugin(mediator, defaultPaymentConfig)
+    : null
+  if (ecommercePayment) {
+    adapters.register('payment', ecommercePayment.adapter)
+  }
+
+  const app = new Elysia({ prefix: '/ecommerce' })
     .onError({ as: 'scoped' }, ({ error, set }) => {
       const msg = error instanceof Error ? error.message : String(error)
       set.status = 500
@@ -69,6 +93,9 @@ export function createEcommerceCompose(
       }
       return app
     })
+
+  if (ecommercePayment) app.use(ecommercePayment.plugin)
+  return app
 }
 
 export type EcommerceApp = ReturnType<typeof createEcommerceCompose>

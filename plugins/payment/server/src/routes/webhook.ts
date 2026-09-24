@@ -2,6 +2,28 @@ import { Elysia, t } from 'elysia'
 import type { PaymentAdapter } from '@core'
 import type { PaymentPluginConfig } from '../types'
 
+function gatewayMeta(event: { data: unknown }): {
+  orderId: string
+  gatewayRef: string
+  amount: { amount: number; currency: string }
+  metadata: Record<string, unknown> | undefined
+} {
+  const meta = event.data as Record<string, unknown>
+  const nested =
+    meta.metadata && typeof meta.metadata === 'object'
+      ? (meta.metadata as Record<string, unknown>)
+      : undefined
+  return {
+    orderId: String(nested?.orderId ?? meta.payment_intent ?? meta.payment_id ?? ''),
+    gatewayRef: String(meta.id ?? ''),
+    amount: {
+      amount: Number(meta.amount ?? 0),
+      currency: String(meta.currency ?? 'USD').toUpperCase(),
+    },
+    metadata: nested,
+  }
+}
+
 export function createWebhookRoutes(adapter: PaymentAdapter, config: PaymentPluginConfig) {
   return new Elysia().post(
     '/webhook/:provider',
@@ -27,52 +49,21 @@ export function createWebhookRoutes(adapter: PaymentAdapter, config: PaymentPlug
         return { error: 'Invalid webhook signature' }
       }
 
-      const meta = event.data as Record<string, unknown>
+      const meta = gatewayMeta(event)
 
       if (event.type === 'payment.received' && config.onPaymentReceived) {
-        const orderId = String(
-          meta.metadata && typeof meta.metadata === 'object'
-            ? ((meta.metadata as Record<string, unknown>).orderId ?? '')
-            : '',
-        )
-        const amount = {
-          amount: Number(meta.amount ?? 0),
-          currency: String(meta.currency ?? 'USD').toUpperCase(),
-        }
-        const gatewayRef = String(meta.id ?? '')
-        const metadata =
-          meta.metadata && typeof meta.metadata === 'object'
-            ? (meta.metadata as Record<string, unknown>)
-            : undefined
-        await config.onPaymentReceived(orderId, amount, gatewayRef, metadata).catch(console.error)
+        await config
+          .onPaymentReceived(meta.orderId, meta.amount, meta.gatewayRef, meta.metadata)
+          .catch(console.error)
       }
 
       if (event.type === 'payment.failed' && config.onPaymentFailed) {
-        const orderId = String(
-          meta.metadata && typeof meta.metadata === 'object'
-            ? ((meta.metadata as Record<string, unknown>).orderId ?? '')
-            : '',
-        )
-        const gatewayRef = String(meta.id ?? '')
-        const metadata =
-          meta.metadata && typeof meta.metadata === 'object'
-            ? (meta.metadata as Record<string, unknown>)
-            : undefined
-        await config.onPaymentFailed(orderId, gatewayRef, metadata).catch(console.error)
+        await config.onPaymentFailed(meta.orderId, meta.gatewayRef, meta.metadata).catch(console.error)
       }
 
       if (event.type === 'refund.created' && config.onRefundIssued) {
-        const orderId = String(meta.payment_intent ?? meta.payment_id ?? '')
-        const refundId = String(meta.id ?? '')
-        const amount = {
-          amount: Number(meta.amount ?? 0),
-          currency: String(meta.currency ?? 'USD').toUpperCase(),
-        }
-        const metadata =
-          meta.metadata && typeof meta.metadata === 'object'
-            ? (meta.metadata as Record<string, unknown>)
-            : undefined
-        await config.onRefundIssued(orderId, refundId, amount, metadata).catch(console.error)
+        const refundId = String((event.data as Record<string, unknown>).id ?? '')
+        await config.onRefundIssued(meta.orderId, refundId, meta.amount, meta.metadata).catch(console.error)
       }
 
       return { received: true }

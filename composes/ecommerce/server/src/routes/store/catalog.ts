@@ -24,11 +24,11 @@ const toProduct = (row: any, opts?: { variants?: any[]; category?: any }) => ({
 export function createCatalogRoutes(mediator: Mediator) {
   return new Elysia({ prefix: '/products' })
     .get('/', async (ctx: any) => {
-      const { page = 1, limit = 20, search, categoryId } = ctx.query
+      const { page = 1, limit = 20, search, categoryId, tag } = ctx.query
       const s = scope(ctx)
       const out = (await mediator.query({
         type: 'catalog.listItems',
-        params: { type: 'product', status: 'active', search, categoryId, page: Number(page), limit: Number(limit) },
+        params: { type: 'product', status: 'active', search, categoryId, tag, page: Number(page), limit: Number(limit) },
         actorId: s.actorId,
         orgId: s.orgId,
       })) as { data: any[]; page: number; limit: number; total: number }
@@ -46,6 +46,30 @@ export function createCatalogRoutes(mediator: Mediator) {
         orgId: s.orgId,
       })) as { item: any; variants: any[]; category: any } | null
       if (!out || out.item.type !== 'product') return null
-      return toProduct(out.item, { variants: out.variants, category: out.category })
+      const variants = await Promise.all(
+        out.variants.map(async (v: any) => {
+          const [price, availability] = await Promise.all([
+            mediator.query({
+              type: 'catalog.resolvePrice',
+              params: { variantId: v.id, qty: 1, currency: 'USD', audience: {} },
+              actorId: s.actorId,
+              orgId: s.orgId,
+            }) as Promise<{ unitPriceAmount: number; unitPriceCurrency: string } | null>,
+            mediator.query({
+              type: 'inventory.getAvailability',
+              params: { variantId: v.id },
+              actorId: s.actorId,
+              orgId: s.orgId,
+            }) as Promise<Array<{ available: number }>>,
+          ])
+          return {
+            ...v,
+            price: price?.unitPriceAmount ?? null,
+            currency: price?.unitPriceCurrency ?? null,
+            available: availability.reduce((sum, a) => sum + a.available, 0),
+          }
+        }),
+      )
+      return toProduct(out.item, { variants, category: out.category })
     })
 }
