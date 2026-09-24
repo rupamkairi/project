@@ -4,6 +4,7 @@
 /* Scan all dirs that use Tailwind classes */
 @source "../../../packages/ui/src";
 @source "../../../composes/platform/web/src";
+@source "../../../plugins/auth/web/src";
 @source "../../../plugins/notification/web/src";
 @source "../../../plugins/storage/web/src";
 @source "../../../composes/crm/web/src";
@@ -11,5 +12,8 @@
 @source "../../../composes/ecommerce/web/storefront/src";
 @source "../../../composes/erp/web/src";
 @source "../../../composes/lms/web/src";
+@source "../../../composes/workplace/web/src";
+@source "../../../composes/hospitality/web/src";
+@source "../../../composes/project-management/web/src";
 @source "../../../composes/restaurant/web/src";
 @source ".";

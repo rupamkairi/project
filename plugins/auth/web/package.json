@@ -19,6 +19,8 @@
     "format:write": "prettier --write ."
   },
   "dependencies": {
+    "@projectx/ui": "workspace:*",
+    "lucide-react": "^0.475.0",
     "zustand": "^5.0.11"
   },
   "devDependencies": {

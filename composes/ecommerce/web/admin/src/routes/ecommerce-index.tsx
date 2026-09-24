@@ -1,10 +1,20 @@
 import { createRoute, Link } from '@tanstack/react-router'
 import { sharedRootRoute } from '@projectx/shared-router'
-import { PageHeader, Card, CardHeader, CardTitle, CardDescription } from '@projectx/ui'
+import {
+  PageHeader,
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  PlatformNavbar,
+  ComposeNavbar,
+} from '@projectx/ui'
+import type { NavBarItem } from '@projectx/ui'
+import { LayoutDashboard, Store } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { ecommerceAdminApi } from '../lib/api'
 import { formatCurrency } from '../lib/format'
-import { requireAuth } from '@projectx/plugin-auth-web'
+import { requireAuth, UserMenu } from '@projectx/plugin-auth-web'
 
 interface RecentOrder {
   id: string
@@ -66,6 +76,12 @@ const actions = [
   { label: 'Storefront', to: '/ecommerce/store', description: 'Customer-facing store' },
 ] as const
 
+const HUB_NAV_ITEMS: NavBarItem[] = [
+  { label: 'Overview', href: '/ecommerce', icon: LayoutDashboard, exact: true },
+  { label: 'Admin', href: '/ecommerce/admin', icon: LayoutDashboard },
+  { label: 'Storefront', href: '/ecommerce/store', icon: Store },
+]
+
 function EcommerceHub() {
   const { data: analyticsData } = useQuery({
     queryKey: ['ecommerce-hub-analytics'],
@@ -80,62 +96,66 @@ function EcommerceHub() {
   const orders = readRecentOrders(ordersData?.data?.data)
 
   return (
-    <div className="space-y-6 p-6">
-      <PageHeader title="Ecommerce" description="Store operations and customer storefront" />
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {[
-          { label: 'GMV', value: analytics.gmv ?? 0 },
-          { label: 'Orders', value: analytics.orderCount ?? 0 },
-          { label: 'AOV', value: analytics.aov ?? 0 },
-          { label: 'Return Rate', value: analytics.returnRate ?? '0%' },
-        ].map((kpi) => (
-          <div key={kpi.label} className="rounded-lg border p-4">
-            <p className="text-xs text-muted-foreground">{kpi.label}</p>
-            <p className="text-2xl font-bold mt-1">
-              {typeof kpi.value === 'number' ? formatCurrency(kpi.value) : kpi.value}
-            </p>
-          </div>
-        ))}
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {actions.map((a) => (
-          <Link key={a.to} to={a.to} className="no-underline">
-            <Card className="h-full hover:border-foreground/20 transition-colors">
-              <CardHeader>
-                <CardTitle className="text-base">{a.label}</CardTitle>
-                <CardDescription>{a.description}</CardDescription>
-              </CardHeader>
-            </Card>
-          </Link>
-        ))}
-      </div>
-      <div>
-        <h3 className="text-sm font-medium mb-3">Recent Orders</h3>
-        <div className="rounded-lg border">
-          {orders.length === 0 ? (
-            <p className="text-sm text-muted-foreground p-4">No orders yet</p>
-          ) : (
-            <table className="w-full text-sm">
-              <thead className="border-b text-left text-muted-foreground">
-                <tr>
-                  <th className="p-3 font-medium">Order</th>
-                  <th className="p-3 font-medium">Customer</th>
-                  <th className="p-3 font-medium">Total</th>
-                  <th className="p-3 font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orders.map((o) => (
-                  <tr key={o.id} className="border-b last:border-0">
-                    <td className="p-3">{o.referenceNo}</td>
-                    <td className="p-3">{o.person?.email ?? '—'}</td>
-                    <td className="p-3">{formatCurrency(Number(o.totalAmount ?? 0))}</td>
-                    <td className="p-3">{o.status}</td>
+    <div className="flex flex-col min-h-screen bg-background">
+      <PlatformNavbar userMenu={<UserMenu />} />
+      <ComposeNavbar title="Ecommerce" items={HUB_NAV_ITEMS} />
+      <div className="space-y-6 p-6">
+        <PageHeader title="Ecommerce" description="Store operations and customer storefront" />
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {[
+            { label: 'GMV', value: analytics.gmv ?? 0 },
+            { label: 'Orders', value: analytics.orderCount ?? 0 },
+            { label: 'AOV', value: analytics.aov ?? 0 },
+            { label: 'Return Rate', value: analytics.returnRate ?? '0%' },
+          ].map((kpi) => (
+            <div key={kpi.label} className="rounded-lg border p-4">
+              <p className="text-xs text-muted-foreground">{kpi.label}</p>
+              <p className="text-2xl font-bold mt-1">
+                {typeof kpi.value === 'number' ? formatCurrency(kpi.value) : kpi.value}
+              </p>
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {actions.map((a) => (
+            <Link key={a.to} to={a.to} className="no-underline">
+              <Card className="h-full hover:border-foreground/20 transition-colors">
+                <CardHeader>
+                  <CardTitle className="text-base">{a.label}</CardTitle>
+                  <CardDescription>{a.description}</CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
+          ))}
+        </div>
+        <div>
+          <h3 className="text-sm font-medium mb-3">Recent Orders</h3>
+          <div className="rounded-lg border">
+            {orders.length === 0 ? (
+              <p className="text-sm text-muted-foreground p-4">No orders yet</p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="border-b text-left text-muted-foreground">
+                  <tr>
+                    <th className="p-3 font-medium">Order</th>
+                    <th className="p-3 font-medium">Customer</th>
+                    <th className="p-3 font-medium">Total</th>
+                    <th className="p-3 font-medium">Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+                </thead>
+                <tbody>
+                  {orders.map((o) => (
+                    <tr key={o.id} className="border-b last:border-0">
+                      <td className="p-3">{o.referenceNo}</td>
+                      <td className="p-3">{o.person?.email ?? '—'}</td>
+                      <td className="p-3">{formatCurrency(Number(o.totalAmount ?? 0))}</td>
+                      <td className="p-3">{o.status}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         </div>
       </div>
     </div>

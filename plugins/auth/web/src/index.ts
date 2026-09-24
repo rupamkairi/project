@@ -20,6 +20,9 @@ export { useAuth } from './hooks/use-auth'
 
 export { AuthGuard } from './components/auth-guard'
 
+export { UserMenu } from './components/user-menu'
+export type { UserMenuProps } from './components/user-menu'
+
 export { AuthProvider } from './providers/auth-provider'
 
 export { requireAuth, redirectIfAuthenticated } from './lib/redirect'

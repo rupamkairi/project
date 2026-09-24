@@ -142,6 +142,21 @@ export type { PageHeaderProps } from './components/page-header'
 export { NavBar } from './components/nav-bar'
 export type { NavBarProps, NavBarItem } from './components/nav-bar'
 
+export { PlatformNavbar } from './components/platform-navbar'
+export type { PlatformNavbarProps } from './components/platform-navbar'
+
+export { ComposeNavbar } from './components/compose-navbar'
+export type { ComposeNavbarProps } from './components/compose-navbar'
+
+export { StackedAppLayout } from './components/stacked-app-layout'
+export type { StackedAppLayoutProps } from './components/stacked-app-layout'
+
+export { PluginsMenu, defaultPluginEntries } from './components/plugins-menu'
+export type { PluginMenuItem } from './components/plugins-menu'
+
+export { UserMenuView } from './components/user-menu-view'
+export type { UserMenuLinkItem, UserMenuViewProps } from './components/user-menu-view'
+
 export { StatusBadge, statusBadgeVariants } from './components/status-badge'
 export type { StatusBadgeProps } from './components/status-badge'
 

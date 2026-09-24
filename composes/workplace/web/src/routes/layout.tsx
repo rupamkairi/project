@@ -1,6 +1,8 @@
 import { createRoute, Outlet } from '@tanstack/react-router'
+import { UserMenu, AuthGuard, requireAuth } from '@projectx/plugin-auth-web'
 import { sharedRootRoute } from '@projectx/shared-router'
-import { NavBar } from '@projectx/ui'
+import { StackedAppLayout } from '@projectx/ui'
+import type { NavBarItem } from '@projectx/ui'
 import {
   LayoutDashboard,
   Briefcase,
@@ -19,10 +21,11 @@ import {
 export const Route = createRoute({
   getParentRoute: () => sharedRootRoute,
   path: '/workplace',
+  beforeLoad: () => requireAuth(),
   component: WorkplaceLayout,
 })
 
-const NAV_ITEMS = [
+const NAV_ITEMS: NavBarItem[] = [
   { label: 'Dashboard', href: '/workplace', icon: LayoutDashboard, exact: true },
   { label: 'Recruitment', href: '/workplace/recruitment', icon: Briefcase },
   { label: 'Onboarding', href: '/workplace/onboarding', icon: UserPlus },
@@ -39,11 +42,15 @@ const NAV_ITEMS = [
 
 function WorkplaceLayout() {
   return (
-    <div className="flex flex-col min-h-screen bg-background">
-      <NavBar items={NAV_ITEMS} />
-      <main className="flex-1 container mx-auto py-6 px-4">
+    <AuthGuard>
+      <StackedAppLayout
+        composeTitle="Workplace"
+        composeItems={NAV_ITEMS}
+        userMenu={<UserMenu />}
+        mainClassName="container mx-auto py-6 px-4"
+      >
         <Outlet />
-      </main>
-    </div>
+      </StackedAppLayout>
+    </AuthGuard>
   )
 }

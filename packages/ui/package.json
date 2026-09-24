@@ -19,6 +19,7 @@
     "format:write": "prettier --write ."
   },
   "dependencies": {
+    "@projectx/shared-router": "workspace:*",
     "@tanstack/react-router": "^1.161.3",
     "@tanstack/react-table": "^8.21.3",
     "react-hook-form": "^7.71.1",
