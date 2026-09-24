@@ -72,7 +72,7 @@ export function resolvePriceRule(
       rule: r,
       list: hit.list,
       specificity: hit.specificity,
-      priority: (hit.list as { priority?: number }).priority ?? 0,
+      priority: hit.list.priority ?? 0,
     })
   }
   if (!candidates.length) return null

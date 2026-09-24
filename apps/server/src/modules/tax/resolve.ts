@@ -23,8 +23,8 @@ export function resolveTaxRate(rates: TaxRate[], ctx: TaxResolveContext): TaxRat
   if (!scored.length) return null
   scored.sort((a, b) => {
     if (b.score !== a.score) return b.score - a.score
-    const ap = (a.r as { priority?: number }).priority ?? 0
-    const bp = (b.r as { priority?: number }).priority ?? 0
+    const ap = a.r.priority ?? 0
+    const bp = b.r.priority ?? 0
     if (bp !== ap) return bp - ap
     return a.r.id < b.r.id ? -1 : a.r.id > b.r.id ? 1 : 0
   })
